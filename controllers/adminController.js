@@ -4,14 +4,13 @@ const UserAdmin = require('../models/admin')
 
 const userController = {
     signUp: async (req, res)=>{
-        let {username, email, password} = req.body
+        let {username, email, password, role} = req.body
 
 
         try {
 
             let adminUser = await UserAdmin.findOne({ email })
             if(!adminUser){
-                let role= "admin";
                 let logged = false;
                 password = bcryptjs.hashSync(password, 10)
 
@@ -79,7 +78,8 @@ const userController = {
                     const loginAdmin = {
                         id: admin._id,
                         email: admin.email,
-                        username: admin.username
+                        username: admin.username,
+                        role: admin.role
                     }
                     admin.logged = true
                     await admin.save()

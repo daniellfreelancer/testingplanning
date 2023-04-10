@@ -11,7 +11,7 @@ var cors = require('cors')
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const userAdmin = require('./routes/adminRoutes')
-
+const userPlanner = require('./routes/plannerRoutes')
 var app = express();
 
 // view engine setup
@@ -31,6 +31,7 @@ app.use(cors());
 
 //myroutes
 app.use('/admin', userAdmin)
+app.use('/planner', userPlanner)
 
 
 // catch 404 and forward to error handler
