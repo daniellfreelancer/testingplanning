@@ -145,6 +145,32 @@ const userController = {
                 success: false
             })
         }
+    },
+    getAdmins: async (req, res) => {
+        try {
+            let admins = await UserAdmin.find().sort({ username: 1})
+
+            if (admins) {
+                res.status(200).json({
+                    
+                    users: admins,
+                    message: "Usuarios registrados",
+                    success: true
+
+                })
+            } else {
+                res.status(404).json({
+                    message: "No hay usuarios asociados",
+                    success: false
+                })
+            }
+        } catch (error) {
+            console.log(error)
+            res.status(400).json({
+                message: error.message,
+                success: false
+            })
+        }
     }
 };
 
