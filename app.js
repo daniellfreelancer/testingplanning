@@ -13,6 +13,9 @@ var usersRouter = require('./routes/users');
 const userAdmin = require('./routes/adminRoutes')
 const userPlanner = require('./routes/plannerRoutes')
 const userInsti = require('./routes/instiroutes')
+const userSchool = require('./routes/schoolRoutes')
+
+
 var app = express();
 
 // view engine setup
@@ -34,6 +37,8 @@ app.use(cors());
 app.use('/admin', userAdmin)
 app.use('/planner', userPlanner)
 app.use('/insti', userInsti)
+app.use('/school', userSchool)
+
 
 
 // catch 404 and forward to error handler
