@@ -11,9 +11,9 @@ const adminSchema = new mongoose.Schema({
     logged: {type: String, required: true}
 })
 
-const USERADMIN = mongoose.model(
-    'user',
-    adminSchema
+const TEACHERS = mongoose.model(
+    'teacher',
+    teacherSchema
 )
 
-module.exports = USERADMIN
+module.exports = TEACHERS

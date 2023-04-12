@@ -4,7 +4,7 @@ const UserAdmin = require('../models/admin')
 
 const userController = {
     signUp: async (req, res)=>{
-        let {username, email, password, role} = req.body
+        let {name, lastName, email, password, role, rut} = req.body
 
 
         try {
@@ -19,7 +19,9 @@ const userController = {
                     password,
                     logged,
                     password,
-                    username,
+                    name,
+                    lastName,
+                    rut,
                     role
                 }).save()
 
@@ -47,12 +49,8 @@ const userController = {
     },
     singIn: async (req, res)=>{
         let {email, password} = req.body;
-
-
         try {
             const admin = await UserAdmin.findOne({ email })
-
-
             if (!admin){
                 res.status(404).json({
                     message: 'Usuario no existe, comunicate con el administrador ',
@@ -78,8 +76,11 @@ const userController = {
                     const loginAdmin = {
                         id: admin._id,
                         email: admin.email,
-                        username: admin.username,
-                        role: admin.role
+                        name: admin.name,
+                        lastName: admin.lastName,
+                        rut: admin.rut,
+                        role: admin.role,
+
                     }
                     admin.logged = true
                     await admin.save()
@@ -148,7 +149,7 @@ const userController = {
     },
     getAdmins: async (req, res) => {
         try {
-            let admins = await UserAdmin.find().sort({ username: 1})
+            let admins = await UserAdmin.find().sort({ name: 1})
 
             if (admins) {
                 res.status(200).json({
