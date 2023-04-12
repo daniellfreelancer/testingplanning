@@ -266,6 +266,36 @@ const instiController = {
         success: false
       });
     }
+  },
+  institutionById: async (req, res) => {
+
+
+    let {id} = req.params;
+
+
+    try {
+
+      const instiFund = await Institution.findById(id).populate(institutionPopulateQuery);
+
+      if (instiFund){
+
+        res.status(200).json({
+          response: instiFund,
+          success: true,
+          message: "Institucion encontrada"
+        })
+
+      } else res.status(404).json({message: "no se pudo encontrar la institución", success: false})
+      
+    } catch (error) {
+      console.log(error)
+      res.status(400).json({
+        message: "Error al realizar peticion de busqueda de institución",
+        success: false
+      })
+    }
+
+
   }
 
 
