@@ -14,6 +14,7 @@ const userAdmin = require('./routes/adminRoutes')
 const userPlanner = require('./routes/plannerRoutes')
 const userInsti = require('./routes/instiroutes')
 const userSchool = require('./routes/schoolRoutes')
+const userClassroom = require('./routes/classroomRoutes')
 
 
 var app = express();
@@ -33,11 +34,13 @@ app.use('/users', usersRouter);
 
 app.use(cors());
 
+
 //myroutes
 app.use('/admin', userAdmin)
 app.use('/planner', userPlanner)
 app.use('/insti', userInsti)
 app.use('/school', userSchool)
+app.use('/classroom', userClassroom)
 
 
 

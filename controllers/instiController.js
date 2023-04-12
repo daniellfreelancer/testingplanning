@@ -1,5 +1,51 @@
 const Institution = require('../models/institution')
 
+const institutionPopulateQuery = [
+  {
+    path: 'teachers',
+    select: 'name lastName email role rut logged',
+  },
+  {
+    path: 'admins',
+    select: 'name lastName email role rut logged',
+  },
+  {
+    path: 'schools',
+    populate: {
+      path: 'admins',
+      select: 'name lastName email role rut logged',
+    },
+
+  },
+  {
+    path: 'schools',
+    populate: {
+      path: 'classrooms',
+      select: 'grade level planner classHistory',
+      populate: {
+        path: 'teacher teacherSubstitute',
+        select: 'name lastName email role rut logged',
+      },
+    },
+  },
+    
+
+  // },{
+  //   path: 'schools',
+  //   populate:{
+  //     path: 'admins teachers students classrooms',
+  //     populate:{
+  //       path: 'classrooms',
+
+  //     }
+  //   }
+  //   populate: {
+  //     path: 'classrooms',
+  //     select: 'grade level teacher teacherSubstitute students planner classHistory',
+  //   },
+  // }
+];
+
 const instiController = {
 
   createInstitution: async (req, res) => {
@@ -25,32 +71,51 @@ const instiController = {
 
   },
   readInstitutions: async (req, res) => {
-
     try {
-      // let allInstitutions = await Institution.find().populate('admin').populate('teacher')
-      let allInstitutions = await Institution.find().populate('teachers', { name: 1, lastName: 1, email: 1, role: 1, rut: 1, logged: 1 }).populate('admins', { name: 1, lastName: 1, email: 1, role: 1, rut: 1, logged: 1 }).populate('schools')
+      // let allInstitutions = await Institution
+      //   .find()
+      //   .populate({
+      //     path: 'teachers',
+      //     select: 'name lastName email role rut logged',
+      //   })
+      //   .populate({
+      //     path: 'admins',
+      //     select: 'name lastName email role rut logged',
+      //   })
+      //   .populate({
+      //     path: 'schools',
+      //     populate: {
+      //       path: 'admins',
+      //       select: 'name lastName email role rut logged',}
+      //   })
+      //   .populate({
+      //     path: 'schools',
+      //     populate :{
+      //       path: 'classrooms',
+      //       select : 'grade level'
+      //     }
+      //   });
 
+      const allInstitutions = await Institution.find().populate(institutionPopulateQuery);
+  
       if (allInstitutions.length > 0) {
-
         res.status(200).json({
-          message: "Instituciones",
+          message: 'Instituciones',
           response: allInstitutions,
-          success: true
-        })
-
+          success: true,
+        });
       } else {
         res.status(404).json({
-          message: "No hay instituciones",
-          success: true
-        })
+          message: 'No hay instituciones',
+          success: true,
+        });
       }
-
     } catch (error) {
-      console.log(error)
+      console.log(error);
       res.status(400).json({
-        message: "error al obtener instituciones",
-        succes: false
-      })
+        message: 'Error al obtener instituciones',
+        success: false,
+      });
     }
 
   },

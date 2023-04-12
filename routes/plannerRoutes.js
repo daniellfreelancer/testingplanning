@@ -1,6 +1,7 @@
 var express = require('express');
-const { createPlan, addRPU,  insertObjective, getPlanners, addRegularProgramUnit, addAprendizajesToUnit, insertAprendizajes, insertAprendizaje, insertResources } = require('../controllers/plannerController');
 var router = express.Router();
+const { createPlan, addRPU,  insertObjective, getPlanners, addRegularProgramUnit, addAprendizajesToUnit, insertAprendizajes, insertAprendizaje, insertResources } = require('../controllers/plannerController');
+
 
 router.post('/create', createPlan)
 router.post('/:grade/:level', addRegularProgramUnit)
