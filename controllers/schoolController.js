@@ -145,41 +145,61 @@ const schoolControllers = {
           });
         }
       },
-      addTeacherToSchool: async (req, res) => {
-          try {
-      
-            const { schoolId, teacherId } = req.body
-      
-      
-            // Buscar la institución por su id
-            const school = await Schools.findById(schoolId);
-      
-            if (!school) {
-              return res.status(404).json({
-                message: 'Escuela no encontrada',
-                success: false
-              });
-            }
-      
-            // Agregar el nuevo id de admin a la propiedad "admin" de la institución
-            school.teachers.push(teacherId);
-      
-            // Guardar los cambios en la base de datos
-            await school.save();
-      
-            return res.status(200).json({
-              message: 'Id de profesor agregado a la Escuela',
-              success: true
-            });
-      
-          } catch (error) {
-            console.log(error);
-            return res.status(400).json({
-              message: 'Error al agregar id de profesor a la Escuela',
-              success: false
-            });
-          }
-        },
+  addTeacherToSchool: async (req, res) => {
+    try {
+      const { schoolId, teacherId } = req.body
+      // Buscar la institución por su id
+      const school = await Schools.findById(schoolId);
+      if (!school) {
+        return res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        });
+      }
+
+      school.teachers.push(teacherId);
+      await school.save();
+
+      return res.status(200).json({
+        message: 'Id de profesor agregado a la Escuela',
+        success: true
+      });
+
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({
+        message: 'Error al agregar id de profesor a la Escuela',
+        success: false
+      });
+    }
+  },
+  addStudentToSchool: async (req, res) => {
+    try {
+      const { schoolId, studentId } = req.body
+      const school = await Schools.findById(schoolId);
+      if (!school) {
+        return res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        });
+      }
+
+      school.students.push(studentId);
+      await school.save();
+
+      return res.status(200).json({
+        message: 'Id de estudiante agregado a la Escuela',
+        success: true
+      });
+
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({
+        message: 'Error al agregar id de estudiante a la Escuela',
+        success: false
+      });
+    }
+  },
 
 }
 

@@ -1,5 +1,35 @@
 const Institution = require('../models/institution')
 
+// const institutionPopulateQuery = [
+//   {
+//     path: 'teachers',
+//     select: 'name lastName email role rut logged',
+//   },
+//   {
+//     path: 'admins',
+//     select: 'name lastName email role rut logged',
+//   },
+//   {
+//     path: 'schools',
+//     populate: {
+//       path: 'admins teachers students',
+//       select: 'name lastName email role rut logged phone age weight size gender',
+//     },
+//   },
+//   {
+//     path: 'schools',
+//     populate: {
+//       path: 'classrooms',
+//       select: 'grade level planner classHistory students',
+//       populate: {
+//         path: 'teacher teacherSubstitute',
+//         select: 'name lastName email role rut logged',
+//       },
+//     },
+//   },
+    
+// ];
+
 const institutionPopulateQuery = [
   {
     path: 'teachers',
@@ -12,8 +42,11 @@ const institutionPopulateQuery = [
   {
     path: 'schools',
     populate: {
-      path: 'admins teachers',
-      select: 'name lastName email role rut logged',
+      path: 'admins teachers students',
+      select: 'name lastName email role rut logged phone age weight size gender',
+      options: {
+        sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+      }
     },
   },
   {
@@ -27,23 +60,18 @@ const institutionPopulateQuery = [
       },
     },
   },
-    
-
-  // },{
-  //   path: 'schools',
-  //   populate:{
-  //     path: 'admins teachers students classrooms',
-  //     populate:{
-  //       path: 'classrooms',
-
-  //     }
-  //   }
-  //   populate: {
-  //     path: 'classrooms',
-  //     select: 'grade level teacher teacherSubstitute students planner classHistory',
-  //   },
-  // }
+  {
+    path: 'schools',
+    populate: {
+      path: 'classrooms.students',
+      select: 'name lastName email role rut logged phone age weight size gender',
+      options: {
+        sort: { name: 1 } // ordenar por el campo "name" en orden ascendente
+      }
+    }
+  }
 ];
+
 
 const instiController = {
 
