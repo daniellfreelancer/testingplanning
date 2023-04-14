@@ -20,7 +20,7 @@ const institutionPopulateQuery = [
     path: 'schools',
     populate: {
       path: 'classrooms',
-      select: 'grade level planner classHistory',
+      select: 'grade level planner classHistory students',
       populate: {
         path: 'teacher teacherSubstitute',
         select: 'name lastName email role rut logged',
