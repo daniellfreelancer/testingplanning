@@ -12,10 +12,9 @@ const institutionPopulateQuery = [
   {
     path: 'schools',
     populate: {
-      path: 'admins',
+      path: 'admins teachers',
       select: 'name lastName email role rut logged',
     },
-
   },
   {
     path: 'schools',
