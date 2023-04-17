@@ -55,8 +55,8 @@ const institutionPopulateQuery = [
       path: 'classrooms',
       select: 'grade level planner classHistory students',
       populate: {
-        path: 'teacher teacherSubstitute',
-        select: 'name lastName email role rut logged',
+        path: 'teacher teacherSubstitute planner',
+        select: 'name lastName email role rut logged date duration classObjectives learningObjectives evaluationIndicators classroom  skills activities materials evaluationType content',
       },
     },
   },
