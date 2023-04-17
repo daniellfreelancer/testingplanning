@@ -12,7 +12,8 @@ const studentSchema = new mongoose.Schema({
     email: {type: String,required: true},  
     phone: {type: String, required: true},
     rut: {type: String, required: true}, 
-    gender: {type: String, required: true}, 
+    gender: {type: String, required: true},
+    school_representative: {type: String, required: true}
 },
 {
     timestamps: true,

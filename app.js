@@ -16,6 +16,7 @@ const userInsti = require('./routes/instiroutes')
 const userSchool = require('./routes/schoolRoutes')
 const userClassroom = require('./routes/classroomRoutes')
 const userStudents = require('./routes/studentRoutes')
+const userPlanification = require('./routes/planificationRoutes')
 
 var app = express();
 
@@ -42,6 +43,7 @@ app.use('/insti', userInsti)
 app.use('/school', userSchool)
 app.use('/classroom', userClassroom)
 app.use('/student', userStudents)
+app.use('/planing', userPlanification)
 
 
 

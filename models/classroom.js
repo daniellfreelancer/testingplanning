@@ -8,7 +8,7 @@ const classroomSchema = new mongoose.Schema({
     teacher:[{type: mongoose.Types.ObjectId, ref:'user'}],
     teacherSubstitute:[{type: mongoose.Types.ObjectId, ref:'user'}],
     students:[{type: mongoose.Types.ObjectId, ref:'student'}],
-    planner: [{type: mongoose.Types.ObjectId, ref:'planner'}],
+    planner:[ {type: mongoose.Types.ObjectId, ref:'planification'}],
     classHistory:[{type: mongoose.Types.ObjectId, ref:'classhistory'}]
 
 })
