@@ -1,6 +1,35 @@
 const Schools = require('../models/school')
 
 
+const institutionPopulateQuery = [
+  {
+    path: 'teachers',
+    select: 'name lastName email role rut logged',
+  },
+  {
+    path: 'admins',
+    select: 'name lastName email role rut logged',
+  },
+  {
+    path: 'students',
+    select: 'name lastName email role rut logged phone age weight size gender',
+    options: {
+      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+    }
+
+    }, 
+    {
+      path: 'classrooms',
+      select: 'grade level planner classHistory student section',
+      populate: {
+        path: 'teacher teacherSubstitute students planner',
+        select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
+      }
+    }
+];
+
+
+
 const schoolControllers = {
 
     createSchool : async (req, res) =>{
@@ -200,6 +229,33 @@ const schoolControllers = {
       });
     }
   },
+  schoolById: async (req, res) => {
+
+    let {id} = req.params;
+
+    try {
+      
+      const schoolFund = await Schools.findById(id).populate(institutionPopulateQuery)
+
+
+      if (schoolFund) {
+        res.status(200).json({
+          response: schoolFund,
+          success: true,
+          message: "Escuela encontrada"
+        })
+      } else res.status(404).json({message: "no se pudo encontrar la escuela", success: false})
+
+
+    } catch (error) {
+      console.log(error)
+      res.status(400).json({
+        message: "Error al realizar peticion de busqueda de busqueda",
+        success: false
+      })
+    }
+
+  }
 
 }
 
