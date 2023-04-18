@@ -1,5 +1,22 @@
 const ClassRoom = require('../models/classroom')
 
+const classroomQueryPopulate= [
+  {
+    path: 'teacher teacherSubstitute',
+    select: 'name lastName email role rut logged',
+  },
+  {
+    path: 'students',
+    select: 'name lastName email role rut logged phone age weight size gender',
+    options: {
+      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+    }
+  },
+  {
+    path: 'planner',
+    select: 'date duration classObjectives evaluationIndicators skills activities materials evaluationType content createdAt updatedAt',
+  },
+]
 
 const classroomController = {
 
@@ -101,6 +118,30 @@ const classroomController = {
           });
         }
       },
+      classroomById: async (req, res) => {
+        let {id} = req.params;
+
+        try {
+
+          const classroomFund = await ClassRoom.findById(id).populate(classroomQueryPopulate)
+
+          if (classroomFund){
+            res.status(200).json({
+              response: classroomFund,
+              success: true,
+              message: "Salon de clase encontrado"
+            })
+          } else res.status(404).json({message: "no se pudo encontrar el salon de clase", success: false})
+          
+        } catch (error) {
+          console.log(error)
+          res.status(400).json({
+            message: "Error al realizar peticion de busqueda de busqueda",
+            success: false
+          })
+        }
+
+      }
     
 
 }

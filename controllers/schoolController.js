@@ -17,15 +17,15 @@ const institutionPopulateQuery = [
       sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
     }
 
-    }, 
-    {
-      path: 'classrooms',
-      select: 'grade level planner classHistory student section',
-      populate: {
-        path: 'teacher teacherSubstitute students planner',
-        select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
-      }
+  },
+  {
+    path: 'classrooms',
+    select: 'grade level planner classHistory student section',
+    populate: {
+      path: 'teacher teacherSubstitute students planner',
+      select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
     }
+  }
 ];
 
 
