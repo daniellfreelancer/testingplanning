@@ -141,7 +141,7 @@ const classroomController = {
           })
         }
 
-      }
+      },
     
 
 }
