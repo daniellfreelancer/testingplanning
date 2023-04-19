@@ -5,42 +5,7 @@ const ClassRoom = require('../models/classroom')
 
 const planificationController = {
 
-
-    // create : async (req, res) => {
-    //     try {
-    //         const newPlanification = await new Planification(req.body).save()
-
-    //         if (newPlanification){
-    //             let planificationID =  newPlanification._id
-
-    //             const classroomGrade = await ClassRoom.findById(req.body.classroom);
-
-    //             if (classroomGrade){
-
-    //                 classroomGrade.planner.push(planificationID)
-
-    //                 res.status(200).json({ response: newPlanification, id: planificationID, message: "agregado planificacion y a salon de clase"})
-    //             }
-    //         } else {
-    //             res.status(400).json({
-    //                 message: "error, creando nueva planificacion",
-    //             success:false
-    //             }
-    //             )
-    //         }
-
-    //     } catch (error) {
-    //         console.log(error)
-    //         res.status(400).json({
-    //             message: "error al intentar crear la planificación",
-    //             success: false
-    //         })
-    //     }
-
-
-    // }
-
-    create: async (req, res) => {
+    createPlanification: async (req, res) => {
         try {
           const newPlanification = await new Planification(req.body).save();
       
@@ -73,42 +38,9 @@ const planificationController = {
           });
         }
       },
-      // deletePlanification: async (req, res) => {
-
-      //   const {id} = req.params;
-
-      //   try {
-
-      //     const planification = await Planification.findById(id)
-
-      //     if (!planification) {
-      //       res.status(404).json({
-      //         message: 'No se puede Eliminar , consulte con el administrador',
-      //         success: false
-      //     })
-      //     } else {
-      //       let planificationDeleted = await Planification.findByIdAndDelete(id)
-      //       res.status(200).json({
-      //         message: 'Planificación eliminada con exito',
-      //         success: true
-      //     })
-      //     }
-          
-
-      //   } catch (error) {
-      //     console.log(error)
-      //     res.status(400).json({
-      //         message: error.message,
-      //         succes: false
-      //     })
-      //   }
-
-      // }
       deletePlanification : async (req, res) => {
         const { planificationId, classroomId } = req.params;
         try {
-          
-      
           const planification = await Planification.findById(planificationId);
           const classroomGrade = await ClassRoom.findById(classroomId);
       
@@ -138,6 +70,63 @@ const planificationController = {
           console.log(error);
           res.status(400).json({
             message: 'Error al intentar eliminar la planificación',
+            success: false
+          });
+        }
+      },
+      getPlanificationById: async (req, res) => {
+
+        const {id} = req.params;
+
+        try {
+
+          let planificationFund = await Planification.findById(id)
+
+          if(!planificationFund){
+            return res.status(404).json({
+              message: 'Planificación no encontrada',
+              success: false
+            });
+          } else {
+            return res.status(200).json(planificationFund);
+          }
+
+
+          
+        } catch (error) {
+          console.log(error);
+          res.status(400).json({
+            message: "Error al intentar buscar la planificación",
+            success: false,
+          });
+        }
+
+      },
+      updatePlanification: async (req, res)=>{
+        const { planificationId } = req.params;
+
+        
+        try {
+          const planification = await Planification.findByIdAndUpdate(planificationId, req.body);
+        
+          if (!planification) {
+            return res.status(404).json({
+              message: 'Planificación no encontrada',
+              success: false
+            });
+          }
+          await planification.save()
+        
+          res.status(200).json({
+            message: 'Planificación actualizada con éxito',
+            success: true,
+            planification
+          });
+        
+        } catch (error) {
+          console.log(error);
+          res.status(400).json({
+            message: 'Error al intentar actualizar la planificación',
             success: false
           });
         }
