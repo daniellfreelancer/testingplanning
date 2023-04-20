@@ -80,7 +80,7 @@ const planificationController = {
 
         try {
 
-          let planificationFund = await Planification.findById(id)
+          let planificationFund = await Planification.findById(id).populate('classroom')
 
           if(!planificationFund){
             return res.status(404).json({
