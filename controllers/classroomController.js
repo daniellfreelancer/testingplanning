@@ -14,7 +14,7 @@ const classroomQueryPopulate= [
   },
   {
     path: 'planner',
-    select: 'date duration classObjectives evaluationIndicators skills activities materials evaluationType content createdAt updatedAt',
+    select: 'startDate endDate duration schoolBlock content classObjectives evaluationIndicators evaluationIndicatorsTeacher learningObjectives  activities materials evaluationType createdAt updatedAt',
   },
 ]
 
