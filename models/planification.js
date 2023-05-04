@@ -15,6 +15,7 @@ const planificationSchema = new mongoose.Schema({
     learningObjectives: { type: Array, required: true },
     activities: { type: String, required: true },
     materials: { type: Array, required: true },
+    otherMaterials: { type: String, required: true },
     evaluationType: { type: String, required: true },
    
   }, { timestamps: true });
