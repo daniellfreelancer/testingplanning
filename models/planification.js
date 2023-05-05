@@ -11,11 +11,11 @@ const planificationSchema = new mongoose.Schema({
     content: { type: String, required: true },
     classObjectives: { type: Array, required: true },
     evaluationIndicators: { type: Array, required: true },
-    evaluationIndicatorsTeacher: { type: Array, required: true },
+    evaluationIndicatorsTeacher: { type: Array },
     learningObjectives: { type: Array, required: true },
     activities: { type: String, required: true },
     materials: { type: Array, required: true },
-    otherMaterials: { type: String, required: true },
+    otherMaterials: { type: String, },
     evaluationType: { type: String, required: true },
    
   }, { timestamps: true });
