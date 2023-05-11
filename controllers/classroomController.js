@@ -1,4 +1,5 @@
 const ClassRoom = require('../models/classroom')
+const Students = require('../models/student')
 
 const classroomQueryPopulate= [
   {
@@ -141,6 +142,39 @@ const classroomController = {
           })
         }
 
+      },
+      addStudentToClassroom: async (req, res) => {
+        try {
+          const { classroomId, studentId } = req.body
+          const classroom = await ClassRoom.findById(classroomId);
+          if (!classroom) {
+            return res.status(404).json({
+              message: 'Salon de clase no encontrado',
+              success: false
+            });
+          }
+    
+          classroom.students.push(studentId);
+          await classroom.save();
+          const student = await Students.findById(studentId)
+          
+          if (student){
+            student.classroom.push(classroomId);
+            await student.save()
+          }
+         
+          return res.status(200).json({
+            message: 'Estudiante agregado con exito al salon de clase',
+            success: true
+          });
+    
+        } catch (error) {
+          console.log(error);
+          return res.status(400).json({
+            message: 'Error al agregar id de estudiante a la Escuela',
+            success: false
+          });
+        }
       },
     
 

@@ -1,4 +1,5 @@
 const Schools = require('../models/school')
+const Students = require('../models/student')
 
 
 const institutionPopulateQuery = [
@@ -12,11 +13,14 @@ const institutionPopulateQuery = [
   },
   {
     path: 'students',
-    select: 'name lastName email role rut logged phone age weight size gender',
+    select: 'name lastName email role rut logged phone age weight size gender classroom school grade',
+    populate: {
+      path: 'classroom school',
+      select : 'grade level section name'
+    },
     options: {
       sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
     }
-
   },
   {
     path: 'classrooms',
@@ -216,8 +220,18 @@ const schoolControllers = {
       school.students.push(studentId);
       await school.save();
 
+      const student = await Students.findById(studentId)
+      
+      if (student){
+        student.school.push(schoolId);
+        await student.save()
+      }
+     
+
+      
+
       return res.status(200).json({
-        message: 'Id de estudiante agregado a la Escuela',
+        message: 'Estudiante agregado con exito a la Escuela',
         success: true
       });
 
