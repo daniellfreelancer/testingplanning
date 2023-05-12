@@ -8,7 +8,7 @@ const classroomQueryPopulate= [
   },
   {
     path: 'students',
-    select: 'name lastName email role rut logged phone age weight size gender',
+    select: 'name lastName email role rut logged phone age weight size gender classroom school ',
     options: {
       sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
     }
