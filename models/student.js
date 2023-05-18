@@ -13,11 +13,17 @@ const studentSchema = new mongoose.Schema({
     phone: {type: String, required: true},
     rut: {type: String, required: true}, 
     gender: {type: String, required: true},
-    school_representative: {type: String, required: true}
+    school_representative: {type: String, },
+    imgUrl: {type: String}
 },
 {
     timestamps: true,
 })
+
+studentSchema.methods.setImgUrl = function setImgUrl (filename) {
+
+    this.imgUrl = `${process.env.HOST_IMAGE}/public/${filename}`
+  }
 
 const STUDENT = mongoose.model(
     'student',

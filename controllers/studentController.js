@@ -5,6 +5,7 @@ const studentController = {
 
     create: async (req, res) => {
         let {rut} = req.body
+        let {filename} = req.file
 
         try {
 
@@ -13,6 +14,10 @@ const studentController = {
             if (!newStudent){
 
                 newStudent = await new Students(req.body).save()
+
+                newStudent.imgUrl = filename
+
+                await newStudent.save()
 
                 res.status(200).json(newStudent)
 

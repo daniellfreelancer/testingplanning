@@ -8,13 +8,13 @@ const classroomQueryPopulate= [
   },
   {
     path: 'students',
-    select: 'name lastName email role rut logged phone age weight size gender classroom school ',
+    select: 'name lastName email role rut logged phone age weight size gender imgUrl classroom school ',
     populate: {
       path: 'classroom school',
       select : 'grade level section name'
     },
     options: {
-      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+      sort: { 'students.lastName': 1 } // ordenar por el campo "name" en orden ascendente
     }
   },
   {

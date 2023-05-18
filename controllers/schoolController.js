@@ -13,7 +13,7 @@ const institutionPopulateQuery = [
   },
   {
     path: 'students',
-    select: 'name lastName email role rut logged phone age weight size gender classroom school grade',
+    select: 'name lastName email role rut logged phone age weight size gender imgUrl classroom school grade',
     populate: {
       path: 'classroom school',
       select : 'grade level section name'
