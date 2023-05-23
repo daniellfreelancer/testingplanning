@@ -18,6 +18,7 @@ const userSchool = require('./routes/schoolRoutes')
 const userClassroom = require('./routes/classroomRoutes')
 const userStudents = require('./routes/studentRoutes')
 const userPlanification = require('./routes/planificationRoutes')
+const userResumeClass = require('./routes/resumeVmClassRoutes')
 
 var app = express();
 
@@ -52,6 +53,7 @@ app.use('/school', userSchool)
 app.use('/classroom', userClassroom)
 app.use('/student', userStudents)
 app.use('/planing', userPlanification)
+app.use('/vmclass', userResumeClass)
 
 
 
