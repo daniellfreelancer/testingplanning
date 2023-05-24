@@ -2,19 +2,20 @@ const mongoose = require('mongoose')
 
 
 const resumeVMSchema = new mongoose.Schema({
-    byTeacher:[{type: mongoose.Types.ObjectId, ref:'user'}],
-    plannerClass:[{type: mongoose.Types.ObjectId, ref:'planification'}],
+    byTeacher:{type: mongoose.Types.ObjectId, ref:'user'},
+    plannerClass:{type: mongoose.Types.ObjectId, ref:'planification', required: false},
+    classroomId:{type: mongoose.Types.ObjectId, ref:'classroom'},
     plannerNoClass: {type:Array},
-    elapsedClassTime:{type: Number, required: true},
-    startClassTime:{type: String, required: true},
-    endClassTime:{type: String, required: true},
-    extraActivities:{type: Array, required: true},
-    presentStudents:{type: Array, required: true},
-    evaluationNotation:{type: Array, required: true},
-    observationsClass:{type: Array, required: true},
-    imgFirstVMClass:{type: String, required: true},
-    imgSecondVMClass:{type: String, required: true},
-    imgThirdVMClass:{type: String, required: true},
+    elapsedClassTime:{type: Number},
+    startClassTime:{type: String},
+    endClassTime:{type: String},
+    extraActivities:{type: Array},
+    presentStudents:{type: Array},
+    evaluationNotation:{type: Array},
+    observationsClass:{type: Array},
+    imgFirstVMClass:{type: String},
+    imgSecondVMClass:{type: String},
+    imgThirdVMClass:{type: String},
 
 },
 {
@@ -37,7 +38,7 @@ resumeVMSchema.methods.setImgFirstVMClassUrl = function setImgFirstVMClassUrl(fi
 
 
 const RESUMEVMClass = mongoose.model(
-    'resumeClass',
+    'resumeVMClass',
     resumeVMSchema
 )
 

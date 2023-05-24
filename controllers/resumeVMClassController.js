@@ -1,5 +1,5 @@
 const ResumeVmClass = require('../models/resumeVMclass');
-
+const ClassRoom = require('../models/classroom')
 
 const resumeVMClassController = {
 
@@ -56,7 +56,8 @@ const resumeVMClassController = {
             presentStudents,
             evaluationNotation,
             observationsClass,
-            plannerNoClass
+            plannerNoClass,
+            classroomId
 
           } = req.body;
       
@@ -74,7 +75,8 @@ const resumeVMClassController = {
             presentStudents,
             evaluationNotation,
             observationsClass,
-            plannerNoClass
+            plannerNoClass,
+            classroomId
 
           });
       
@@ -98,13 +100,48 @@ const resumeVMClassController = {
       
           // Guardar la instancia del modelo en la base de datos
           await resume.save();
-      
-          res.status(200).json({ message: 'Resume VM added successfully' });
+
+            // Obtener el ID del resume guardado
+            const resumeId = resume._id;
+            try {
+                const classroom = await ClassRoom.findById(req.body.classroomId)
+
+                if (classroom){
+                    classroom.classHistory.push(resumeId)
+                    await classroom.save();
+                    res.status(200).json({ 
+                        message: 'VMClass Finalizado con exito',
+                        success: true    
+                    });
+                } else {
+                    res.status(400).json({
+                        message: "Error al crear resumen de clase",
+                        success: false,
+                      });
+                }
+
+            } catch (error) {
+                console.log(error)
+            }
+
         } catch (error) {
           console.log(error);
           res.status(500).json({ error: 'Failed to add Resume VM' });
         }
+      },
+      getResume: async (req, res) => {
+        try {
+          // Obtener todos los documentos ResumeVmClass
+          const resumes = await ResumeVmClass.find()
+          .populate('byTeacher',( {name: 1,lastName: 1 })).populate('plannerClass').populate('classroomId',( {grade: 1,level: 1, section: 1 }))
+      
+          res.status(200).json(resumes);
+        } catch (error) {
+          console.log(error);
+          res.status(500).json({ error: 'Failed to fetch resumes' });
+        }
       }
+
       
 
 }

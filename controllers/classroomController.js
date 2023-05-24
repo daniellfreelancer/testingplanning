@@ -19,8 +19,23 @@ const classroomQueryPopulate= [
   },
   {
     path: 'planner',
-    select: 'startDate endDate duration schoolBlock content classObjectives evaluationIndicators evaluationIndicatorsTeacher learningObjectives  activities materials evaluationType createdAt updatedAt',
+    select: 'startDate endDate duration schoolBlock content classObjectives evaluationIndicators evaluationIndicatorsTeacher learningObjectives  activities materials evaluationType otherMaterials createdAt updatedAt',
   },
+  {
+    path: 'classHistory',
+    populate: {
+      path: 'plannerClass',
+     
+    },
+  },
+  {
+    path: 'classHistory',
+    populate: {
+      path: 'byTeacher classroomId',
+      select : 'name lastName email grade level section'
+    },
+
+  }
 ]
 
 const classroomController = {
