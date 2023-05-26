@@ -1,6 +1,6 @@
 var express = require('express');
 const upload = require('../libs/storage');
-const { createResume, getResume } = require('../controllers/resumeVMClassController');
+const { createResume, getResume, getResumeById } = require('../controllers/resumeVMClassController');
 var router = express.Router();
 
 router.post('/create-resume', upload.fields([
@@ -10,6 +10,7 @@ router.post('/create-resume', upload.fields([
   ]), createResume );
 
 router.get('/resumes', getResume)
+router.get('/vmresume/:id', getResumeById)
 
 
 module.exports = router;

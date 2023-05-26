@@ -140,6 +140,30 @@ const resumeVMClassController = {
           console.log(error);
           res.status(500).json({ error: 'Failed to fetch resumes' });
         }
+      },
+      getResumeById: async (req, res) =>{
+
+        let {id} = req.params;
+
+        try {
+
+          const resumeFund = await ResumeVmClass.findById(id).populate('byTeacher',{name:1, lastName:1}).populate('plannerClass').populate('classroomId', {grade:1, section:1, level:1})
+
+          if (resumeFund){
+            res.status(200).json({
+              response: resumeFund,
+              success: true,
+              message: "Resumen VMClass encontrado"
+            })
+          } else res.status(404).json({message: "no se pudo encontrar Resumen VMClass", success: false})
+          
+        } catch (error) {
+          console.log(error)
+          res.status(400).json({
+            message: "Error al realizar peticion de busqueda de busqueda",
+            success: false
+          })
+        }
       }
 
       
