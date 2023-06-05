@@ -5,8 +5,6 @@ const UserAdmin = require('../models/admin')
 const userController = {
     signUp: async (req, res)=>{
         let {name, lastName, email, password, role, rut} = req.body
-
-
         try {
 
             let adminUser = await UserAdmin.findOne({ email })
@@ -47,13 +45,13 @@ const userController = {
         }
 
     },
-    singIn: async (req, res)=>{
+    signIn: async (req, res)=>{
         let {email, password} = req.body;
         try {
             const admin = await UserAdmin.findOne({ email })
             if (!admin){
                 res.status(404).json({
-                    message: 'Usuario no existe, comunicate con el administrador ',
+                    message: 'Usuario no existe, comunicate con el administrador',
                     success: false
                 })
             } else if (admin){
@@ -81,7 +79,7 @@ const userController = {
                         rut: admin.rut,
                         role: admin.role,
 
-                    }
+                    } 
                     admin.logged = true
                     await admin.save()
 
@@ -95,7 +93,7 @@ const userController = {
                     })
                 } else {
                     res.status(400).json({
-                        message: 'Datos incorrectos, verifica tu email y password',
+                        message: 'La contraseña es incorrecta, verifica e intenta nuevamente',
                         success: false
                     })
                 }
@@ -112,7 +110,7 @@ const userController = {
             })
         }
     },
-    singOut: async (req, res) => {
+    signOut: async (req, res) => {
         let { email } = req.body;
 
         try {
@@ -172,7 +170,36 @@ const userController = {
                 success: false
             })
         }
-    }
+    },
+    resetPassword : async (req, res) => {
+        const { email, newPassword } = req.body;
+      
+        try {
+          let adminUser = await UserAdmin.findOne({ email });
+          if (!adminUser) {
+            res.status(404).json({
+              message: 'Usuario no encontrado',
+              success: false
+            });
+            return;
+          }
+      
+          const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+          adminUser.password = hashedPassword;
+          await adminUser.save();
+      
+          res.status(200).json({
+            message: 'Contraseña restablecida con éxito',
+            success: true
+          });
+        } catch (error) {
+          console.log(error);
+          res.status(500).json({
+            message: 'Ocurrió un error al restablecer la contraseña',
+            success: false
+          });
+        }
+      }
 };
 
 module.exports = userController;
