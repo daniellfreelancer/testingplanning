@@ -8,8 +8,14 @@ const adminSchema = new mongoose.Schema({
     password:[{type: String, required: true}],
     role: {type: String},
     rut: {type: String},
-    logged: {type: String, required: true}
+    logged: {type: String, required: true},
+    imgUrl: {type: String},
 })
+
+adminSchema.methods.setImgUrl = function setImgUrl (filename) {
+
+    this.imgUrl = `${process.env.HOST_IMAGE}/public/${filename}`
+  }
 
 const USERADMIN = mongoose.model(
     'user',

@@ -1,5 +1,5 @@
 const bcryptjs = require('bcryptjs');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
 const UserAdmin = require('../models/admin')
 
 const userController = {
@@ -10,6 +10,7 @@ const userController = {
             let adminUser = await UserAdmin.findOne({ email })
             if(!adminUser){
                 let logged = false;
+                let imgUrl = null
                 password = bcryptjs.hashSync(password, 10)
 
                 adminUser = await new UserAdmin({
@@ -20,8 +21,16 @@ const userController = {
                     name,
                     lastName,
                     rut,
-                    role
+                    role,
+                    imgUrl
                 }).save()
+
+                if (req.file) {
+                    let {filename} = req.file
+                    adminUser.imgUrl = filename
+                    await adminUser.save()
+                }
+
 
                 res.status(201).json({
                     message:"Usuario registrado con exito",

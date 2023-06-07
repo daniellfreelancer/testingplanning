@@ -1,9 +1,10 @@
 var express = require('express');
 var router = express.Router();
 const {signUp, getAdmins, resetPassword, signIn, signOut}  = require('../controllers/adminController')
+const upload = require('../libs/storage')
 
 
-router.post('/register',signUp)
+router.post('/register',upload.single('image') ,signUp)
 router.post('/login',signIn)
 router.post('/logout', signOut)
 router.post('/reset', resetPassword)

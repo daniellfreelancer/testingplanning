@@ -5,9 +5,20 @@ const ClassRoom = require('../models/classroom')
 
 const planificationController = {
 
+
     createPlanification: async (req, res) => {
+      // let {filename} = req.file
         try {
           const newPlanification = await new Planification(req.body).save();
+
+          if (req.file){
+            let {filename} = req.file
+            newPlanification.quiz = filename
+
+            await newPlanification.save()
+          }
+
+
       
           if (newPlanification) {
             let planificationID = newPlanification._id;

@@ -14,7 +14,10 @@ const studentSchema = new mongoose.Schema({
     rut: {type: String, required: true}, 
     gender: {type: String, required: true},
     school_representative: {type: String, },
-    imgUrl: {type: String}
+    imgUrl: {type: String},
+    password:[{type: String, required: true}],
+    role: {type: String},
+    logged: {type: String, required: true},
 },
 {
     timestamps: true,

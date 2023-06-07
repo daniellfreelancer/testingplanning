@@ -17,10 +17,14 @@ const planificationSchema = new mongoose.Schema({
     materials: { type: Array, required: true },
     otherMaterials: { type: String, },
     evaluationType: { type: String, required: true },
+    quiz: {type: String}
    
   }, { timestamps: true });
   
+  planificationSchema.methods.setQuiz = function setQuiz (filename) {
 
+    this.quiz = `${process.env.HOST_IMAGE}/public/quiz/${filename}`
+  }
 
 const PLANIFICATION = mongoose.model(
     'planification',
