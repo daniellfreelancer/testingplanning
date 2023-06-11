@@ -27,7 +27,7 @@ const institutionPopulateQuery = [
     select: 'grade level planner classHistory student section',
     populate: {
       path: 'teacher teacherSubstitute students planner',
-      select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
+      select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content quiz'
     }
   }
 ];
