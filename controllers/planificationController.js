@@ -12,11 +12,17 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 // const command = new GetObjectCommand(getObjectParams);
 // const url = await getSignedUrl(client, command, { expiresIn: 3600 });
 
+
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
+
 const  clientAWS = new S3Client({
-  region: process.env.AWS_BUCKET_REGION,
+  region: bucketRegion,
   credentials: {
-    accessKeyId: process.env.AWS_PUBLIC_KEY,
-    secretAccessKey: process.env.AWS_SECRET_KEY,
+    accessKeyId: publicKey,
+    secretAccessKey: privateKey,
   },
 })
 
@@ -184,11 +190,12 @@ const planificationController = {
             });
           }
 
-          if (planification) {
+          if (planification.evaluationType === "Sumativa") {
+            let quizdoc = planification.quiz
 
             const params = {
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: planification.quiz
+              Bucket: bucketName,
+              Key: quizdoc
             }
 
             const command = new DeleteObjectCommand(params)
