@@ -1,5 +1,8 @@
 const ResumeVmClass = require('../models/resumeVMclass');
 const ClassRoom = require('../models/classroom')
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const upLoadFiles = require('../s3')
+const crypto = require('crypto')
 
 const resumeVMClassController = {
 
@@ -41,6 +44,18 @@ const resumeVMClassController = {
 
     // } 
     createResume: async (req, res) => {
+
+      const  clientAWS = new S3Client({
+        region: process.env.AWS_BUCKET_REGION_VMCLASS,
+        credentials: {
+          accessKeyId: process.env.AWS_PUBLIC_KEY_VMCLASS,
+          secretAccessKey: process.env.AWS_SECRET_KEY_VMCLASS,
+        },
+      })
+
+
+      const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
         try {
           // Extraer los campos necesarios de req.body
           const {
@@ -80,23 +95,76 @@ const resumeVMClassController = {
 
           });
       
-          // Verificar si se cargó la imagen del campo imgFirstVMClass
+
           if (req.files && req.files['imgFirstVMClass']) {
-            const imgFirstVMClass = req.files['imgFirstVMClass'][0];
-            resume.setImgFirstVMClassUrl(imgFirstVMClass.filename);
-          }
+            const fileContent = req.files['imgFirstVMClass'][0].buffer;
+            const fileName = `${req.files['imgFirstVMClass'][0].fieldname}-${quizIdentifier()}.png`;
       
-          // Verificar si se cargó la imagen del campo imgSecondVMClass
-          if (req.files && req.files['imgSecondVMClass']) {
-            const imgSecondVMClass = req.files['imgSecondVMClass'][0];
-            resume.setImgSecondVMClassUrl(imgSecondVMClass.filename);
-          }
+            const uploadFirst = {
+              Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+              Key: fileName,
+              Body: fileContent,
+            };
       
-          // Verificar si se cargó la imagen del campo imgThirdVMClass
-          if (req.files && req.files['imgThirdVMClass']) {
-            const imgThirdVMClass = req.files['imgThirdVMClass'][0];
-            resume.setImgThirdVMClassUrl(imgThirdVMClass.filename);
+            const uploadCommand = new PutObjectCommand(uploadFirst);
+            await clientAWS.send(uploadCommand);
+      
+            resume.imgFirstVMClass = fileName;
           }
+
+              // Verificar si se cargó la imagen del campo imgSecondVMClass
+    if (req.files && req.files['imgSecondVMClass']) {
+      const fileContent = req.files['imgSecondVMClass'][0].buffer;
+      const fileName = `${req.files['imgSecondVMClass'][0].fieldname}-${quizIdentifier()}.png`;
+
+      const uploadSecond = {
+        Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+        Key: fileName,
+        Body: fileContent,
+      };
+
+      const uploadCommand = new PutObjectCommand(uploadSecond);
+      await clientAWS.send(uploadCommand);
+
+      resume.imgSecondVMClass = fileName;
+    }
+    if (req.files && req.files['imgThirdVMClass']) {
+      const fileContent = req.files['imgThirdVMClass'][0].buffer;
+      const fileName = `${req.files['imgThirdVMClass'][0].fieldname}-${quizIdentifier()}.png`;
+
+      const uploadThird = {
+        Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+        Key: fileName,
+        Body: fileContent,
+      };
+
+      const uploadCommand = new PutObjectCommand(uploadThird);
+      await clientAWS.send(uploadCommand);
+
+      resume.imgThirdVMClass = fileName;
+    }
+
+
+
+          
+          // // Verificar si se cargó la imagen del campo imgFirstVMClass
+          // if (req.files && req.files['imgFirstVMClass']) {
+          //   const imgFirstVMClass = req.files['imgFirstVMClass'][0];
+          //   resume.setImgFirstVMClassUrl(imgFirstVMClass.filename);
+          // }
+
+          // // Verificar si se cargó la imagen del campo imgSecondVMClass
+          // if (req.files && req.files['imgSecondVMClass']) {
+          //   const imgSecondVMClass = req.files['imgSecondVMClass'][0];
+          //   resume.setImgSecondVMClassUrl(imgSecondVMClass.filename);
+          // }
+
+          // // Verificar si se cargó la imagen del campo imgThirdVMClass
+          // if (req.files && req.files['imgThirdVMClass']) {
+          //   const imgThirdVMClass = req.files['imgThirdVMClass'][0];
+          //   resume.setImgThirdVMClassUrl(imgThirdVMClass.filename);
+          // }
+
       
           // Guardar la instancia del modelo en la base de datos
           await resume.save();
