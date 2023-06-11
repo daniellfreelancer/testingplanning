@@ -232,21 +232,12 @@ const planificationController = {
               message: 'Planificación no encontrada',
               success: false
             });
-          } else {
+          } 
 
-            const getObjectParams = {
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: planificationFund.quiz
-            }
 
-            const command = new GetObjectCommand(getObjectParams);
-
-            const url = await getSignedUrl(clientAWS, command, { expiresIn: 3600 });
-
-            planificationFund.quiz = url
 
             return res.status(200).json(planificationFund);
-          }
+
 
 
           
