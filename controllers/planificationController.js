@@ -26,6 +26,8 @@ const  clientAWS = new S3Client({
   },
 })
 
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
 const planificationController = {
 
     // createPlanification: async (req, res) => {
@@ -118,7 +120,7 @@ const planificationController = {
 
 
 
-      const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+    
 
       //resize image
     // const imgbuffer = await sharp(req.file.buffer).resize({ height:1920, width:1080, fit: "contain" } ).toBuffer()
@@ -270,6 +272,26 @@ const planificationController = {
               success: false
             });
           }
+
+          if (req.file) {
+            const fileContent = req.file.buffer;
+            const extension = req.file.originalname.split('.').pop();
+            const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+      
+            const uploadParams = {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: fileName,
+              Body: fileContent,
+              
+            };
+      
+            // Subir el archivo a S3
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await clientAWS.send(uploadCommand);
+      
+            planification.quiz = fileName; // Guardar el nombre del archivo en el campo quiz
+          }
+
           await planification.save()
         
           res.status(200).json({

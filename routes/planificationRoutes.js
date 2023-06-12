@@ -11,7 +11,7 @@ router.post('/create', uploadDocs.single('quiz'), createPlanification)
 router.delete('/delete-planification', deletePlanification)
 router.delete('/delete-planification/:planificationId/classroom/:classroomId', deletePlanification)
 router.get('/find/:id', getPlanificationById)
-router.patch('/update/:planificationId', updatePlanification)
+router.patch('/update/:planificationId', uploadDocs.single('quiz'), updatePlanification)
 
 
 module.exports = router
