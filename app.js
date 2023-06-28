@@ -24,6 +24,9 @@ const userClassroom = require('./routes/classroomRoutes')
 const userStudents = require('./routes/studentRoutes')
 const userPlanification = require('./routes/planificationRoutes')
 const userResumeClass = require('./routes/resumeVmClassRoutes')
+const userPrograms = require('./routes/programRoutes')
+const userWorkshops = require('./routes/workshopRoutes')
+const userWorkshopPlanifications = require('./routes/workshopPlanificationRoutes')
 
 var app = express();
 
@@ -64,7 +67,9 @@ app.use('/classroom', userClassroom)
 app.use('/student', userStudents)
 app.use('/planing', userPlanification)
 app.use('/vmclass', userResumeClass)
-
+app.use('/program', userPrograms)
+app.use('/workshop', userWorkshops)
+app.use('/workshop-planification', userWorkshopPlanifications)
 
 
 // catch 404 and forward to error handler

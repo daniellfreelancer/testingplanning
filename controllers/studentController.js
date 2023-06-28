@@ -17,8 +17,11 @@ const studentController = {
             email,
             phone,
             gender,
+            workshop,
+            program,
             school_representative } = req.body
-            let { filename } = req.file
+
+            const { filename } = req.file
 
         try {
 
@@ -48,7 +51,9 @@ const studentController = {
                         gender,
                         school_representative,
                         role,
-                        logged
+                        logged,
+                        workshop,
+                        program,
                     }).save()
 
                     if (filename) {

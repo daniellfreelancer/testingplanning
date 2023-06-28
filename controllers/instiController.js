@@ -27,7 +27,7 @@ const Institution = require('../models/institution')
 //       },
 //     },
 //   },
-    
+
 // ];
 
 const institutionPopulateQuery = [
@@ -69,7 +69,14 @@ const institutionPopulateQuery = [
         sort: { name: 1 } // ordenar por el campo "name" en orden ascendente
       }
     }
+  },
+  {
+    path: 'programs',
+    populate:{
+      path: 'admins teachers workshops students'
+    }
   }
+
 ];
 
 
@@ -124,7 +131,7 @@ const instiController = {
       //   });
 
       const allInstitutions = await Institution.find().populate(institutionPopulateQuery);
-  
+
       if (allInstitutions.length > 0) {
         res.status(200).json({
           message: 'Instituciones',
@@ -264,7 +271,6 @@ const instiController = {
 
       const { institutionId, schoolId } = req.body
 
-
       // Buscar la institución por su id
       const institution = await Institution.findById(institutionId);
 
@@ -274,7 +280,6 @@ const instiController = {
           success: false
         });
       }
-
       // Agregar el nuevo id de admin a la propiedad "admin" de la institución
       institution.schools.push(schoolId);
 
@@ -294,17 +299,50 @@ const instiController = {
       });
     }
   },
+  addProgramToInstitution: async (req, res) => {
+    try {
+
+      const { institutionId, programId  } = req.body
+
+      // Buscar la institución por su id
+      const institution = await Institution.findById(institutionId);
+
+      if (!institution) {
+        return res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        });
+      }
+      // Agregar el nuevo id de admin a la propiedad "admin" de la institución
+      institution.programs.push(programId);
+
+      // Guardar los cambios en la base de datos
+      await institution.save();
+
+      return res.status(200).json({
+        message: 'Id del programa agregado a la institución',
+        success: true
+      });
+
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({
+        message: 'Error al agregar id del programa a la institución',
+        success: false
+      });
+    }
+  },
   institutionById: async (req, res) => {
 
 
-    let {id} = req.params;
+    let { id } = req.params;
 
 
     try {
 
       const instiFund = await Institution.findById(id).populate(institutionPopulateQuery);
 
-      if (instiFund){
+      if (instiFund) {
 
         res.status(200).json({
           response: instiFund,
@@ -312,8 +350,8 @@ const instiController = {
           message: "Institucion encontrada"
         })
 
-      } else res.status(404).json({message: "no se pudo encontrar la institución", success: false})
-      
+      } else res.status(404).json({ message: "no se pudo encontrar la institución", success: false })
+
     } catch (error) {
       console.log(error)
       res.status(400).json({
