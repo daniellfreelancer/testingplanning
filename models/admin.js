@@ -10,6 +10,7 @@ const adminSchema = new mongoose.Schema({
     rut: {type: String},
     logged: {type: String, required: true},
     imgUrl: {type: String},
+    bio: {type: String},
 })
 
 adminSchema.methods.setImgUrl = function setImgUrl (filename) {

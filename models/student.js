@@ -17,9 +17,10 @@ const studentSchema = new mongoose.Schema({
     imgUrl: {type: String},
     password:[{type: String, required: true}],
     role: {type: String},
-    logged: {type: String, required: true},
+    logged: {type: String},
     workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
     program: [{type: mongoose.Types.ObjectId, ref:'program'}],
+    bio: {type: String}
 },
 {
     timestamps: true,
