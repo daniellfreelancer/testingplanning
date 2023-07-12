@@ -105,7 +105,11 @@ const userController = {
                             role: admin.role,
                             logged: admin.logged,
                             imgUrl: admin.imgUrl,
-                            bio : admin.bio
+                            bio : admin.bio,
+                            age:admin.age,
+                            weight:admin.weight,
+                            size:admin.size,
+                            phone:admin.phone
                         };
 
                         admin.logged = true;
@@ -587,7 +591,8 @@ const userController = {
 
                 res.status(200).json({
                     message: 'Usuario actualizado con éxito',
-                    success: true
+                    success: true,
+                    response: studentForUpdate
                   });
 
             }

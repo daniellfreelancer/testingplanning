@@ -11,6 +11,11 @@ const adminSchema = new mongoose.Schema({
     logged: {type: String, required: true},
     imgUrl: {type: String},
     bio: {type: String},
+    phone: {type: String},
+    gender: {type: String},
+    age:{type: Number},
+    weight:{type: Number},
+    size:{type: Number},
 })
 
 adminSchema.methods.setImgUrl = function setImgUrl (filename) {
