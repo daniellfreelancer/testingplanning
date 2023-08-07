@@ -20,7 +20,8 @@ const studentSchema = new mongoose.Schema({
     logged: {type: String},
     workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
     program: [{type: mongoose.Types.ObjectId, ref:'program'}],
-    bio: {type: String}
+    bio: {type: String},
+    tasks:[{type: Object}]
 },
 {
     timestamps: true,

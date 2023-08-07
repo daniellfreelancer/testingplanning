@@ -2,6 +2,7 @@ const Students = require('../models/student')
 const bcryptjs = require('bcryptjs');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto')
+const Tasks = require('../models/tasks')
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -9,14 +10,24 @@ const publicKey = process.env.AWS_PUBLIC_KEY
 const privateKey = process.env.AWS_SECRET_KEY
 
 const clientAWS = new S3Client({
-  region: bucketRegion,
-  credentials: {
-    accessKeyId: publicKey,
-    secretAccessKey: privateKey,
-  },
+    region: bucketRegion,
+    credentials: {
+        accessKeyId: publicKey,
+        secretAccessKey: privateKey,
+    },
 })
 
 const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
+
+const studentQueryPopulate = [
+    {
+        path: 'classroom school workshop program tasks',
+        select: 'grade level section name  title description fileStudent status classroom notation teacher dueDate'
+
+    }
+]
+
 
 const studentController = {
 
@@ -52,6 +63,7 @@ const studentController = {
                     let role = "ESTU";
                     let logged = false;
                     let imgUrl
+                    let tasks = []
 
                     password = bcryptjs.hashSync(password, 10)
                     newStudent = await new Students({
@@ -73,7 +85,8 @@ const studentController = {
                         workshop,
                         program,
                         bio,
-                        imgUrl
+                        imgUrl,
+                        tasks
                     }).save()
 
                     if (req.file) {
@@ -127,6 +140,232 @@ const studentController = {
         }
 
     },
+    getStudentDetail: async (req, res) => {
+        let id = req.params.id
+
+        try {
+
+            const student = await Students.findById(id).populate(studentQueryPopulate)
+
+            if (!student) {
+                return res.status(404).json({
+                    message: "Estudiante no encontrado",
+                    success: false
+                });
+            }
+
+            res.status(200).json({
+                student,
+                message: "Estudiante encontrado",
+                success: true
+            });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: "Error al obtener el detalle del estudiante",
+            });
+        }
+    },
+    // updateTask: async (req, res) => {
+    //     const studentId = req.params.studentId;
+    //     const taskId = req.params.taskId;
+
+    //     try {
+    //         // Buscar al estudiante
+    //         const student = await Students.findById(studentId)
+
+    //         if (!student) {
+    //             return res.status(404).json({
+    //                 message: "Estudiante no encontrado",
+    //             });
+    //         }
+
+    //         let arraytasks = student.tasks
+
+    //         // Buscar la tarea en el array tasks del estudiante
+    //         const taskIndex =  arraytasks._id.findIndex(task => task.toString() === taskId);
+
+    //         if (taskIndex === -1) {
+    //             return res.status(404).json({
+    //                 message: "Tarea no encontrada en el array de tareas del estudiante",
+    //             });
+    //         }
+
+    //         console.log(taskIndex)
+
+    //         const task = student.tasks[taskIndex];
+
+    //         // Subir el archivo a S3 si se proporciona
+    //         if (req.file) {
+    //             const fileContent = req.file.buffer;
+    //             const extension = req.file.originalname.split('.').pop();
+    //             const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+    //             const uploadParams = {
+    //                 Bucket: process.env.AWS_BUCKET_NAME,
+    //                 Key: fileName,
+    //                 Body: fileContent,
+    //             };
+
+    //             // Subir el archivo a S3
+    //             const uploadCommand = new PutObjectCommand(uploadParams);
+    //             await clientAWS.send(uploadCommand);
+
+    //             task.fileStudent = fileName; // Guardar el nombre del archivo en el campo fileStudent
+    //         }
+
+    //         task.status = 'DONE'; // Cambiar el estado a DONE
+
+    //         await student.save();
+
+    //         res.status(200).json({
+    //             message: "Tarea actualizada exitosamente",
+    //             response: task,
+    //             success: true
+    //         });
+    //     } catch (error) {
+    //         console.error(error);
+    //         res.status(500).json({
+    //             message: "Error al actualizar la tarea",
+    //         });
+    //     }
+    // },
+    updateTask: async (req, res) => {
+        const studentId = req.params.studentId;
+        const taskId = req.params.taskId;
+
+        try {
+            // Buscar al estudiante
+            const student = await Students.findById(studentId);
+
+            if (!student) {
+                return res.status(404).json({
+                    message: "Estudiante no encontrado",
+                });
+            }
+
+            // Buscar y actualizar la tarea en el array tasks del estudiante
+            const taskIndex = student.tasks.findIndex(task => task._id.toString() === taskId);
+
+            if (taskIndex === -1) {
+                return res.status(404).json({
+                    message: "Tarea no encontrada en el array de tareas del estudiante",
+                });
+            }
+
+            const task = student.tasks[taskIndex];
+
+            // Subir el archivo a S3 si se proporciona
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                task.fileStudent = fileName; // Guardar el nombre del archivo en el campo fileStudent
+            }
+
+            task.status = 'DONE'; // Cambiar el estado a DONE
+
+            await student.save();
+
+            res.status(200).json({
+                response: student,
+                message: "Tarea actualizada exitosamente",
+                success: true
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: "Error al actualizar la tarea",
+            });
+        }
+    },
+
+    findTaskByStudent: async (req, res) => {
+        const studentId = req.params.studentId; // Obtener el id del estudiante de los parámetros de la solicitud
+        const idTask = req.params.idTask; // Obtener el id de la tarea de los parámetros de la solicitud
+
+        try {
+            // Buscar al estudiante por su _id
+            const student = await Students.findById(studentId);
+
+            if (!student) {
+                return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+            }
+
+            // Buscar la tarea dentro del array de tasks del estudiante
+            const task = student.tasks.find(task => task._id.toString() === idTask);
+
+            if (!task) {
+                return res.status(404).json({ success: false, message: 'Tarea no encontrada para este estudiante' });
+            }
+
+            return res.status(200).json({ success: true, task: task, message: 'Estudiante y tarea encontrados' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Error al buscar el estudiante y la tarea', error: error.message });
+        }
+    },
+    updateTaskById: async (req, res) => {
+        const studentId = req.params.studentId; // Obtener el id del estudiante de los parámetros de la solicitud
+        const idTask = req.params.idTask; // Obtener el id de la tarea de los parámetros de la solicitud
+        const updatedTaskData = req.body; // Datos para actualizar la tarea
+
+        try {
+            // Buscar al estudiante por su _id
+            const student = await Students.findById(studentId);
+
+            if (!student) {
+                return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+            }
+
+            // Buscar la tarea dentro del array de tasks del estudiante
+            const taskIndex = student.tasks.findIndex(task => task._id.toString() === idTask);
+
+            if (taskIndex === -1) {
+                return res.status(404).json({ success: false, message: 'Tarea no encontrada para este estudiante' });
+            }
+
+            // Actualizar los valores de la tarea con los datos proporcionados en req.body
+            student.tasks[taskIndex] = { ...student.tasks[taskIndex], ...updatedTaskData };
+
+            // Manejar la carga de archivos si se proporciona un file en el body
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                student.tasks[taskIndex].fileStudent = fileName; // Actualizar el campo fileStudent
+            }
+
+            // Guardar los cambios en la base de datos
+            await student.save();
+
+            return res.status(200).json({ success: true, task: student.tasks[taskIndex], message: 'Tarea actualizada exitosamente' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Error al actualizar la tarea', error: error.message });
+        }
+    }
 
 }
 

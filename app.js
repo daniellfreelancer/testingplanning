@@ -27,7 +27,7 @@ const userResumeClass = require('./routes/resumeVmClassRoutes')
 const userPrograms = require('./routes/programRoutes')
 const userWorkshops = require('./routes/workshopRoutes')
 const userWorkshopPlanifications = require('./routes/workshopPlanificationRoutes')
-
+const userTasks = require('./routes/taskRoutes')
 var app = express();
 
 // view engine setup
@@ -70,7 +70,7 @@ app.use('/vmclass', userResumeClass)
 app.use('/program', userPrograms)
 app.use('/workshop', userWorkshops)
 app.use('/workshop-planification', userWorkshopPlanifications)
-
+app.use('/task',userTasks)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
