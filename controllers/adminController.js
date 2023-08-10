@@ -124,6 +124,8 @@ const userController = {
                             }
                         );
 
+                        await admin.populate('classroom school workshop program')
+
                         const loginAdmin = {
                             id: admin._id,
                             email: admin.email,
