@@ -1,5 +1,6 @@
 const ClassRoom = require('../models/classroom')
 const Students = require('../models/student')
+const Users = require('../models/admin')
 
 const classroomQueryPopulate= [
   {
@@ -68,41 +69,122 @@ const classroomController = {
             })
         }
     },
+    // addTeacherClassroom: async (req, res) => {
+
+    //     try {
+    
+    //       const { classroomId, teacherId } = req.body
+    
+    
+    //       // Buscar la institución por su id
+    //       const classroom = await ClassRoom.findById(classroomId);
+    
+    //       if (!classroom) {
+    //         return res.status(404).json({
+    //           message: 'Salon de clase no encontrado',
+    //           success: false
+    //         });
+    //       }
+    
+    //       // Agregar el nuevo id de admin a la propiedad "admin" de la institución
+    //       classroom.teacher.push(teacherId);
+    
+    //       // Guardar los cambios en la base de datos
+    //       await classroom.save();
+
+    //               // Buscar el objeto teacher en la colección Users
+    //     const teacher = await Users.findById(teacherId);
+
+    //     if (!teacher) {
+    //         return res.status(404).json({
+    //             message: 'Profesor no encontrado',
+    //             success: false
+    //         });
+    //     }
+
+    //     // Agregar el id del salón de clase al array "classroom" del objeto teacher
+    //     teacher.classroom.push(classroomId);
+
+    //     // Guardar los cambios en el objeto teacher
+    //     await teacher.save();
+    
+    //       return res.status(200).json({
+    //         message: 'Id de profesor agregado al salon de clase',
+    //         success: true
+    //       });
+    
+    //     } catch (error) {
+    //       console.log(error);
+    //       return res.status(400).json({
+    //         message: 'Error al agregar id de profesor al salon de clase',
+    //         success: false
+    //       });
+    //     }
+    //   },
     addTeacherClassroom: async (req, res) => {
-        try {
-    
-          const { classroomId, teacherId } = req.body
-    
-    
-          // Buscar la institución por su id
+      try {
+          const { classroomId, teacherId } = req.body;
+  
+          // Buscar el salón de clase por su id
           const classroom = await ClassRoom.findById(classroomId);
-    
+  
           if (!classroom) {
-            return res.status(404).json({
-              message: 'Salon de clase no encontrado',
-              success: false
-            });
+              return res.status(404).json({
+                  message: 'Salón de clase no encontrado',
+                  success: false
+              });
           }
-    
-          // Agregar el nuevo id de admin a la propiedad "admin" de la institución
+  
+          // Verificar si el teacher ya está agregado al salón de clase
+          if (classroom.teacher.includes(teacherId)) {
+              return res.status(400).json({
+                  message: 'El profesor ya está agregado a este salón de clase',
+                  success: false
+              });
+          }
+  
+          // Agregar el nuevo id de profesor al array "teacher" del salón de clase
           classroom.teacher.push(teacherId);
-    
+  
           // Guardar los cambios en la base de datos
           await classroom.save();
-    
+  
+          // Buscar el objeto teacher en la colección Users
+          const teacher = await Users.findById(teacherId);
+  
+          if (!teacher) {
+              return res.status(404).json({
+                  message: 'Profesor no encontrado',
+                  success: false
+              });
+          }
+  
+          // Verificar si el salón de clase ya está agregado al teacher
+          if (teacher.classroom.includes(classroomId)) {
+              return res.status(400).json({
+                  message: 'Este salón de clase ya está agregado al profesor',
+                  success: false
+              });
+          }
+  
+          // Agregar el id del salón de clase al array "classroom" del objeto teacher
+          teacher.classroom.push(classroomId);
+  
+          // Guardar los cambios en el objeto teacher
+          await teacher.save();
+  
           return res.status(200).json({
-            message: 'Id de profesor agregado al salon de clase',
-            success: true
+              message: 'Id de profesor agregado al salón de clase y id de salón agregado al profesor',
+              success: true
           });
-    
-        } catch (error) {
+      } catch (error) {
           console.log(error);
           return res.status(400).json({
-            message: 'Error al agregar id de profesor al salon de clase',
-            success: false
+              message: 'Error al agregar id de profesor al salón de clase',
+              success: false
           });
-        }
-      },
+      }
+  },
       addTeacherSubstituteClassroom: async (req, res) => {
         try {
     

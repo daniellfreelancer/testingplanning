@@ -16,6 +16,11 @@ const adminSchema = new mongoose.Schema({
     age:{type: Number},
     weight:{type: Number},
     size:{type: Number},
+    classroom: [{type: mongoose.Types.ObjectId, ref:'classroom', required: false}],
+    school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
+    workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
+    program: [{type: mongoose.Types.ObjectId, ref:'program'}],
+
 })
 
 adminSchema.methods.setImgUrl = function setImgUrl (filename) {

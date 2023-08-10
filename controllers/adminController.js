@@ -22,26 +22,54 @@ const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const userController = {
     signUp: async (req, res) => {
-        let { name, lastName, email, password, role, rut , bio} = req.body
+        let { 
+          name, 
+          lastName, 
+          email, 
+          password, 
+          role, 
+          rut ,  
+          phone, 
+          gender, 
+          age
+        } = req.body
         try {
 
             let adminUser = await UserAdmin.findOne({ email })
             if (!adminUser) {
                 let logged = false;
-                let imgUrl = null
+                let imgUrl = null;
+                let classroom = [];
+                let school = [];
+                let workshop = [];
+                let program = [];
+                let bio = "";
+                let weight = "";
+                let size = "";
+
+
                 password = bcryptjs.hashSync(password, 10)
 
                 adminUser = await new UserAdmin({
                     email,
                     password,
                     logged,
-                    password,
                     name,
                     lastName,
                     rut,
                     role,
                     imgUrl,
-                    bio
+                    bio,
+                    classroom,
+                    school,
+                    workshop,
+                    program,
+                    weight,
+                    size,
+                    age,
+                    gender,
+                    phone
+
                 }).save()
 
                 if (req.file) {
@@ -109,7 +137,13 @@ const userController = {
                             age:admin.age,
                             weight:admin.weight,
                             size:admin.size,
-                            phone:admin.phone
+                            phone:admin.phone,
+                            gender:admin.gender,
+                            classroom: admin.classroom,
+                            school: admin.school,
+                            workshop: admin.workshop,
+                            program: admin.program
+
                         };
 
                         admin.logged = true;
@@ -172,7 +206,8 @@ const userController = {
                         school_representative: student.school_representative,
                         workshop: student.workshop,
                         program: student.program,
-                        bio: student.bio
+                        bio: student.bio,
+                        tasks: student.tasks
                     };
 
                     student.logged = true;
