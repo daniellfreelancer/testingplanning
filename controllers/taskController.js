@@ -304,7 +304,7 @@ const taskController = {
                 return res.status(404).json({ success: false, message: 'Tarea no encontrada para este estudiante' });
             }
     
-            return res.status(200).json({ success: true, response: task, message: 'Tarea encontrada exitosamente' });
+            return res.status(200).json({ success: true, task: task, student: student, message: 'Tarea encontrada exitosamente' });
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Error al buscar la tarea', error: error.message });
         }
