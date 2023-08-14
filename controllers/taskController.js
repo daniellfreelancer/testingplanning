@@ -284,9 +284,33 @@ const taskController = {
         } catch (error) {
           return res.status(500).json({ success: false, message: 'Error al eliminar tareas del aula', error: error.message });
         }
-      }
+      },
+      getTaskByStudent: async (req, res) => {
+        const studentId = req.params.studentId; // Obtener el id del estudiante de los parámetros de la solicitud
+        const idTask = req.params.idTask; // Obtener el id de la tarea de los parámetros de la solicitud
+    
+        try {
+            // Buscar al estudiante por su _id
+            const student = await Students.findById(studentId);
+    
+            if (!student) {
+                return res.status(404).json({ success: false, message: 'Estudiante no encontrado' });
+            }
+    
+            // Buscar la tarea dentro del array de tasks del estudiante
+            const task = student.tasks.find(task => task._id.toString() === idTask);
+    
+            if (!task) {
+                return res.status(404).json({ success: false, message: 'Tarea no encontrada para este estudiante' });
+            }
+    
+            return res.status(200).json({ success: true, response: task, message: 'Tarea encontrada exitosamente' });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: 'Error al buscar la tarea', error: error.message });
+        }
+    }
 
-};
+}
 
 
 module.exports=taskController
