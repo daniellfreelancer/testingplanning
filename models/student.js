@@ -21,7 +21,9 @@ const studentSchema = new mongoose.Schema({
     workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
     program: [{type: mongoose.Types.ObjectId, ref:'program'}],
     bio: {type: String},
-    tasks:[{type: Object}]
+    tasks:[{type: Object}],
+    gradebook:[{type: Object}]
+
 },
 {
     timestamps: true,

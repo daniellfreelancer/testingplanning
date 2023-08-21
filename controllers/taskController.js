@@ -24,8 +24,7 @@ const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const taskController = {
     createTask: async (req, res) => {
-        let { title, description, fileStudent, status, classroom, notation, teacher, dueDate, feedback } = req.body;
-
+        let { title, description, fileStudent, status, classroom, notation, teacher, dueDate, feedback, deliveryDate, gradeBook } = req.body;
         try {
             // Crear la nueva tarea
             const newTask = new Tasks({
@@ -37,7 +36,10 @@ const taskController = {
                 notation,
                 teacher,
                 dueDate,
-                feedback
+                feedback,
+                deliveryDate,
+                gradeBook
+
             });
 
             // Guardar la tarea en la base de datos
@@ -58,7 +60,6 @@ const taskController = {
                     $push: { tasks: newTask },
                 });
             }
-
             res.status(200).json({
                 response: newTask,
                 message: "Tarea creada y asignada a estudiantes",
@@ -279,8 +280,11 @@ const taskController = {
               await student.save();
             }
           }
+
+          await Tasks.findOneAndDelete({ _id: idTask });
+
       
-          return res.status(200).json({ success: true, message: 'Todas las tareas eliminadas del aula' });
+          return res.status(200).json({ success: true, message: 'Tarea eliminada correctamente' });
         } catch (error) {
           return res.status(500).json({ success: false, message: 'Error al eliminar tareas del aula', error: error.message });
         }

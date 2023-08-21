@@ -38,6 +38,14 @@ const taskSchema = new mongoose.Schema({
     feedback:{
         type: String,
         required: false,
+    },
+    deliveryDate:{
+        type: String,
+        required: false,
+    },
+    gradeBook:{
+        type: Boolean,
+        required: false,
     }
 },
 {
