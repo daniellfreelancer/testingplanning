@@ -13,6 +13,10 @@ const taskSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    fileTeacher: {
+        type: String,
+        required: false,
+    },
     status: {
         type: String,
         default: 'PENDING',

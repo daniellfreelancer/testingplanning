@@ -39,9 +39,26 @@ const taskController = {
                 feedback,
                 deliveryDate,
                 gradeBook
-
             });
 
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `task-file-${Date.now()}.${extension}`;
+    
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+    
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+    
+                newTask.fileTeacher = fileName; // Asignar el nombre del archivo a la propiedad fileTeacher
+            }
+    
             // Guardar la tarea en la base de datos
             await newTask.save();
 
