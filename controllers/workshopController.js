@@ -19,7 +19,14 @@ const workshopQueryPopulate= [
   },
   {
     path: 'planner',
-    select: 'startDate endDate duration schoolBlock content classObjectives evaluationIndicators evaluationIndicatorsTeacher learningObjectives  activities materials evaluationType otherMaterials createdAt updatedAt quiz',
+    select: 'startDate endDate duration schoolBlock content classObjectives evaluationIndicators evaluationIndicatorsTeacher learningObjectives  activities materials evaluationType otherMaterials createdAt updatedAt quiz workshop',
+    populate:{
+      path: 'workshop',
+      select: 'name'
+    },
+    options: {
+      sort: { 'startDate': 1 }
+    }
   },
   {
     path: 'workshopHistory',
