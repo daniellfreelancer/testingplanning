@@ -29,6 +29,8 @@ const userWorkshops = require('./routes/workshopRoutes')
 const userWorkshopPlanifications = require('./routes/workshopPlanificationRoutes')
 const userTasks = require('./routes/taskRoutes')
 const userGradebook = require('./routes/gradebookRoutes')
+const userMoments = require('./routes/momentRoutes')
+const userFeeds = require('./routes/postRoutes')
 var app = express();
 
 // view engine setup
@@ -70,6 +72,8 @@ app.use('/workshop', userWorkshops)
 app.use('/workshop-planification', userWorkshopPlanifications)
 app.use('/task', userTasks)
 app.use('/notes', userGradebook)
+app.use('/moments', userMoments)
+app.use('/feed', userFeeds)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
