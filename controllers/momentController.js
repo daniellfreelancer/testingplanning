@@ -104,6 +104,31 @@ const momentscontroller = {
           return res.status(500).json({ message: 'Error fetching moments' });
         }
       },
+      deleteMoment: async (req, res) => {
+        try {
+            const { momentId, userId } = req.params;
+
+            // Buscar el momento por su _id
+            const moment = await Moments.findById(momentId);
+
+            if (!moment) {
+                return res.status(404).json({ message: 'Moment not found' });
+            }
+
+            // Verificar si el usuario que realiza la solicitud es el creador del momento
+            if (moment.user.toString() !== userId.toString()) {
+                return res.status(403).json({ message: 'No puedes eliminar este momento' });
+            }
+
+            // Eliminar el momento
+            await Moments.findByIdAndDelete(momentId);
+
+            return res.status(200).json({ message: 'Momento eliminado correctamente' });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error deleting moment' });
+        }
+    }
 }
 
 
