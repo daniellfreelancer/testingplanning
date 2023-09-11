@@ -97,13 +97,27 @@ const postController = {
 
             const fileContent = req.file.buffer;
             const extension = req.file.originalname.split('.').pop();
-            const fileName = `post-image-${quizIdentifier()}.${extension}`;
+            const isVideo = extension.toLowerCase() === 'mp4';
 
+
+            let fileName;
+            let optimizedImageBuffer;
+
+
+            if (isVideo) {
+                fileName = `post-video-${quizIdentifier()}.${extension}`;
+            } else {
+                // Optimizar la imagen usando sharp
+                optimizedImageBuffer = await sharp(fileContent).toBuffer();
+                fileName = `post-image-${quizIdentifier()}.${extension}`;
+            }
+    
             const uploadParams = {
-                Bucket: bucketName,
+                Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
                 Key: fileName,
-                Body: fileContent,
+                Body: isVideo ? fileContent : optimizedImageBuffer,
             };
+
 
             // Subir la imagen a S3
             const uploadCommand = new PutObjectCommand(uploadParams);
