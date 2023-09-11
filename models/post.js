@@ -6,6 +6,7 @@ const postSchema = new mongoose.Schema({
     likes: { type: Array, required: true },
     commentsAllow: { type: Boolean, required: true },
     text: { type: String },
+    videoPost:{type: Boolean},
     comments: [ { type : mongoose.Types.ObjectId, ref: 'comment', required: false }], // Uso del esquema embebido para los comentarios
 }, {
     timestamps: true,
