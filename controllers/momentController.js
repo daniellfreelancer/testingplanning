@@ -27,19 +27,14 @@ const momentscontroller = {
             return res.status(400).json({ message: 'Sin imagen cargada' });
           }
 
-         const imageResized = await sharp(req.file.buffer).resize({
-            width: 1080,
-            height: 1920,
-         }).toBuffer()
-    
-          const fileContent = imageResized;
+         const optimizedImage = await sharp(req.file.buffer).toBuffer();
           const extension = req.file.originalname.split('.').pop();
           const fileName = `moment-image-${quizIdentifier()}.${extension}`;
     
           const uploadParams = {
             Bucket: bucketName,
             Key: fileName,
-            Body: imageResized,
+            Body: optimizedImage,
           };
     
           // Subir la imagen a S3
@@ -56,8 +51,6 @@ const momentscontroller = {
           // Guardar el momento en la base de datos
           await newMoment.save();
     
-        
-
            // Buscar momentos del usuario creados hace 7 días o más y eliminarlos
            const sevenDaysAgo = new Date();
            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

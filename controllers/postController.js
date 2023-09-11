@@ -89,7 +89,7 @@ const postController = {
 
     createPost: async (req, res) => {
         try {
-            const { user, commentsAllow, text } = req.body;
+            const { user, commentsAllow, text, videoPost } = req.body;
 
             if (!req.file) {
                 return res.status(400).json({ message: 'Sin imagen cargada' });
@@ -115,7 +115,8 @@ const postController = {
                 likes: [],
                 commentsAllow,
                 comments: [],
-                text
+                text,
+                videoPost
             });
 
             await newPost.save();
