@@ -28,7 +28,7 @@ const PostQueryPopulate = [
     },
     {
         path: 'comments',
-        select: 'name lastName role imgUrl user text replies',
+        select: 'user replies text',
         populate: {
             path: 'user',
             select: 'name lastName imgUrl role',
@@ -111,7 +111,7 @@ const postController = {
                 optimizedImageBuffer = await sharp(fileContent).toBuffer();
                 fileName = `post-image-${quizIdentifier()}.${extension}`;
             }
-    
+
             const uploadParams = {
                 Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
                 Key: fileName,
@@ -228,34 +228,34 @@ const postController = {
     deleteComment: async (req, res) => {
         try {
             const { postId, commentId, userId } = req.body;
-    
+
             // Buscar el post y actualizar el array comments para eliminar el comentario
             const updatedPost = await Post.findByIdAndUpdate(
                 postId,
                 { $pull: { comments: commentId } },
                 { new: true }
             );
-    
+
             if (!updatedPost) {
                 return res.status(404).json({ message: 'Post not found' });
             }
-    
+
             const comment = await Comment.findById(commentId);
-    
+
             if (!comment) {
                 return res.status(404).json({ message: 'Comment not found in Comment collection' });
             }
-    
+
             if (comment.user.toString() === userId.toString()) {
                 // El usuario creador del comentario puede borrarlo
-    
+
                 // Eliminar el comentario de la colección Comment
                 await Comment.findByIdAndDelete(commentId);
             } else {
                 // Otros usuarios solo pueden editar su propio comentario
                 return res.status(403).json({ message: 'Permission denied' });
             }
-    
+
             return res.status(200).json({ message: 'Comment deleted successfully' });
         } catch (error) {
             console.error(error);
@@ -298,7 +298,32 @@ const postController = {
     getAllPosts: async (req, res) => {
         try {
             // Obtener todos los posts ordenados por fecha de creación descendente
-            const posts = await Post.find().sort({ createdAt: -1 }).populate(PostQueryPopulate)
+            // const posts = await Post.find().sort({ createdAt: -1 }).populate(PostQueryPopulate)
+
+            const posts = await Post.find()
+                .sort({ createdAt: -1 })
+                .populate({
+                    path: 'user',
+                    select: 'name lastName role imgUrl',
+                })
+                .populate({
+                    path: 'comments',
+                    select: 'user replies text',
+                    populate: [
+                        {
+                            path: 'user',
+                            select: 'name lastName imgUrl role',
+                        },
+                        {
+                            path: 'replies',
+                            select: 'name lastName role imgUrl user text',
+                            populate: {
+                                path: 'user',
+                                select: 'name lastName imgUrl role',
+                            },
+                        },
+                    ],
+                })
 
             return res.status(200).json({ response: posts, message: "Posts", success: true });
         } catch (error) {
@@ -330,24 +355,24 @@ const postController = {
     editReply: async (req, res) => {
         try {
             const { replyId, newText } = req.body;
-    
+
             // Buscar el comentario que contiene el reply
             const parentComment = await Comment.findOne({ 'replies._id': replyId });
-    
+
             if (!parentComment) {
                 return res.status(404).json({ message: 'Parent comment not found' });
             }
-    
+
             // Encontrar y actualizar el reply dentro del comentario
             const reply = parentComment.replies.find(r => r._id.toString() === replyId);
-    
+
             if (!reply) {
                 return res.status(404).json({ message: 'Reply not found' });
             }
-    
+
             reply.text = newText;
             await parentComment.save();
-    
+
             return res.status(200).json({ message: 'Reply updated successfully', reply });
         } catch (error) {
             console.error(error);
@@ -357,18 +382,18 @@ const postController = {
     // deleteReply: async (req, res) => {
     //     try {
     //         const { replyId } = req.params;
-    
+
     //         // Buscar el comentario que contiene el reply
     //         const parentComment = await Comment.findOne({ 'replies._id': replyId });
-    
+
     //         if (!parentComment) {
     //             return res.status(404).json({ message: 'Parent comment not found' });
     //         }
-    
+
     //         // Eliminar el reply del comentario
     //         parentComment.replies = parentComment.replies.filter(r => r._id.toString() !== replyId);
     //         await parentComment.save();
-    
+
     //         return res.status(200).json({ message: 'Reply deleted successfully' });
     //     } catch (error) {
     //         console.error(error);
@@ -378,25 +403,25 @@ const postController = {
     deleteReply: async (req, res) => {
         try {
             const { parentCommentId, replyId } = req.params;
-    
+
             // Buscar el comentario principal por su _id
             const parentComment = await Comment.findById(parentCommentId);
-    
+
             if (!parentComment) {
                 return res.status(404).json({ message: 'Parent comment not found' });
             }
-    
+
             // Encontrar el reply dentro de las respuestas del comentario principal
             const replyToDeleteIndex = parentComment.replies.findIndex(reply => reply._id.toString() === replyId);
-    
+
             if (replyToDeleteIndex === -1) {
                 return res.status(404).json({ message: 'Reply not found in parent comment' });
             }
-    
+
             // Eliminar el reply del comentario principal
             parentComment.replies.splice(replyToDeleteIndex, 1);
             await parentComment.save();
-    
+
             return res.status(200).json({ message: 'Reply deleted successfully' });
         } catch (error) {
             console.error(error);
