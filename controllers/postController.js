@@ -168,20 +168,32 @@ const postController = {
 
     addComment: async (req, res) => {
         try {
-            const { postId, userId, text, parentCommentId } = req.body;
-
-            //busco el post
+            const { postId, userId, studentId, text, parentCommentId } = req.body;
+    
+            // Buscar el post
             const post = await Post.findById(postId);
-
+    
             if (!post) {
                 return res.status(404).json({ message: 'Post not found' });
             }
-
-            const newComment = new Comment({
-                user: userId,
-                text,
-            });
-
+    
+            let newComment;
+    
+            // Comprobar si se proporcionó userId o studentId y crear el comentario en consecuencia
+            if (userId) {
+                newComment = new Comment({
+                    user: userId,
+                    text,
+                });
+            } else if (studentId) {
+                newComment = new Comment({
+                    student: studentId,
+                    text,
+                });
+            } else {
+                return res.status(400).json({ message: 'Debe proporcionar userId o studentId' });
+            }
+    
             if (parentCommentId) {
                 // Este es un comentario de respuesta, lo adjuntamos al comentario padre
                 const parentComment = await Comment.findById(parentCommentId);
@@ -193,41 +205,44 @@ const postController = {
             } else {
                 // Este es un comentario principal del post
                 post.comments.push(newComment);
-                await newComment.save()
+                await newComment.save();
                 await post.save();
             }
-
+    
             return res.status(201).json({ message: 'Comment added successfully', comment: newComment });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error adding comment' });
         }
     },
+    
     editComment: async (req, res) => {
         try {
-            const { commentId, userId, text } = req.body;
-            const comment = await Comment.findById(commentId);
+            const { commentId, userId, studentId, text } = req.body;
 
+            const comment = await Comment.findById(commentId);
+    
             if (!comment) {
                 return res.status(404).json({ message: 'Comment not found' });
             }
-
-            if (comment.user.toString() !== userId.toString()) {
+    
+            if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
+                // El usuario o estudiante creador del comentario puede editarlo
+    
+                comment.text = text;
+                await comment.save();
+                return res.status(200).json({ message: 'Comment edited successfully', comment });
+            } else {
                 return res.status(403).json({ message: 'Permission denied' });
             }
-
-            comment.text = text;
-            await comment.save();
-            return res.status(200).json({ message: 'Comment edited successfully', comment });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error editing comment' });
         }
     },
-
     deleteComment: async (req, res) => {
         try {
-            const { postId, commentId, userId } = req.body;
+            const { postId, commentId, userId, studentId } = req.body;
 
             // Buscar el post y actualizar el array comments para eliminar el comentario
             const updatedPost = await Post.findByIdAndUpdate(
@@ -246,7 +261,7 @@ const postController = {
                 return res.status(404).json({ message: 'Comment not found in Comment collection' });
             }
 
-            if (comment.user.toString() === userId.toString()) {
+            if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
                 // El usuario creador del comentario puede borrarlo
 
                 // Eliminar el comentario de la colección Comment
@@ -262,7 +277,6 @@ const postController = {
             return res.status(500).json({ message: 'Error deleting comment' });
         }
     }
-
     ,
     deletePost: async (req, res) => {
         try {
@@ -308,17 +322,17 @@ const postController = {
                 })
                 .populate({
                     path: 'comments',
-                    select: 'user replies text',
+                    select: 'user replies text student',
                     populate: [
                         {
-                            path: 'user',
+                            path: 'user student',
                             select: 'name lastName imgUrl role',
                         },
                         {
                             path: 'replies',
-                            select: 'name lastName role imgUrl user text',
+                            select: 'name lastName role imgUrl user text student',
                             populate: {
-                                path: 'user',
+                                path: 'user student',
                                 select: 'name lastName imgUrl role',
                             },
                         },
