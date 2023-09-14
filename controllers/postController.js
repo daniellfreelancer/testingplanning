@@ -242,7 +242,7 @@ const postController = {
     },
     deleteComment: async (req, res) => {
         try {
-            const { postId, commentId, userId, studentId } = req.body;
+            const { postId, commentId } = req.body;
 
             // Buscar el post y actualizar el array comments para eliminar el comentario
             const updatedPost = await Post.findByIdAndUpdate(
@@ -261,23 +261,24 @@ const postController = {
                 return res.status(404).json({ message: 'Comment not found in Comment collection' });
             }
 
-            if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
-                // El usuario creador del comentario puede borrarlo
+            // if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
+            //     // El usuario creador del comentario puede borrarlo
 
-                // Eliminar el comentario de la colección Comment
-                await Comment.findByIdAndDelete(commentId);
-            } else {
-                // Otros usuarios solo pueden editar su propio comentario
-                return res.status(403).json({ message: 'Permission denied' });
-            }
+            //     // Eliminar el comentario de la colección Comment
+            //     await Comment.findByIdAndDelete(commentId);
+            // } else {
+            //     // Otros usuarios solo pueden editar su propio comentario
+            //     return res.status(403).json({ message: 'Permission denied' });
+            // }
+
+            await Comment.findByIdAndDelete(commentId);
 
             return res.status(200).json({ message: 'Comment deleted successfully' });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error deleting comment' });
         }
-    }
-    ,
+    },
     deletePost: async (req, res) => {
         try {
             const { postId } = req.params;
