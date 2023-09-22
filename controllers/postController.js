@@ -87,60 +87,125 @@ const postController = {
     //     }
     // },
 
+    // createPost: async (req, res) => {
+    //     try {
+    //         const { user, commentsAllow, text, videoPost } = req.body;
+
+    //         if (!req.file) {
+    //             return res.status(400).json({ message: 'Sin imagen cargada' });
+    //         }
+
+    //         const fileContent = req.file.buffer;
+    //         const extension = req.file.originalname.split('.').pop();
+    //         const isVideo = extension.toLowerCase() === 'mp4';
+
+
+    //         let fileName;
+    //         let optimizedImageBuffer;
+
+
+    //         if (isVideo) {
+    //             fileName = `post-video-${quizIdentifier()}.${extension}`;
+    //         } else {
+    //             // Optimizar la imagen usando sharp
+    //             optimizedImageBuffer = await sharp(fileContent).toBuffer();
+    //             fileName = `post-image-${quizIdentifier()}.${extension}`;
+    //         }
+
+    //         const uploadParams = {
+    //             Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
+    //             Key: fileName,
+    //             Body: isVideo ? fileContent : optimizedImageBuffer,
+    //         };
+
+
+    //         // Subir la imagen a S3
+    //         const uploadCommand = new PutObjectCommand(uploadParams);
+    //         await clientAWS.send(uploadCommand);
+
+    //         const newPost = new Post({
+    //             user,
+    //             postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
+    //             likes: [],
+    //             commentsAllow,
+    //             comments: [],
+    //             text,
+    //             videoPost
+    //         });
+
+    //         await newPost.save();
+
+    //         return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
+    //     } catch (error) {
+    //         console.error(error);
+    //         return res.status(500).json({ message: 'Error creating post' });
+    //     }
+    // },
     createPost: async (req, res) => {
         try {
-            const { user, commentsAllow, text, videoPost } = req.body;
-
-            if (!req.file) {
-                return res.status(400).json({ message: 'Sin imagen cargada' });
-            }
-
-            const fileContent = req.file.buffer;
-            const extension = req.file.originalname.split('.').pop();
-            const isVideo = extension.toLowerCase() === 'mp4';
-
-
-            let fileName;
-            let optimizedImageBuffer;
-
-
-            if (isVideo) {
-                fileName = `post-video-${quizIdentifier()}.${extension}`;
+          const { user, commentsAllow, text, videoPost } = req.body;
+      
+          if (!req.file) {
+            return res.status(400).json({ message: 'Sin imagen cargada' });
+          }
+      
+          const fileContent = req.file.buffer;
+          const extension = req.file.originalname.split('.').pop();
+          const isVideo = extension.toLowerCase() === 'mp4';
+      
+      
+          let fileName;
+          let optimizedImageBuffer;
+      
+      
+          if (isVideo) {
+            fileName = `post-video-${quizIdentifier()}.${extension}`;
+          } else {
+            // Optimizar la imagen usando sharp
+            // Obtener la orientación de la imagen
+            const exif = await sharp(fileContent).metadata();
+            const orientation = exif.exif.Orientation;
+      
+            // Si la orientación de la imagen es horizontal, rotarla 90 grados
+            if (orientation === 6 || orientation === 8) {
+              optimizedImageBuffer = await sharp(fileContent).rotate(90).toBuffer();
             } else {
-                // Optimizar la imagen usando sharp
-                optimizedImageBuffer = await sharp(fileContent).toBuffer();
-                fileName = `post-image-${quizIdentifier()}.${extension}`;
+              optimizedImageBuffer = await sharp(fileContent).toBuffer();
             }
-
-            const uploadParams = {
-                Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
-                Key: fileName,
-                Body: isVideo ? fileContent : optimizedImageBuffer,
-            };
-
-
-            // Subir la imagen a S3
-            const uploadCommand = new PutObjectCommand(uploadParams);
-            await clientAWS.send(uploadCommand);
-
-            const newPost = new Post({
-                user,
-                postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
-                likes: [],
-                commentsAllow,
-                comments: [],
-                text,
-                videoPost
-            });
-
-            await newPost.save();
-
-            return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
+      
+            fileName = `post-image-${quizIdentifier()}.${extension}`;
+          }
+      
+          const uploadParams = {
+            Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
+            Key: fileName,
+            Body: isVideo ? fileContent : optimizedImageBuffer,
+          };
+      
+      
+          // Subir la imagen a S3
+          const uploadCommand = new PutObjectCommand(uploadParams);
+          await clientAWS.send(uploadCommand);
+      
+          const newPost = new Post({
+            user,
+            postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
+            likes: [],
+            commentsAllow,
+            comments: [],
+            text,
+            videoPost
+          });
+      
+          await newPost.save();
+      
+          return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
         } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error creating post' });
+          console.error(error);
+          return res.status(500).json({ message: 'Error creating post' });
         }
-    },
+      },
+      
     likePost: async (req, res) => {
         try {
             const { postId, userId } = req.body;
