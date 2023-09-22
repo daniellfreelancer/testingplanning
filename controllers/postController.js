@@ -164,7 +164,8 @@ const postController = {
             // Optimizar la imagen usando sharp
             // Obtener la orientación de la imagen
             const exif = await sharp(fileContent).metadata();
-            const orientation = exif.exif.Orientation;
+           // const orientation = exif.exif.Orientation;
+           const orientation = exif ? exif.exif.Orientation : 1;
       
             // Si la orientación de la imagen es horizontal, rotarla 90 grados
             if (orientation === 6 || orientation === 8) {
