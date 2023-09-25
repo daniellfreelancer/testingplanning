@@ -143,74 +143,93 @@ const postController = {
     // },
     createPost: async (req, res) => {
         try {
-          const { user, commentsAllow, text, videoPost } = req.body;
-      
-          if (!req.file) {
-            return res.status(400).json({ message: 'Sin imagen cargada' });
-          }
-      
-          const fileContent = req.file.buffer;
-          const extension = req.file.originalname.split('.').pop();
-          const isVideo = extension.toLowerCase() === 'mp4';
-      
-      
-          let fileName;
-          let optimizedImageBuffer;
-      
-      
-          if (isVideo) {
-            fileName = `post-video-${quizIdentifier()}.${extension}`;
-          } else {
-            // Optimizar la imagen usando sharp
-            // Obtener la orientación de la imagen
-       //     const exif = await sharp(fileContent).metadata();
-           // const orientation = exif.exif.Orientation;
-          // const orientation = exif ? exif.exif.Orientation : 1;
+            const { user, commentsAllow, text, videoPost } = req.body;
 
-          const exif = await sharp(fileContent).metadata();
-const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orientation : 1;
-
-      
-            // Si la orientación de la imagen es horizontal, rotarla 90 grados
-            if (orientation === 6 || orientation === 8) {
-              optimizedImageBuffer = await sharp(fileContent).rotate(90).toBuffer();
-            } else {
-              optimizedImageBuffer = await sharp(fileContent).toBuffer();
+            if (!req.file) {
+                return res.status(400).json({ message: 'Sin imagen cargada' });
             }
-      
-            fileName = `post-image-${quizIdentifier()}.${extension}`;
-          }
-      
-          const uploadParams = {
-            Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
-            Key: fileName,
-            Body: isVideo ? fileContent : optimizedImageBuffer,
-          };
-      
-      
-          // Subir la imagen a S3
-          const uploadCommand = new PutObjectCommand(uploadParams);
-          await clientAWS.send(uploadCommand);
-      
-          const newPost = new Post({
-            user,
-            postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
-            likes: [],
-            commentsAllow,
-            comments: [],
-            text,
-            videoPost
-          });
-      
-          await newPost.save();
-      
-          return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
+
+            const fileContent = req.file.buffer;
+            const extension = req.file.originalname.split('.').pop();
+            const isVideo = extension.toLowerCase() === 'mp4';
+
+
+            let fileName;
+            let optimizedImageBuffer;
+
+
+            // if (isVideo) {
+            //     fileName = `post-video-${quizIdentifier()}.${extension}`;
+            // } else {
+
+            //     const exif = await sharp(fileContent).metadata();
+            //     const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orientation : 1;
+
+
+            //     // Si la orientación de la imagen es horizontal, rotarla 90 grados
+            //     if (orientation === 6 || orientation === 8) {
+            //         optimizedImageBuffer = await sharp(fileContent).rotate(90).toBuffer();
+            //     } else {
+            //         optimizedImageBuffer = await sharp(fileContent).toBuffer();
+            //     }
+
+            //     fileName = `post-image-${quizIdentifier()}.${extension}`;
+            // }
+
+
+            if (isVideo) {
+                fileName = `post-video-${quizIdentifier()}.${extension}`;
+              } else {
+                const exif = await sharp(fileContent).metadata();
+                console.log('Información EXIF:', exif); // Muestra la información EXIF por consola
+          
+                const orientation = exif  ? exif.orientation : 1;
+          
+                // Si la orientación de la imagen es horizontal, rotarla 90 grados
+                if (orientation === 6 || orientation === 8) {
+                  optimizedImageBuffer = await sharp(fileContent)
+                    .rotate(90)
+                    .resize(1350, 1720)
+                    .toBuffer();
+                } else {
+                  optimizedImageBuffer = await sharp(fileContent)
+                    .resize(1350, 1720)
+                    .toBuffer();
+                }
+          
+                fileName = `post-image-${quizIdentifier()}.${extension}`;
+              }
+
+            const uploadParams = {
+                Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
+                Key: fileName,
+                Body: isVideo ? fileContent : optimizedImageBuffer,
+            };
+
+
+            // Subir la imagen a S3
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await clientAWS.send(uploadCommand);
+
+            const newPost = new Post({
+                user,
+                postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
+                likes: [],
+                commentsAllow,
+                comments: [],
+                text,
+                videoPost
+            });
+
+            await newPost.save();
+
+            return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
         } catch (error) {
-          console.error(error);
-          return res.status(500).json({ message: 'Error creating post' });
+            console.error(error);
+            return res.status(500).json({ message: 'Error creating post' });
         }
-      },
-      
+    },
+
     likePost: async (req, res) => {
         try {
             const { postId, userId } = req.body;
@@ -239,16 +258,16 @@ const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orien
     addComment: async (req, res) => {
         try {
             const { postId, userId, studentId, text, parentCommentId } = req.body;
-    
+
             // Buscar el post
             const post = await Post.findById(postId);
-    
+
             if (!post) {
                 return res.status(404).json({ message: 'Post not found' });
             }
-    
+
             let newComment;
-    
+
             // Comprobar si se proporcionó userId o studentId y crear el comentario en consecuencia
             if (userId) {
                 newComment = new Comment({
@@ -263,7 +282,7 @@ const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orien
             } else {
                 return res.status(400).json({ message: 'Debe proporcionar userId o studentId' });
             }
-    
+
             if (parentCommentId) {
                 // Este es un comentario de respuesta, lo adjuntamos al comentario padre
                 const parentComment = await Comment.findById(parentCommentId);
@@ -278,27 +297,27 @@ const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orien
                 await newComment.save();
                 await post.save();
             }
-    
+
             return res.status(201).json({ message: 'Comment added successfully', comment: newComment });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error adding comment' });
         }
     },
-    
+
     editComment: async (req, res) => {
         try {
             const { commentId, userId, studentId, text } = req.body;
 
             const comment = await Comment.findById(commentId);
-    
+
             if (!comment) {
                 return res.status(404).json({ message: 'Comment not found' });
             }
-    
+
             if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
                 // El usuario o estudiante creador del comentario puede editarlo
-    
+
                 comment.text = text;
                 await comment.save();
                 return res.status(200).json({ message: 'Comment edited successfully', comment });
