@@ -28,13 +28,36 @@ const momentscontroller = {
           }
 
          const optimizedImage = await sharp(req.file.buffer).toBuffer();
+         const fileContent = req.file.buffer;
           const extension = req.file.originalname.split('.').pop();
-          const fileName = `moment-image-${quizIdentifier()}.${extension}`;
+        //  const fileName = `moment-image-${quizIdentifier()}.${extension}`;
+
+          let fileName;
+          let optimizedImageBuffer;
+
+          const exif = await sharp(fileContent).metadata();
+          console.log('Información EXIF:', exif); // Muestra la información EXIF por consola
+    
+          const orientation = exif  ? exif.orientation : 1;
+    
+          // Si la orientación de la imagen es horizontal, rotarla 90 grados
+          if (orientation === 6 || orientation === 8) {
+            optimizedImageBuffer = await sharp(fileContent)
+              .rotate(90)
+              .resize(1350, 1720)
+              .toBuffer();
+          } else {
+            optimizedImageBuffer = await sharp(fileContent)
+              .resize(1350, 1720)
+              .toBuffer();
+          }
+    
+          fileName = `post-image-${quizIdentifier()}.${extension}`;
     
           const uploadParams = {
             Bucket: bucketName,
             Key: fileName,
-            Body: optimizedImage,
+            Body: optimizedImageBuffer,
           };
     
           // Subir la imagen a S3
