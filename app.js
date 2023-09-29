@@ -9,9 +9,9 @@ var cors = require('cors')
 const bodyParser = require('body-parser')
 
 const fileUpload = require('express-fileupload')
+// const { initializeApp } = require("firebase-admin/app");
 
-
-
+// initializeApp();
 
 
 var indexRouter = require('./routes/index');
@@ -31,6 +31,7 @@ const userTasks = require('./routes/taskRoutes')
 const userGradebook = require('./routes/gradebookRoutes')
 const userMoments = require('./routes/momentRoutes')
 const userFeeds = require('./routes/postRoutes')
+const userNotifications = require('./routes/tokenRoutes')
 var app = express();
 
 // view engine setup
@@ -74,6 +75,7 @@ app.use('/task', userTasks)
 app.use('/notes', userGradebook)
 app.use('/moments', userMoments)
 app.use('/feed', userFeeds)
+app.use('/push', userNotifications)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
