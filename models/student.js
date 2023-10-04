@@ -22,7 +22,8 @@ const studentSchema = new mongoose.Schema({
     program: [{type: mongoose.Types.ObjectId, ref:'program'}],
     bio: {type: String},
     tasks:[{type: Object}],
-    gradebook:[{type: Object}]
+    gradebook:[{type: Object}],
+    notifications:[{type: Object}],
 
 },
 {

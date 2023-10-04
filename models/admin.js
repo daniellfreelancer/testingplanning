@@ -19,7 +19,9 @@ const adminSchema = new mongoose.Schema({
     classroom: [{type: mongoose.Types.ObjectId, ref:'classroom', required: false}],
     school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
     workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
-    program: [{type: mongoose.Types.ObjectId, ref:'program'}]
+    program: [{type: mongoose.Types.ObjectId, ref:'program'}],
+    notifications:[{type: Object}],
+
 })
 
 adminSchema.methods.setImgUrl = function setImgUrl (filename) {

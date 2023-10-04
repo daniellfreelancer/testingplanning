@@ -32,6 +32,7 @@ const userGradebook = require('./routes/gradebookRoutes')
 const userMoments = require('./routes/momentRoutes')
 const userFeeds = require('./routes/postRoutes')
 const userNotifications = require('./routes/tokenRoutes')
+const userNotificationsApp = require('./routes/notificationRoutes')
 var app = express();
 
 // view engine setup
@@ -76,6 +77,7 @@ app.use('/notes', userGradebook)
 app.use('/moments', userMoments)
 app.use('/feed', userFeeds)
 app.use('/push', userNotifications)
+app.use('/notification', userNotificationsApp)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
