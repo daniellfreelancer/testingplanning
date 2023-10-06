@@ -275,6 +275,47 @@ const notificationController = {
             res.status(500).json({ message: 'Error interno del servidor' });
         }
     },
+    createNotificationForStudent: async (req, res) => {
+        try {
+          const {
+            teacherId,
+            title,
+            notificationText,
+            route,
+            studentId
+          } = req.body;
+    
+          // Verificar si teacherId está presente
+          if (!teacherId) {
+            return res.status(400).json({ message: 'teacherId es requerido' });
+          }
+    
+          // Crear la notificación
+          const notification = new Notification({
+            title,
+            createByTeacher: teacherId,
+            notificationText,
+            route,
+          });
+    
+          await notification.save();
+    
+          // Buscar al estudiante por su ID
+          const student = await Students.findById(studentId);
+          if (!student) {
+            return res.status(404).json({ message: 'Estudiante no encontrado' });
+          }
+    
+          // Agregar la notificación al array de notificaciones del estudiante
+          student.notifications.push(notification);
+          await student.save();
+    
+          res.status(201).json({ message: 'Notificación creada y asignada al estudiante' });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({ message: 'Error interno del servidor' });
+        }
+      },
 
 }
 
