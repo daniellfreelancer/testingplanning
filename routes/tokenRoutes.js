@@ -1,5 +1,5 @@
 var express = require('express');
-const { enableNotification, getClassrooms, getWorkshops, disableNotification, getAllTokens, addTokenUser, addTokenTeacher, removeTokenUser, removeTokenTeacher, sendNotificationUser } = require('../controllers/tokenFCMController');
+const { enableNotification, getClassrooms, getWorkshops, disableNotification, getAllTokens, addTokenUser, addTokenTeacher, removeTokenUser, removeTokenTeacher, sendNotificationUser, getTokensForStudentPush, getTokensForTeacherPush } = require('../controllers/tokenFCMController');
 
 var router = express.Router();
 
@@ -14,4 +14,10 @@ router.post('/add-token-teacher', addTokenTeacher);
 router.delete('/remove-token-user', removeTokenUser); // Eliminar token cuando cierre sesion
 router.delete('/remove-token-teacher', removeTokenTeacher);
 router.post('/send-notification-user', sendNotificationUser);
+router.get('/get-tokens-for-student-push/classroom/:classroomId', getTokensForStudentPush); // Obtener tokens de estudiantes para un aula específica
+router.get('/get-tokens-for-student-push/workshop/:workshopId', getTokensForStudentPush); // Obtener tokens de estudiantes para un taller específico
+router.get('/get-tokens-for-teacher-push/classroom/:classroomId', getTokensForTeacherPush); // Obtener tokens de teachers para un aula específica
+router.get('/get-tokens-for-teacher-push/workshop/:workshopId', getTokensForTeacherPush); // Obtener tokens de teachers para un taller específico
+
+
 module.exports = router

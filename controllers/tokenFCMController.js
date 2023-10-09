@@ -377,6 +377,84 @@ const tokenFCMController = {
             });
         }
     },
+    getTokensForStudentPush: async (req, res) => {
+        const { classroomId, workshopId } = req.params; // Supongo que los IDs se pasan como parámetros en la URL
+    
+        try {
+          let tokenDoc;
+    
+          if (classroomId) {
+            tokenDoc = await Tokens.findOne({ classroom: classroomId });
+          } else if (workshopId) {
+            tokenDoc = await Tokens.findOne({ workshop: workshopId });
+          } else {
+            return res.status(400).json({
+              message: "Debes proporcionar el ID de un aula o taller",
+              success: false,
+            });
+          }
+    
+          if (!tokenDoc) {
+            return res.status(404).json({
+              message: "Aula o taller no encontrado",
+              success: false,
+            });
+          }
+    
+          const studentTokens = tokenDoc.tokens; // Obtener el array de tokens de estudiantes
+    
+          res.status(200).json({
+            message: "Tokens de estudiantes obtenidos con éxito",
+            success: true,
+            data: studentTokens,
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({
+            message: "Error al obtener los tokens de estudiantes",
+            error: error.message,
+          });
+        }
+      },
+      getTokensForTeacherPush: async (req, res) => {
+        const { classroomId, workshopId } = req.params; // Supongo que los IDs se pasan como parámetros en la URL
+    
+        try {
+          let tokenDoc;
+    
+          if (classroomId) {
+            tokenDoc = await Tokens.findOne({ classroom: classroomId });
+          } else if (workshopId) {
+            tokenDoc = await Tokens.findOne({ workshop: workshopId });
+          } else {
+            return res.status(400).json({
+              message: "Debes proporcionar el ID de un aula o taller",
+              success: false,
+            });
+          }
+    
+          if (!tokenDoc) {
+            return res.status(404).json({
+              message: "Aula o taller no encontrado",
+              success: false,
+            });
+          }
+    
+          const teacherTokens = tokenDoc.tokenTeacher; // Obtener el array de tokens de teachers
+    
+          res.status(200).json({
+            message: "Tokens de teachers obtenidos con éxito",
+            success: true,
+            data: teacherTokens,
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({
+            message: "Error al obtener los tokens de teachers",
+            error: error.message,
+          });
+        }
+      },
 
 
 
