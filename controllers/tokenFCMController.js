@@ -2,6 +2,7 @@ const Tokens = require('../models/tokenFCM')
 const Teacher = require('../models/admin')
 const Classrooms = require('../models/classroom')
 const Students = require('../models/student')
+const TokensOneToOne = require('../models/fcmOnetoOne')
 const admin = require('firebase-admin'); // Asegúrate de que Firebase Admin SDK esté configurado correctamente
 
 
@@ -379,83 +380,162 @@ const tokenFCMController = {
     },
     getTokensForStudentPush: async (req, res) => {
         const { classroomId, workshopId } = req.params; // Supongo que los IDs se pasan como parámetros en la URL
-    
-        try {
-          let tokenDoc;
-    
-          if (classroomId) {
-            tokenDoc = await Tokens.findOne({ classroom: classroomId });
-          } else if (workshopId) {
-            tokenDoc = await Tokens.findOne({ workshop: workshopId });
-          } else {
-            return res.status(400).json({
-              message: "Debes proporcionar el ID de un aula o taller",
-              success: false,
-            });
-          }
-    
-          if (!tokenDoc) {
-            return res.status(404).json({
-              message: "Aula o taller no encontrado",
-              success: false,
-            });
-          }
-    
-          const studentTokens = tokenDoc.tokens; // Obtener el array de tokens de estudiantes
-    
-          res.status(200).json({
-            message: "Tokens de estudiantes obtenidos con éxito",
-            success: true,
-            data: studentTokens,
-          });
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({
-            message: "Error al obtener los tokens de estudiantes",
-            error: error.message,
-          });
-        }
-      },
-      getTokensForTeacherPush: async (req, res) => {
-        const { classroomId, workshopId } = req.params; // Supongo que los IDs se pasan como parámetros en la URL
-    
-        try {
-          let tokenDoc;
-    
-          if (classroomId) {
-            tokenDoc = await Tokens.findOne({ classroom: classroomId });
-          } else if (workshopId) {
-            tokenDoc = await Tokens.findOne({ workshop: workshopId });
-          } else {
-            return res.status(400).json({
-              message: "Debes proporcionar el ID de un aula o taller",
-              success: false,
-            });
-          }
-    
-          if (!tokenDoc) {
-            return res.status(404).json({
-              message: "Aula o taller no encontrado",
-              success: false,
-            });
-          }
-    
-          const teacherTokens = tokenDoc.tokenTeacher; // Obtener el array de tokens de teachers
-    
-          res.status(200).json({
-            message: "Tokens de teachers obtenidos con éxito",
-            success: true,
-            data: teacherTokens,
-          });
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({
-            message: "Error al obtener los tokens de teachers",
-            error: error.message,
-          });
-        }
-      },
 
+        try {
+            let tokenDoc;
+
+            if (classroomId) {
+                tokenDoc = await Tokens.findOne({ classroom: classroomId });
+            } else if (workshopId) {
+                tokenDoc = await Tokens.findOne({ workshop: workshopId });
+            } else {
+                return res.status(400).json({
+                    message: "Debes proporcionar el ID de un aula o taller",
+                    success: false,
+                });
+            }
+
+            if (!tokenDoc) {
+                return res.status(404).json({
+                    message: "Aula o taller no encontrado",
+                    success: false,
+                });
+            }
+
+            const studentTokens = tokenDoc.tokens; // Obtener el array de tokens de estudiantes
+
+            res.status(200).json({
+                message: "Tokens de estudiantes obtenidos con éxito",
+                success: true,
+                data: studentTokens,
+            });
+        } catch (error) {
+            console.error(error);
+
+            res.status(500).json({
+                message: "Error al obtener los tokens de estudiantes",
+                error: error.message,
+            });
+        }
+    },
+    getTokensForTeacherPush: async (req, res) => {
+        const { classroomId, workshopId } = req.params; // Supongo que los IDs se pasan como parámetros en la URL
+
+        try {
+            let tokenDoc;
+
+            if (classroomId) {
+                tokenDoc = await Tokens.findOne({ classroom: classroomId });
+            } else if (workshopId) {
+                tokenDoc = await Tokens.findOne({ workshop: workshopId });
+            } else {
+                return res.status(400).json({
+                    message: "Debes proporcionar el ID de un aula o taller",
+                    success: false,
+                });
+            }
+
+            if (!tokenDoc) {
+                return res.status(404).json({
+                    message: "Aula o taller no encontrado",
+                    success: false,
+                });
+            }
+
+            const teacherTokens = tokenDoc.tokenTeacher; // Obtener el array de tokens de teachers
+
+            res.status(200).json({
+                message: "Tokens de teachers obtenidos con éxito",
+                success: true,
+                data: teacherTokens,
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: "Error al obtener los tokens de teachers",
+                error: error.message,
+            });
+        }
+    },
+    createTokenOneToOne: async (req, res) => {
+        try {
+          const { user, token } = req.body;
+    
+          // Verificar si el usuario ya existe en la colección
+          const existingToken = await TokensOneToOne.findOne({ user });
+    
+          if (existingToken) {
+            return res.status(400).json({
+              success: false,
+              message: "El usuario ya tiene un token registrado",
+            });
+          }
+    
+          // Crear y guardar el nuevo token
+          const newToken = new TokensOneToOne({
+            user,
+            token,
+          });
+    
+          await newToken.save();
+    
+          res.status(200).json({
+            success: true,
+            message: "Token device agregado correctamente",
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+          });
+        }
+      },
+      deleteTokenOneToOne: async (req, res) => {
+        try {
+          const { user } = req.params;
+    
+          // Eliminar el token basado en el usuario
+          await TokensOneToOne.findOneAndDelete({ user });
+    
+          res.status(200).json({
+            success: true,
+            message: "Token eliminado correctamente",
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+          });
+        }
+      },
+      getTokenOneToOne: async (req, res) => {
+        try {
+          const { user } = req.params;
+    
+          // Buscar el token basado en el usuario
+          const tokenData = await TokensOneToOne.findOne({ user });
+    
+          if (!tokenData) {
+            return res.status(404).json({
+              success: false,
+              message: "Token no encontrado para el usuario proporcionado",
+            });
+          }
+    
+          res.status(200).json({
+            success: true,
+            token: tokenData.token,
+          });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+          });
+        }
+      },
 
 
 }

@@ -1,5 +1,5 @@
 var express = require('express');
-const { enableNotification, getClassrooms, getWorkshops, disableNotification, getAllTokens, addTokenUser, addTokenTeacher, removeTokenUser, removeTokenTeacher, sendNotificationUser, getTokensForStudentPush, getTokensForTeacherPush } = require('../controllers/tokenFCMController');
+const { enableNotification, getClassrooms, getWorkshops, disableNotification, getAllTokens, addTokenUser, addTokenTeacher, removeTokenUser, removeTokenTeacher, sendNotificationUser, getTokensForStudentPush, getTokensForTeacherPush, createTokenOneToOne, deleteTokenOneToOne, getTokenOneToOne } = require('../controllers/tokenFCMController');
 
 var router = express.Router();
 
@@ -18,6 +18,11 @@ router.get('/get-tokens-for-student-push/classroom/:classroomId', getTokensForSt
 router.get('/get-tokens-for-student-push/workshop/:workshopId', getTokensForStudentPush); // Obtener tokens de estudiantes para un taller específico
 router.get('/get-tokens-for-teacher-push/classroom/:classroomId', getTokensForTeacherPush); // Obtener tokens de teachers para un aula específica
 router.get('/get-tokens-for-teacher-push/workshop/:workshopId', getTokensForTeacherPush); // Obtener tokens de teachers para un taller específico
+
+router.post('/add-one-to-one-token-user', createTokenOneToOne)
+router.delete('/delete-one-to-one-token-user/:user', deleteTokenOneToOne)
+router.get('/get-one-to-one-token-user/:user',getTokenOneToOne )
+
 
 
 module.exports = router
