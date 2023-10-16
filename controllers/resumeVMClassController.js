@@ -232,6 +232,22 @@ const resumeVMClassController = {
             success: false
           })
         }
+      },
+      getResumeByClassroom : async (req, res) => {
+        const { classroomId } = req.params; // Obtén el classroomId de los parámetros de la solicitud
+      
+        try {
+          const resumes = await ResumeVmClass
+            .find({ classroomId }) // Busca documentos con el classroomId proporcionado
+            .populate() // Realiza un populate en el campo byTeacher para obtener información adicional (nombre y email)
+            .sort({ createdAt: -1 }) // Ordena por createdAt en orden descendente (del más reciente al más antiguo)
+            .exec();
+      
+          res.json(resumes); // Devuelve los resúmenes encontrados en formato JSON
+        } catch (error) {
+          console.error('Error al buscar resúmenes:', error);
+          res.status(500).json({ error: 'Error al buscar resúmenes' });
+        }
       }
 
       
