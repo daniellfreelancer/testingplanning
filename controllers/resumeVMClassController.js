@@ -4,6 +4,12 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const upLoadFiles = require('../s3')
 const crypto = require('crypto')
 
+const resumeQueryPopulate = [
+  {
+    path:'byTeacher plannerClass'
+  }
+]
+
 const resumeVMClassController = {
 
     // createResume: async (req, res) => {
@@ -239,7 +245,7 @@ const resumeVMClassController = {
         try {
           const resumes = await ResumeVmClass
             .find({ classroomId }) // Busca documentos con el classroomId proporcionado
-            .populate() // Realiza un populate en el campo byTeacher para obtener información adicional (nombre y email)
+            .populate('plannerClass') // Realiza un populate en el campo byTeacher para obtener información adicional (nombre y email)
             .sort({ createdAt: -1 }) // Ordena por createdAt en orden descendente (del más reciente al más antiguo)
             .exec();
       
