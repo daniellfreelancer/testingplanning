@@ -4,7 +4,7 @@ const Students = require('../models/student')
 const programPopulateQuery = [
   {
     path: 'teachers',
-    select: 'name lastName email role rut logged',
+    select: 'name lastName email role rut logged program wokrshops',
   },
   {
     path: 'admins',
@@ -256,6 +256,31 @@ const programControllers = {
       })
     }
 
+  },
+  getProgramAll: async (req, res) => {
+    try {
+      const allPrograms = await Programs.find().populate(programPopulateQuery);
+
+
+      if (allPrograms) {
+        res.status(200).json({
+          message: 'Programas encontrados',
+          response: allPrograms,
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'No se encontraron programas disponibles',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error en el servidor',
+        success: false
+      });
+    }
   }
 
 }

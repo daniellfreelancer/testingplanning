@@ -5,7 +5,7 @@ const Users = require('../models/admin')
 const classroomQueryPopulate= [
   {
     path: 'teacher teacherSubstitute',
-    select: 'name lastName email role rut logged',
+    select: 'name lastName email role rut logged classroom workshop program school imgUrl ',
   },
   {
     path: 'students',
@@ -281,6 +281,29 @@ const classroomController = {
           });
         }
       },
+      getClassRoomsAll: async (req, res) => {
+        try {
+          const allClassRooms = await ClassRoom.find().populate(classroomQueryPopulate);
+          if (allClassRooms) {
+            res.status(200).json({
+              message: 'Cursos encontrados',
+              response: allClassRooms,
+              success: true
+            });
+          } else {
+            res.status(404).json({
+              message: 'No se encontraron cursos disponibles',
+              success: false
+            });
+          }
+        } catch (error) {
+          console.log(error);
+          res.status(500).json({
+            message: 'Error en el servidor',
+            success: false
+          });
+        }
+      }
     
 
 }

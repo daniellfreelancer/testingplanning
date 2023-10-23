@@ -1,5 +1,5 @@
 var express = require('express');
-const { createSchool, addAdminToSchool, removeAdminFromSchool, addClassroomToSchool, addTeacherToSchool, addStudentToSchool, schoolById } = require('../controllers/schoolController');
+const { createSchool, addAdminToSchool, removeAdminFromSchool, addClassroomToSchool, addTeacherToSchool, addStudentToSchool, schoolById, getSchoolAll } = require('../controllers/schoolController');
 var router = express.Router();
 
 
@@ -10,6 +10,7 @@ router.patch('/new-classroom', addClassroomToSchool)
 router.patch('/new-student', addStudentToSchool)
 router.delete('/delete-admin', removeAdminFromSchool)
 router.get('/find/:id', schoolById)
+router.get('/read-by-camp', getSchoolAll)
 
 
 module.exports = router
