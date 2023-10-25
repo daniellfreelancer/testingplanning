@@ -14,7 +14,7 @@ const programPopulateQuery = [
     path: 'students',
     select: 'name lastName email role rut logged phone age weight size gender imgUrl classroom school grade',
     populate: {
-      path: 'workshops',
+      path: 'workshop',
       select: 'name'
     },
     options: {
