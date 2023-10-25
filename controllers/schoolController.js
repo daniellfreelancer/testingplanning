@@ -1,5 +1,6 @@
 const Schools = require('../models/school')
 const Students = require('../models/student')
+const Teachers = require('../models/admin')
 
 
 const institutionPopulateQuery = [
@@ -180,7 +181,8 @@ const schoolControllers = {
   },
   addTeacherToSchool: async (req, res) => {
     try {
-      const { schoolId, teacherId } = req.body
+      const { schoolId, teacherId } = req.body;
+
       // Buscar la institución por su id
       const school = await Schools.findById(schoolId);
       if (!school) {
@@ -190,13 +192,22 @@ const schoolControllers = {
         });
       }
 
+      // Agregar el teacherId al campo 'teachers' del objeto school
       school.teachers.push(teacherId);
+
+      // Guardar la escuela actualizada
       await school.save();
 
+      const teacher = await Teachers.findById(teacherId)
+      if (teacher) {
+        teacher.school.push(schoolId);
+        await teacher.save()
+      }
       return res.status(200).json({
         message: 'Id de profesor agregado a la Escuela',
         success: true
       });
+
 
     } catch (error) {
       console.log(error);
@@ -216,20 +227,14 @@ const schoolControllers = {
           success: false
         });
       }
-
       school.students.push(studentId);
       await school.save();
 
       const student = await Students.findById(studentId)
-
       if (student) {
         student.school.push(schoolId);
         await student.save()
       }
-
-
-
-
       return res.status(200).json({
         message: 'Estudiante agregado con exito a la Escuela',
         success: true

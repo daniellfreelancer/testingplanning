@@ -175,7 +175,7 @@ const workshopController = {
       const student = await Students.findById(studentId)
 
       if (student) {
-        student.classroom.push(workshopId);
+        student.workshop.push(workshopId);
         await student.save()
       }
 

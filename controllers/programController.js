@@ -215,7 +215,7 @@ const programControllers = {
       const student = await Students.findById(studentId)
 
       if (student) {
-        student.programs.push(programId);
+        student.program.push(programId);
         await student.save()
       }
 
