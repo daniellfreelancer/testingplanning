@@ -1,5 +1,6 @@
 const Workshops = require('../models/workshop')
 const Students = require('../models/student')
+const Teachers = require('../models/admin')
 
 const workshopQueryPopulate = [
   {
@@ -86,6 +87,12 @@ const workshopController = {
 
       // Guardar los cambios en la base de datos
       await workshop.save();
+
+      const teacher = await Teachers.findById(teacherId)
+      if (teacher) {
+        teacher.workshop.push(workshopId);
+        await teacher.save()
+      }
 
       return res.status(200).json({
         message: 'Id de profesor agregado al taller',

@@ -1,5 +1,6 @@
 const Programs = require('../models/program')
 const Students = require('../models/student')
+const Teachers = require('../models/admin')
 
 const programPopulateQuery = [
   {
@@ -184,6 +185,12 @@ const programControllers = {
 
       program.teachers.push(teacherId);
       await program.save();
+
+      const teacher = await Teachers.findById(teacherId)
+      if (teacher) {
+        teacher.program.push(programId);
+        await teacher.save()
+      }
 
       return res.status(200).json({
         message: 'Id de profesor agregado al Programa',
