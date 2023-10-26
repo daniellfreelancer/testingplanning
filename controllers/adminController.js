@@ -188,6 +188,8 @@ const userController = {
                         }
                     );
 
+                    await student.populate('classroom school workshop program')
+
                     const loginStudent = {
                         id: student._id,
                         email: student.email,
