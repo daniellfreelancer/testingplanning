@@ -124,7 +124,7 @@ const userController = {
                             }
                         );
 
-                     //   await admin.populate('classroom school workshop program')
+                        await admin.populate('classroom school workshop program')
 
                         const loginAdmin = {
                             id: admin._id,
@@ -188,7 +188,9 @@ const userController = {
                         }
                     );
 
-                 //   await student.populate('classroom school workshop program')
+             
+             
+                    await student.populate('school program')
 
                     const loginStudent = {
                         id: student._id,
