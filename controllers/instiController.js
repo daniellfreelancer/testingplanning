@@ -63,7 +63,7 @@ const institutionPopulateQuery = [
   {
     path: 'schools',
     populate: {
-      path: 'classrooms.students',
+      path: 'classrooms students',
       select: 'name lastName email role rut logged phone age weight size gender',
       options: {
         sort: { name: 1 } // ordenar por el campo "name" en orden ascendente
