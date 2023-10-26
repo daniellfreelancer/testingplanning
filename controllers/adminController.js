@@ -190,7 +190,7 @@ const userController = {
 
              
              
-                    await student.populate('school program workshop ')
+                    await student.populate('school program workshop')
 
                     const loginStudent = {
                         id: student._id,
