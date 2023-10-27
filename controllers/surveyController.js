@@ -57,7 +57,7 @@ const surveyController = {
           const { surveyId } = req.params;
           const { sleepLevel, stressLevel, fatigueLevel, muscleLevel, moodLevel } = req.body;
       
-          const survey = await Survey.findOne(surveyId);
+          const survey = await Survey.findOne({surveyId});
       
           if (!survey) {
             return res.status(404).json({ message: 'Encuesta no encontrada' });
