@@ -54,10 +54,10 @@ const surveyController = {
     },
     updateSurveyStudent : async (req, res) => {
         try {
-          const { studentId } = req.params;
+          const { surveyId } = req.params;
           const { sleepLevel, stressLevel, fatigueLevel, muscleLevel, moodLevel } = req.body;
       
-          const survey = await Survey.findOne({ student: studentId });
+          const survey = await Survey.findOne(surveyId);
       
           if (!survey) {
             return res.status(404).json({ message: 'Encuesta no encontrada' });
