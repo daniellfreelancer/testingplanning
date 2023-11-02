@@ -43,7 +43,6 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
 
 const resumeVMClassController = {
 
-  // createResume: async (req, res) => {
 
 
 
