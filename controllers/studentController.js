@@ -49,9 +49,16 @@ const studentController = {
             workshop,
             program,
             school_representative,
-            bio } = req.body
+            bio, from } = req.body
 
         try {
+
+            if (from !== 'form') {
+                return res.status(400).json({
+                    message: "No se puede crear su cuenta, por favor contacte a su administrador",
+                    success: false
+                })
+            }
 
             let newStudent = await Students.findOne({ rut })
 
@@ -120,13 +127,22 @@ const studentController = {
                     })
 
                 } else {
-                    res.status(400).json({
-                        message: "El email ingresado ya existe en nuestra base de datos",
-                        success: false
-                    })
+
+                    if (newStudent.from.includes(from)) {
+                        return res.status(400).json({
+                            message: "El email ingresado ya existe en nuestra base de datos",
+                            success: false
+                        })
+                    } else {
+                        newStudent.from.push(from)
+                        adminUser.password.push(bcryptjs.hashSync(password, 10));
+                        await newStudent.save()
+                        res.status(201).json({
+                            message: "Estudiante ha creado su cuenta desde: " + from,
+                            success: true
+                        });
+                    }
                 }
-
-
             } else {
                 res.status(400).json({
                     message: "Estudiante ya existe en la base de datos, verifica tu numero de RUT",

@@ -24,6 +24,9 @@ const studentSchema = new mongoose.Schema({
     tasks:[{type: Object}],
     gradebook:[{type: Object}],
     notifications:[{type: Object}],
+    from: [{type:String, require:true}],  // from google o formularios
+    verified:{type:Boolean, required: true},    // si es verificado por codigos
+    code: {type:String, required:true}
 
 },
 {

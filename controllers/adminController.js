@@ -1,9 +1,11 @@
 const bcryptjs = require('bcryptjs');
+const crypto = require('crypto')
 const jwt = require('jsonwebtoken');
 const UserAdmin = require('../models/admin')
 const Students = require('../models/student')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const crypto = require('crypto')
+const Joi = require('joi')
+const sendResetMail = require('./mailResetPassword')
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -20,653 +22,1013 @@ const clientAWS = new S3Client({
 
 const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
+
+const userLoginValidator = Joi.object({
+  "email": Joi.string()
+    .email()
+    .required().messages({
+      "string.email": "El email debe ser válido",
+      "string.empty": "El email es requerido"
+    }),
+  "password": Joi.string()
+    .required().messages({
+      "string.empty": "La contraseña es requerida"
+    }),
+  "from": Joi.string()
+    .required().messages({
+      "string.empty": "El origen es requerido"
+    })
+})
+
+
+
 const userController = {
-    signUp: async (req, res) => {
-        let { 
-          name, 
-          lastName, 
-          email, 
-          password, 
-          role, 
-          rut ,  
-          phone, 
-          gender, 
-          age
-        } = req.body
-        try {
+  signUp: async (req, res) => {
+    // let {
+    //   name,
+    //   lastName,
+    //   email,
+    //   password,
+    //   role,
+    //   rut,
+    //   phone,
+    //   gender,
+    //   age,
+    //   from
+    // } = req.body
+    // try {
 
-            let adminUser = await UserAdmin.findOne({ email })
-            if (!adminUser) {
-                let logged = false;
-                let imgUrl = null;
-                let classroom = [];
-                let school = [];
-                let workshop = [];
-                let program = [];
-                let bio = "";
-                let weight = "";
-                let size = "";
+    //   let adminUser = await UserAdmin.findOne({ email })
+
+    //   if (!adminUser) {
+    //     let logged = false;
+    //     let imgUrl = null;
+    //     let classroom = [];
+    //     let school = [];
+    //     let workshop = [];
+    //     let program = [];
+    //     let bio = "";
+    //     let weight = "";
+    //     let size = "";
+    //     let verified = false
+    //     let code = crypto.randomBytes(15).toString('hex')
+    //     password = bcryptjs.hashSync(password, 10)
+
+    //     if (from === 'form') {
+    //       adminUser = await new UserAdmin({
+    //         email,
+    //         password: [password],
+    //         logged,
+    //         name,
+    //         lastName,
+    //         rut,
+    //         role,
+    //         imgUrl,
+    //         bio,
+    //         classroom,
+    //         school,
+    //         workshop,
+    //         program,
+    //         weight,
+    //         size,
+    //         age,
+    //         gender,
+    //         phone,
+    //         from: [from],
+    //         verified,
+    //         code
+    //       }).save()
+
+    //       if (req.file) {
+    //         let { filename } = req.file
+    //         adminUser.imgUrl = filename
+    //         await adminUser.save()
+    //       }
+
+    //       res.status(201).json({
+    //         message: "Usuario creado correctamente",
+    //         success: true
+    //       })
+    //     } else {
+    //       verified = true
+    //       adminUser = await new UserAdmin({
+    //         email,
+    //         password: [password],
+    //         logged,
+    //         name,
+    //         lastName,
+    //         rut,
+    //         role,
+    //         imgUrl,
+    //         bio,
+    //         classroom,
+    //         school,
+    //         workshop,
+    //         program,
+    //         weight,
+    //         size,
+    //         age,
+    //         gender,
+    //         phone,
+    //         from: [from],
+    //         verified,
+    //         code
+    //       }).save()
+
+    //       if (req.file) {
+    //         let { filename } = req.file
+    //         adminUser.imgUrl = filename
+    //         await adminUser.save()
+    //       }
 
 
-                password = bcryptjs.hashSync(password, 10)
-
-                adminUser = await new UserAdmin({
-                    email,
-                    password,
-                    logged,
-                    name,
-                    lastName,
-                    rut,
-                    role,
-                    imgUrl,
-                    bio,
-                    classroom,
-                    school,
-                    workshop,
-                    program,
-                    weight,
-                    size,
-                    age,
-                    gender,
-                    phone
-
-                }).save()
-
-                if (req.file) {
-                    let { filename } = req.file
-                    adminUser.imgUrl = filename
-                    await adminUser.save()
-                }
+    //       res.status(201).json({
+    //         message: "Usuario creado desde: " + from,
+    //         success: true
+    //       })
 
 
-                res.status(201).json({
-                    message: "Usuario registrado con exito",
-                    success: true
-                })
+    //     }
 
-            } else {
-                res.status(200).json({
-                    message: "Usuario ya existe en la base de datos",
-                    success: false
-                })
-            }
+    //   } else {
+
+    //     if (adminUser.from.includes(from)) {
+    //       res.status(200).json({
+    //         message: "Usuario, posse cuenta creada desde: " + from,
+    //         success: false
+    //       })
+    //     } else {
+    //       adminUser.from.push(from)
+    //       adminUser.verified = true
+    //       adminUser.password.push(bcryptjs.hashSync(password, 10))
+    //       await adminUser.save()
+    //       res.status(201).json({
+    //         message: "Usuario, ha creado su cuenta desde: " + from,
+    //         success: true
+    //       })
+    //     }
+    //   }
 
 
-        } catch (error) {
-            console.log(error)
-            res.status(400).json({
-                message: error.message,
-                success: false
-            })
+    // } catch (error) {
+    //   console.log(error)
+    //   res.status(400).json({
+    //     message: error.message,
+    //     success: false
+    //   })
+    // }
+
+    let {
+      name,
+      lastName,
+      email,
+      password,
+      role,
+      rut,
+      phone,
+      gender,
+      age,
+      from
+    } = req.body;
+
+    try {
+      if (from !== 'form') {
+        return res.status(400).json({
+          message: "No está habilitado para crear cuenta desde esta fuente",
+          success: false
+        });
+      }
+
+      let adminUser = await UserAdmin.findOne({ email });
+
+      if (!adminUser) {
+        let logged = false;
+        let imgUrl = null;
+        let classroom = [];
+        let school = [];
+        let workshop = [];
+        let program = [];
+        let bio = "";
+        let weight = "";
+        let size = "";
+        let verified = false;
+        let code = crypto.randomBytes(15).toString('hex');
+        password = bcryptjs.hashSync(password, 10);
+
+        adminUser = await new UserAdmin({
+          email,
+          password: [password],
+          logged,
+          name,
+          lastName,
+          rut,
+          role,
+          imgUrl,
+          bio,
+          classroom,
+          school,
+          workshop,
+          program,
+          weight,
+          size,
+          age,
+          gender,
+          phone,
+          from: [from],
+          verified,
+          code
+        }).save();
+
+        if (req.file) {
+          let { filename } = req.file;
+          adminUser.imgUrl = filename;
+          await adminUser.save();
         }
 
-    }, signIn: async (req, res) => {
-            let { email, password } = req.body;
-            try {
-                // Buscar en UserAdmin
-                const admin = await UserAdmin.findOne({ email });
-
-                if (admin) {
-                    const adminPass = admin.password.filter(userpassword =>
-                        bcryptjs.compareSync(password, userpassword)
-                    );
-
-                    if (adminPass.length > 0) {
-                        // Código existente para inicio de sesión exitoso del administrador
-                        const token = jwt.sign(
-                            {
-                                id: admin._id,
-                                role: admin.role
-                            },
-                            process.env.KEY_JWT,
-                            {
-                                expiresIn: 60 * 60 * 24
-                            }
-                        );
-
-                        await admin.populate('classroom school workshop program')
-
-                        const loginAdmin = {
-                            id: admin._id,
-                            email: admin.email,
-                            name: admin.name,
-                            lastName: admin.lastName,
-                            rut: admin.rut,
-                            role: admin.role,
-                            logged: admin.logged,
-                            imgUrl: admin.imgUrl,
-                            bio : admin.bio,
-                            age:admin.age,
-                            weight:admin.weight,
-                            size:admin.size,
-                            phone:admin.phone,
-                            gender:admin.gender,
-                            classroom: admin.classroom,
-                            school: admin.school,
-                            workshop: admin.workshop,
-                            program: admin.program
-
-                        };
-
-                        admin.logged = true;
-                        await admin.save();
-
-                        return res.status(200).json({
-                            message: 'Bienvenido, inicio de sesión exitoso',
-                            success: true,
-                            response: {
-                                admin: loginAdmin,
-                                token: token
-                            }
-                        });
-                    } else {
-                        return res.status(400).json({
-                            message: 'Contraseña incorrecta para el administrador, verifica e intenta nuevamente',
-                            success: false
-                        });
-                    }
-                }
-
-                // Buscar en Students
-                const student = await Students.findOne({ email });
-
-                if (student) {
-                    const studentPass = student.password.filter(userpassword =>
-                        bcryptjs.compareSync(password, userpassword)
-                    );
-
-                    if (studentPass.length > 0) {
-                        // Código existente para inicio de sesión exitoso del estudiante
-                        const token = jwt.sign(
-                        {
-                            id: student._id,
-                            role: student.role
-                        },
-                        process.env.KEY_JWT,
-                        {
-                            expiresIn: 60 * 60 * 24
-                        }
-                    );
-
-             
-             
-                    await student.populate('school program workshop')
-
-                    const loginStudent = {
-                        id: student._id,
-                        email: student.email,
-                        name: student.name,
-                        lastName: student.lastName,
-                        role: student.role,
-                        logged: student.logged,
-                        age: student.age,
-                        weight: student.weight,
-                        size: student.size,
-                        classroom: student.classroom,
-                        school: student.school,
-                        gender: student.gender,
-                        rut: student.rut,
-                        imgUrl: student.imgUrl,
-                        phone: student.phone,
-                        gender: student.gender,
-                        school_representative: student.school_representative,
-                        workshop: student.workshop,
-                        program: student.program,
-                        bio: student.bio,
-                        tasks: student.tasks
-                    };
-
-                    student.logged = true;
-                    await student.save();
-
-                    return res.status(200).json({
-                        message: 'Bienvenido, inicio de sesión exitoso',
-                        success: true,
-                        response: {
-                            student: loginStudent,
-                            token: token
-                        }
-                    })} else {
-                        return res.status(400).json({
-                            message: 'Contraseña incorrecta para el estudiante, verifica e intenta nuevamente',
-                            success: false
-                        });
-                    }
-                }
-
-                // Código existente para cuando el usuario no existe
-                res.status(404).json({
-                    message: 'Usuario no existe, comunícate con el administrador',
-                    success: false
-                })
-
-            } catch (error) {
-                console.log(error);
-                res.status(400).json({
-                    message: error.message,
-                    success: false
-                });
-            }
-    },
-
-    //     let { email, password } = req.body;
-
-    //     const admin = await UserAdmin.findOne({ email })
-
-    //     const student = await Students.findOne({ email })
-
-
-    //     // try {
-
-
-    //     //     if (!admin ) {
-    //     //         res.status(404).json({
-    //     //             message: 'Usuario no existe, comunicate con el administrador',
-    //     //             success: false
-    //     //         })
-    //     //     }  else if (admin) {
-
-    //     //         const token = jwt.sign(
-    //     //             {
-    //     //                 id: admin._id,
-    //     //                 role: admin.role
-    //     //             },
-    //     //             process.env.KEY_JWT,
-    //     //             {
-    //     //                 expiresIn: 60 * 60 * 24
-    //     //             }
-    //     //         )
-
-
-    //     //         const adminPass = admin.password.filter(userpassword => bcryptjs.compareSync(password, userpassword))
-
-    //     //         if (adminPass.length > 0) {
-    //     //             const loginAdmin = {
-    //     //                 id: admin._id,
-    //     //                 email: admin.email,
-    //     //                 name: admin.name,
-    //     //                 lastName: admin.lastName,
-    //     //                 rut: admin.rut,
-    //     //                 role: admin.role,
-
-    //     //             }
-    //     //             admin.logged = true
-    //     //             await admin.save()
-
-    //     //             res.status(200).json({
-    //     //                 message: 'Bienvenido, Inicio de sesión con exito',
-    //     //                 success: true,
-    //     //                 response: {
-    //     //                     admin: loginAdmin,
-    //     //                     token: token
-    //     //                 }
-    //     //             })
-    //     //         } else {
-    //     //             res.status(400).json({
-    //     //                 message: 'La contraseña es incorrecta, verifica e intenta nuevamente',
-    //     //                 success: false
-    //     //             })
-    //     //         }
-    //     //     } else if (student ) {
-    //     //         res.status(200).json({
-    //     //             message: 'estudiante encontrado',
-    //     //             success: true
-    //     //         })
-    //     //     } else if(!student){
-    //     //         res.status(404).json({
-    //     //             message: 'Estudiante no existe, comunicate con el administrador',
-    //     //             success: false
-    //     //         })
-    //     //     }
-    //     // } catch (error) {
-    //     //     console.log(error);
-    //     //     res.status(400).json({
-    //     //         message: error.message,
-    //     //         success: false
-    //     //     })
-    //     // }
-
-
-    //     // } catch (error) {
-    //     //     console.log(error);
-    //     //     res.status(400).json({
-    //     //         message: error.message,
-    //     //         success: false
-    //     //     })
-    //     // }
-    //     // try {
-    //     //     // Buscar en UserAdmin
-    //     //     const admin = await UserAdmin.findOne({ email });
-    //     //     // Buscar en Students
-    //     //     const student = await Students.findOne({ email });
-
-    //     //     if (admin) {
-    //     //         const adminPass = admin.password.filter(userpassword =>
-    //     //             bcryptjs.compareSync(password, userpassword)
-    //     //         );
-
-    //     //         if (adminPass.length > 0) {
-    //     //             const token = jwt.sign(
-    //     //                 {
-    //     //                     id: admin._id,
-    //     //                     role: admin.role
-    //     //                 },
-    //     //                 process.env.KEY_JWT,
-    //     //                 {
-    //     //                     expiresIn: 60 * 60 * 24
-    //     //                 }
-    //     //             );
-
-    //     //             const loginAdmin = {
-    //     //                 id: admin._id,
-    //     //                 email: admin.email,
-    //     //                 name: admin.name,
-    //     //                 lastName: admin.lastName,
-    //     //                 rut: admin.rut,
-    //     //                 role: admin.role,
-    //     //                 logged: admin.logged
-    //     //             };
-
-    //     //             admin.logged = true;
-    //     //             await admin.save();
-
-    //     //             return res.status(200).json({
-    //     //                 message: 'Bienvenido, inicio de sesión exitoso',
-    //     //                 success: true,
-    //     //                 response: {
-    //     //                     admin: loginAdmin,
-    //     //                     token: token
-    //     //                 }
-    //     //             });
-    //     //         } else {
-    //     //             res.status(400).json({
-    //     //                 message: 'La contraseña es incorrecta, verifica e intenta nuevamente',
-    //     //                 success: false
-    //     //             })
-    //     //         }
-    //     //     }
-
-
-    //     //     if (student) {
-    //     //         const studentPass = student.password.filter(userpassword =>
-    //     //             bcryptjs.compareSync(password, userpassword)
-    //     //         );
-
-    //     //         if (studentPass.length > 0) {
-    //     //             const token = jwt.sign(
-    //     //                 {
-    //     //                     id: student._id,
-    //     //                     role: student.role
-    //     //                 },
-    //     //                 process.env.KEY_JWT,
-    //     //                 {
-    //     //                     expiresIn: 60 * 60 * 24
-    //     //                 }
-    //     //             );
-
-    //     //             const loginStudent = {
-    //     //                 id: student._id,
-    //     //                 email: student.email,
-    //     //                 name: student.name,
-    //     //                 lastName: student.lastName,
-    //     //                 role: student.role,
-    //     //                 logged: student.logged,
-    //     //                 age: student.age,
-    //     //                 weight: student.weight,
-    //     //                 size: student.size,
-    //     //                 classroom: student.classroom,
-    //     //                 school: student.school,
-    //     //                 gender: student.gender,
-    //     //                 rut: student.rut,
-    //     //                 imgUrl: student.imgUrl,
-    //     //                 phone: student.phone,
-    //     //                 gender: student.gender,
-    //     //                 school_representative: student.school_representative,
-    //     //                 workshop: student.workshop,
-    //     //                 program: student.program
-    //     //             };
-
-    //     //             student.logged = true;
-    //     //             await student.save();
-
-    //     //             return res.status(200).json({
-    //     //                 message: 'Bienvenido, inicio de sesión exitoso',
-    //     //                 success: true,
-    //     //                 response: {
-    //     //                     student: loginStudent,
-    //     //                     token: token
-    //     //                 }
-    //     //             })
-    //     //         }
-    //     //     }
-
-    //     //     res.status(404).json({
-    //     //         message: 'Usuario no existe, comunícate con el administrador',
-    //     //         success: false
-    //     //     })
-
-    //     // } catch (error) {
-    //     //     console.log(error);
-    //     //     res.status(400).json({
-    //     //         message: error.message,
-    //     //         success: false
-    //     //     })
-    //     // }
-    // },
-    signOut: async (req, res) => {
-        let { email } = req.body;
-
-        try {
-            const adminUser = await UserAdmin.findOne({ email });
-            const studentUser = await Students.findOne({ email });
-        
-            if (adminUser) {
-              adminUser.logged = false;
-              await adminUser.save();
-        
-              res.status(200).json({
-                message: 'Hasta luego, cierre de sesión exitoso',
-                success: true,
-                response: {
-                  username: adminUser.name,
-                  logged: adminUser.logged
-                }
-              });
-            } else if (studentUser) {
-              studentUser.logged = false;
-              await studentUser.save();
-        
-              res.status(200).json({
-                message: 'Hasta luego, cierre de sesión exitoso',
-                success: true,
-                response: {
-                  username: studentUser.name,
-                  logged: studentUser.logged
-                }
-              });
-            } else {
-              res.status(400).json({
-                message: 'No puedes cerrar sesión, ya que no estás logueado',
-                success: false
-              });
-            }
-          } catch (error) {
-            console.log(error);
-            res.status(400).json({
-              message: 'Error al intentar finalizar tu sesión',
-              success: false
-            });
-          }
-
-    },
-    getAdmins: async (req, res) => {
-        try {
-            let admins = await UserAdmin.find().sort({ name: 1 })
-
-            if (admins) {
-                res.status(200).json({
-
-                    users: admins,
-                    message: "Usuarios registrados",
-                    success: true
-
-                })
-            } else {
-                res.status(404).json({
-                    message: "No hay usuarios asociados",
-                    success: false
-                })
-            }
-        } catch (error) {
-            console.log(error)
-            res.status(400).json({
-                message: error.message,
-                success: false
-            })
-        }
-    },
-    resetPassword: async (req, res) => {
-
-        const { email, newPassword } = req.body;
-
-        try {
-          let adminUser = await UserAdmin.findOne({ email });
-          let studentUser = await Students.findOne({ email });
-      
-          if (!adminUser && !studentUser) {
-            return res.status(404).json({
-              message: 'Usuario no encontrado',
-              success: false
-            });
-          }
-      
-          const hashedPassword = bcryptjs.hashSync(newPassword, 10);
-      
-          if (adminUser) {
-            adminUser.password = hashedPassword;
-            await adminUser.save();
-          }
-      
-          if (studentUser) {
-            studentUser.password = hashedPassword;
-            await studentUser.save();
-          }
-      
+        res.status(201).json({
+          message: "Usuario creado correctamente",
+          success: true
+        });
+      } else {
+        if (adminUser.from.includes(from)) {
           res.status(200).json({
-            message: 'Contraseña restablecida con éxito',
+            message: "Usuario posee cuenta creada desde: " + from,
+            success: false
+          });
+        } else {
+          adminUser.from.push(from);
+          adminUser.verified = true;
+          adminUser.password.push(bcryptjs.hashSync(password, 10));
+          await adminUser.save();
+          res.status(201).json({
+            message: "Usuario ha creado su cuenta desde: " + from,
             success: true
           });
-        } catch (error) {
-          console.log(error);
-          res.status(500).json({
-            message: 'Ocurrió un error al restablecer la contraseña',
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: error.message,
+        success: false
+      });
+    }
+
+  }, signIn: async (req, res) => {
+    let { email, password, from } = req.body;
+    try {
+
+      // Buscar en UserAdmin
+      const admin = await UserAdmin.findOne({ email });
+
+      if (admin) {
+        if (!admin.verified) {
+          return res.status(400).json({
+            message: 'Usuario no verificado, comunícate con el administrador',
+            success: false
+          });
+        } else {
+          if (from === 'form') {
+            await userLoginValidator.validateAsync(req.body)
+
+            const adminPass = admin.password.filter(userpassword =>
+              bcryptjs.compareSync(password, userpassword)
+            );
+
+            if (adminPass.length > 0) {
+              // Código existente para inicio de sesión exitoso del administrador
+              const token = jwt.sign(
+                {
+                  id: admin._id,
+                  role: admin.role
+                },
+                process.env.KEY_JWT,
+                {
+                  expiresIn: 60 * 60 * 24
+                }
+              );
+
+              await admin.populate('classroom school workshop program')
+
+              const loginAdmin = {
+                id: admin._id,
+                email: admin.email,
+                name: admin.name,
+                lastName: admin.lastName,
+                rut: admin.rut,
+                role: admin.role,
+                logged: admin.logged,
+                imgUrl: admin.imgUrl,
+                bio: admin.bio,
+                age: admin.age,
+                weight: admin.weight,
+                size: admin.size,
+                phone: admin.phone,
+                gender: admin.gender,
+                classroom: admin.classroom,
+                school: admin.school,
+                workshop: admin.workshop,
+                program: admin.program,
+                verified: admin.verified,
+                code: admin.code,
+                from: admin.from
+
+              };
+
+              admin.logged = true;
+              await admin.save();
+              return res.status(200).json({
+                message: 'Bienvenido, inicio de sesión exitoso',
+                success: true,
+                response: {
+                  admin: loginAdmin,
+                  token: token
+                }
+              });
+            } else {
+              return res.status(400).json({
+                message: 'Contraseña incorrecta, verifica e intenta nuevamente',
+                success: false
+              });
+            }
+
+          } else {
+
+            const token = jwt.sign(
+              {
+                id: admin._id,
+                role: admin.role
+              },
+              process.env.KEY_JWT,
+              {
+                expiresIn: 60 * 60 * 24
+              }
+            );
+
+            await admin.populate('classroom school workshop program')
+
+            const loginAdmin = {
+              id: admin._id,
+              email: admin.email,
+              name: admin.name,
+              lastName: admin.lastName,
+              rut: admin.rut,
+              role: admin.role,
+              logged: admin.logged,
+              imgUrl: admin.imgUrl,
+              bio: admin.bio,
+              age: admin.age,
+              weight: admin.weight,
+              size: admin.size,
+              phone: admin.phone,
+              gender: admin.gender,
+              classroom: admin.classroom,
+              school: admin.school,
+              workshop: admin.workshop,
+              program: admin.program,
+              verified: admin.verified,
+              code: admin.code,
+              from: admin.from
+
+            };
+
+            admin.logged = true;
+            await admin.save();
+            return res.status(200).json({
+              message: 'Bienvenido, inicio de sesión exitoso',
+              success: true,
+              response: {
+                admin: loginAdmin,
+                token: token
+              }
+            });
+          }
+        }
+      }
+
+
+      // Buscar en Students
+      const student = await Students.findOne({ email });
+      if (student) {
+
+
+
+          if (from === 'app') {
+            await userLoginValidator.validateAsync(req.body)
+            const studentPass = student.password.filter(userpassword =>
+              bcryptjs.compareSync(password, userpassword)
+            );
+
+            if (studentPass.length > 0) {
+              // Código existente para inicio de sesión exitoso del estudiante
+              const token = jwt.sign(
+                {
+                  id: student._id,
+                  role: student.role
+                },
+                process.env.KEY_JWT,
+                {
+                  expiresIn: 60 * 60 * 24
+                }
+              );
+              await student.populate('school program workshop')
+
+              const loginStudent = {
+                id: student._id,
+                email: student.email,
+                name: student.name,
+                lastName: student.lastName,
+                role: student.role,
+                logged: student.logged,
+                age: student.age,
+                weight: student.weight,
+                size: student.size,
+                classroom: student.classroom,
+                school: student.school,
+                gender: student.gender,
+                rut: student.rut,
+                imgUrl: student.imgUrl,
+                phone: student.phone,
+                gender: student.gender,
+                school_representative: student.school_representative,
+                workshop: student.workshop,
+                program: student.program,
+                bio: student.bio,
+                tasks: student.tasks
+              };
+
+              student.logged = true;
+              await student.save();
+
+              return res.status(200).json({
+                message: 'Bienvenido, inicio de sesión exitoso',
+                success: true,
+                response: {
+                  student: loginStudent,
+                  token: token
+                }
+              })
+            } else {
+              return res.status(400).json({
+                message: 'Contraseña incorrecta para el estudiante, verifica e intenta nuevamente',
+                success: false
+              });
+            }
+
+          } else if (from === 'app-google') {
+
+            const token = jwt.sign(
+              {
+                id: student._id,
+                role: student.role
+              },
+              process.env.KEY_JWT,
+              {
+                expiresIn: 60 * 60 * 24
+              }
+            );
+            await student.populate('school program workshop')
+
+            const loginStudent = {
+              id: student._id,
+              email: student.email,
+              name: student.name,
+              lastName: student.lastName,
+              role: student.role,
+              logged: student.logged,
+              age: student.age,
+              weight: student.weight,
+              size: student.size,
+              classroom: student.classroom,
+              school: student.school,
+              gender: student.gender,
+              rut: student.rut,
+              imgUrl: student.imgUrl,
+              phone: student.phone,
+              gender: student.gender,
+              school_representative: student.school_representative,
+              workshop: student.workshop,
+              program: student.program,
+              bio: student.bio,
+              tasks: student.tasks
+            };
+
+            student.logged = true;
+            await student.save();
+
+            return res.status(200).json({
+              message: 'Bienvenido, inicio de sesión exitoso',
+              success: true,
+              response: {
+                student: loginStudent,
+                token: token
+              }
+            })
+
+          } else {
+            return res.status(400).json({
+              message: 'Acceso restringido, no puedes acceder desde este sitio',
+              success: false
+            });
+          }
+
+      }
+
+      // Código existente para cuando el usuario no existe
+      res.status(404).json({
+        message: 'Usuario no existe, comunícate con el administrador',
+        success: false
+      })
+
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: error.message,
+        success: false
+      });
+    }
+  },
+
+  //     let { email, password } = req.body;
+
+  //     const admin = await UserAdmin.findOne({ email })
+
+  //     const student = await Students.findOne({ email })
+
+
+  //     // try {
+
+
+  //     //     if (!admin ) {
+  //     //         res.status(404).json({
+  //     //             message: 'Usuario no existe, comunicate con el administrador',
+  //     //             success: false
+  //     //         })
+  //     //     }  else if (admin) {
+
+  //     //         const token = jwt.sign(
+  //     //             {
+  //     //                 id: admin._id,
+  //     //                 role: admin.role
+  //     //             },
+  //     //             process.env.KEY_JWT,
+  //     //             {
+  //     //                 expiresIn: 60 * 60 * 24
+  //     //             }
+  //     //         )
+
+
+  //     //         const adminPass = admin.password.filter(userpassword => bcryptjs.compareSync(password, userpassword))
+
+  //     //         if (adminPass.length > 0) {
+  //     //             const loginAdmin = {
+  //     //                 id: admin._id,
+  //     //                 email: admin.email,
+  //     //                 name: admin.name,
+  //     //                 lastName: admin.lastName,
+  //     //                 rut: admin.rut,
+  //     //                 role: admin.role,
+
+  //     //             }
+  //     //             admin.logged = true
+  //     //             await admin.save()
+
+  //     //             res.status(200).json({
+  //     //                 message: 'Bienvenido, Inicio de sesión con exito',
+  //     //                 success: true,
+  //     //                 response: {
+  //     //                     admin: loginAdmin,
+  //     //                     token: token
+  //     //                 }
+  //     //             })
+  //     //         } else {
+  //     //             res.status(400).json({
+  //     //                 message: 'La contraseña es incorrecta, verifica e intenta nuevamente',
+  //     //                 success: false
+  //     //             })
+  //     //         }
+  //     //     } else if (student ) {
+  //     //         res.status(200).json({
+  //     //             message: 'estudiante encontrado',
+  //     //             success: true
+  //     //         })
+  //     //     } else if(!student){
+  //     //         res.status(404).json({
+  //     //             message: 'Estudiante no existe, comunicate con el administrador',
+  //     //             success: false
+  //     //         })
+  //     //     }
+  //     // } catch (error) {
+  //     //     console.log(error);
+  //     //     res.status(400).json({
+  //     //         message: error.message,
+  //     //         success: false
+  //     //     })
+  //     // }
+
+
+  //     // } catch (error) {
+  //     //     console.log(error);
+  //     //     res.status(400).json({
+  //     //         message: error.message,
+  //     //         success: false
+  //     //     })
+  //     // }
+  //     // try {
+  //     //     // Buscar en UserAdmin
+  //     //     const admin = await UserAdmin.findOne({ email });
+  //     //     // Buscar en Students
+  //     //     const student = await Students.findOne({ email });
+
+  //     //     if (admin) {
+  //     //         const adminPass = admin.password.filter(userpassword =>
+  //     //             bcryptjs.compareSync(password, userpassword)
+  //     //         );
+
+  //     //         if (adminPass.length > 0) {
+  //     //             const token = jwt.sign(
+  //     //                 {
+  //     //                     id: admin._id,
+  //     //                     role: admin.role
+  //     //                 },
+  //     //                 process.env.KEY_JWT,
+  //     //                 {
+  //     //                     expiresIn: 60 * 60 * 24
+  //     //                 }
+  //     //             );
+
+  //     //             const loginAdmin = {
+  //     //                 id: admin._id,
+  //     //                 email: admin.email,
+  //     //                 name: admin.name,
+  //     //                 lastName: admin.lastName,
+  //     //                 rut: admin.rut,
+  //     //                 role: admin.role,
+  //     //                 logged: admin.logged
+  //     //             };
+
+  //     //             admin.logged = true;
+  //     //             await admin.save();
+
+  //     //             return res.status(200).json({
+  //     //                 message: 'Bienvenido, inicio de sesión exitoso',
+  //     //                 success: true,
+  //     //                 response: {
+  //     //                     admin: loginAdmin,
+  //     //                     token: token
+  //     //                 }
+  //     //             });
+  //     //         } else {
+  //     //             res.status(400).json({
+  //     //                 message: 'La contraseña es incorrecta, verifica e intenta nuevamente',
+  //     //                 success: false
+  //     //             })
+  //     //         }
+  //     //     }
+
+
+  //     //     if (student) {
+  //     //         const studentPass = student.password.filter(userpassword =>
+  //     //             bcryptjs.compareSync(password, userpassword)
+  //     //         );
+
+  //     //         if (studentPass.length > 0) {
+  //     //             const token = jwt.sign(
+  //     //                 {
+  //     //                     id: student._id,
+  //     //                     role: student.role
+  //     //                 },
+  //     //                 process.env.KEY_JWT,
+  //     //                 {
+  //     //                     expiresIn: 60 * 60 * 24
+  //     //                 }
+  //     //             );
+
+  //     //             const loginStudent = {
+  //     //                 id: student._id,
+  //     //                 email: student.email,
+  //     //                 name: student.name,
+  //     //                 lastName: student.lastName,
+  //     //                 role: student.role,
+  //     //                 logged: student.logged,
+  //     //                 age: student.age,
+  //     //                 weight: student.weight,
+  //     //                 size: student.size,
+  //     //                 classroom: student.classroom,
+  //     //                 school: student.school,
+  //     //                 gender: student.gender,
+  //     //                 rut: student.rut,
+  //     //                 imgUrl: student.imgUrl,
+  //     //                 phone: student.phone,
+  //     //                 gender: student.gender,
+  //     //                 school_representative: student.school_representative,
+  //     //                 workshop: student.workshop,
+  //     //                 program: student.program
+  //     //             };
+
+  //     //             student.logged = true;
+  //     //             await student.save();
+
+  //     //             return res.status(200).json({
+  //     //                 message: 'Bienvenido, inicio de sesión exitoso',
+  //     //                 success: true,
+  //     //                 response: {
+  //     //                     student: loginStudent,
+  //     //                     token: token
+  //     //                 }
+  //     //             })
+  //     //         }
+  //     //     }
+
+  //     //     res.status(404).json({
+  //     //         message: 'Usuario no existe, comunícate con el administrador',
+  //     //         success: false
+  //     //     })
+
+  //     // } catch (error) {
+  //     //     console.log(error);
+  //     //     res.status(400).json({
+  //     //         message: error.message,
+  //     //         success: false
+  //     //     })
+  //     // }
+  // },
+  signOut: async (req, res) => {
+    let { email } = req.body;
+
+    try {
+      const adminUser = await UserAdmin.findOne({ email });
+      const studentUser = await Students.findOne({ email });
+
+      if (adminUser) {
+        adminUser.logged = false;
+        await adminUser.save();
+
+        res.status(200).json({
+          message: 'Hasta luego, cierre de sesión exitoso',
+          success: true,
+          response: {
+            username: adminUser.name,
+            logged: adminUser.logged
+          }
+        });
+      } else if (studentUser) {
+        studentUser.logged = false;
+        await studentUser.save();
+
+        res.status(200).json({
+          message: 'Hasta luego, cierre de sesión exitoso',
+          success: true,
+          response: {
+            username: studentUser.name,
+            logged: studentUser.logged
+          }
+        });
+      } else {
+        res.status(400).json({
+          message: 'No puedes cerrar sesión, ya que no estás logueado',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al intentar finalizar tu sesión',
+        success: false
+      });
+    }
+
+  },
+  getAdmins: async (req, res) => {
+    try {
+      let admins = await UserAdmin.find().sort({ name: 1 })
+
+      if (admins) {
+        res.status(200).json({
+
+          users: admins,
+          message: "Usuarios registrados",
+          success: true
+
+        })
+      } else {
+        res.status(404).json({
+          message: "No hay usuarios asociados",
+          success: false
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      res.status(400).json({
+        message: error.message,
+        success: false
+      })
+    }
+  },
+  resetPassword: async (req, res) => {
+
+    const { email, newPassword, code } = req.body;
+
+    try {
+      let adminUser = await UserAdmin.findOne({ email });
+      let studentUser = await Students.findOne({ email });
+
+      if (!adminUser && !studentUser) {
+        return res.status(404).json({
+          message: 'Verifique su email, no se encontró el usuario',
+          success: false
+        });
+      }
+
+      const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+
+      if (adminUser) {
+
+        if (adminUser.code !== code) {
+          return res.status(400).json({
+            message: 'Código de verificación incorrecto',
+            success: false
+          });
+        }
+        adminUser.password = hashedPassword;
+        await adminUser.save();
+      }
+
+      if (studentUser) {
+
+        if (studentUser.code !== code) {
+          return res.status(400).json({
+            message: 'Código de verificación incorrecto',
             success: false
           });
         }
 
+        studentUser.password = hashedPassword;
+        await studentUser.save();
+      }
 
-    },
-    updateUser: async (req,res)=>{
+      res.status(200).json({
+        message: 'Contraseña restablecida con éxito',
+        success: true
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Ocurrió un error al restablecer la contraseña',
+        success: false
+      });
+    }
 
-        const {rut} = req.params;
 
-        try {
-            let adminUser = await UserAdmin.findOne({ rut });
-            
+  },
+  updateUser: async (req, res) => {
 
-            if (adminUser){
+    const { rut } = req.params;
 
-                const userForUpdate = await UserAdmin.findOneAndUpdate({rut}, req.body)
+    try {
+      let adminUser = await UserAdmin.findOne({ rut });
 
-                if (req.file) {
-                    const fileContent = req.file.buffer;
-                    const extension = req.file.originalname.split('.').pop();
-                    const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-            
-                    const uploadParams = {
-                      Bucket: process.env.AWS_BUCKET_NAME,
-                      Key: fileName,
-                      Body: fileContent,
-                    };
-            
-                    // Subir el archivo a S3
-                    const uploadCommand = new PutObjectCommand(uploadParams);
-                    await clientAWS.send(uploadCommand);
-            
-                    userForUpdate.imgUrl = fileName;
-                  }
-                await userForUpdate.save()
 
-                res.status(200).json({
-                    message: 'Usuario actualizado con éxito',
-                    success: true,
-                    response: userForUpdate
-                  });
+      if (adminUser) {
 
-            }
+        const userForUpdate = await UserAdmin.findOneAndUpdate({ rut }, req.body)
 
-            let studentUser = await Students.findOne({ rut });
+        if (req.file) {
+          const fileContent = req.file.buffer;
+          const extension = req.file.originalname.split('.').pop();
+          const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
 
-            if (studentUser){
-                const studentForUpdate = await Students.findOneAndUpdate({rut}, req.body)
+          const uploadParams = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileName,
+            Body: fileContent,
+          };
 
-                if (req.file) {
-                    const fileContent = req.file.buffer;
-                    const extension = req.file.originalname.split('.').pop();
-                    const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-            
-                    const uploadParams = {
-                      Bucket: process.env.AWS_BUCKET_NAME,
-                      Key: fileName,
-                      Body: fileContent,
-                    };
-            
-                    // Subir el archivo a S3
-                    const uploadCommand = new PutObjectCommand(uploadParams);
-                    await clientAWS.send(uploadCommand);
-            
-                    studentForUpdate.imgUrl = fileName;
-                  }
+          // Subir el archivo a S3
+          const uploadCommand = new PutObjectCommand(uploadParams);
+          await clientAWS.send(uploadCommand);
 
-                await studentForUpdate.save()
+          userForUpdate.imgUrl = fileName;
+        }
+        await userForUpdate.save()
 
-                res.status(200).json({
-                    message: 'Usuario actualizado con éxito',
-                    success: true,
-                    response: studentForUpdate
-                  });
+        res.status(200).json({
+          message: 'Usuario actualizado con éxito',
+          success: true,
+          response: userForUpdate
+        });
 
-            }
+      }
 
-            
-        } catch (error) {
-                  console.log(error);
+      let studentUser = await Students.findOne({ rut });
+
+      if (studentUser) {
+        const studentForUpdate = await Students.findOneAndUpdate({ rut }, req.body)
+
+        if (req.file) {
+          const fileContent = req.file.buffer;
+          const extension = req.file.originalname.split('.').pop();
+          const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+          const uploadParams = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileName,
+            Body: fileContent,
+          };
+
+          // Subir el archivo a S3
+          const uploadCommand = new PutObjectCommand(uploadParams);
+          await clientAWS.send(uploadCommand);
+
+          studentForUpdate.imgUrl = fileName;
+        }
+
+        await studentForUpdate.save()
+
+        res.status(200).json({
+          message: 'Usuario actualizado con éxito',
+          success: true,
+          response: studentForUpdate
+        });
+
+      }
+
+
+    } catch (error) {
+      console.log(error);
       res.status(400).json({
         message: 'Error al intentar actualizar el usuario',
         success: false
       });
-        }
-
-    },
-    updateProfilePhoto: async (req, res)=>{
-        const {rut} = req.params;
-
-        try {
-
-
-
-
-            
-        } catch (error) {
-            console.log(error);
-            res.status(400).json({
-              message: 'Error al intentar actualizar la foto de perfil',
-              success: false
-            });
-        }
-
-
     }
+
+  },
+  updateProfilePhoto: async (req, res) => {
+    const { rut } = req.params;
+
+    try {
+
+
+
+
+
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al intentar actualizar la foto de perfil',
+        success: false
+      });
+    }
+
+
+  }, 
+  emailToResetPassword : async (req, res) => {
+    const { email } = req.body;
+    try {
+
+      let adminUser = await UserAdmin.findOne({ email });
+      let studentUser = await Students.findOne({ email });
+  
+      if (!adminUser && !studentUser) {
+        return res.status(404).json({
+          message: 'Usuario no encontrado, comunícate con el administrador',
+          success: false
+        });
+      }
+      const code = crypto.randomBytes(15).toString('hex')
+  
+      if (adminUser) {
+        adminUser.code = code
+        await adminUser.save()
+        sendResetMail(email, code)
+        res.status(200).json({
+          message: 'Se ha enviado un correo para restablecer tu contraseña',
+          success: true
+        });
+      }
+  
+      if (studentUser) {
+        studentUser.code = code
+        await studentUser.save()
+        sendResetMail(email, code)
+        res.status(200).json({
+          message: 'Se ha enviado un correo para restablecer tu contraseña',
+          success: true
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Ocurrió un error al restablecer la contraseña',
+        success: false
+      });
+      
+    }
+
+
+
+  },
 };
 
 module.exports = userController;
