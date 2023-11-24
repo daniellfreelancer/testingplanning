@@ -21,9 +21,9 @@ const adminSchema = new mongoose.Schema({
     workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
     program: [{type: mongoose.Types.ObjectId, ref:'program'}],
     notifications:[{type: Object}],
-    from: [{type:String, require:true}],  // from google o formularios
-    verified:{type:Boolean, required: true},    // si es verificado por codigos
-    code: {type:String, required:true}
+    from: [{type:String}],  // from google o formularios
+    verified:{type:Boolean},    // si es verificado por codigos
+    code: {type:String}
 
 })
 
