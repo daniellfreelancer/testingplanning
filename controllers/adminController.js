@@ -288,7 +288,7 @@ const userController = {
             success: false
           });
         } else {
-          if (from === 'form') {
+          if (from === 'form' || from === 'app') {
             await userLoginValidator.validateAsync(req.body)
 
             const adminPass = admin.password.filter(userpassword =>
