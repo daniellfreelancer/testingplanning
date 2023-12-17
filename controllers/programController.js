@@ -288,6 +288,63 @@ const programControllers = {
         success: false
       });
     }
+  },
+  deleteProgram: async (req, res) => {
+
+    try {
+      const { id } = req.params
+
+      const deletedProgram = await Programs.findByIdAndDelete(id) 
+
+      if (deletedProgram) {
+        res.status(200).json({
+          message: 'Programa eliminado',
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Programa no encontrado',
+          success: false
+        });
+      }
+
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al eliminar programa',
+        success: false
+      });
+    }
+  },
+  updateProgram : async (req, res) => {
+    const {id} = req.params;
+    const update = req.body;
+  
+    try {
+      // Actualizar la escuela y obtener el documento actualizado
+      const updatedProgram = await Programs.findByIdAndUpdate(id, update, { new: true });
+
+      await updatedProgram.save();
+
+      if (updatedProgram) {
+        res.status(200).json({
+          message: 'Programa actualizado',
+          response: updatedProgram,
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Programa no encontrado',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al actualizar programa',
+        success: false
+      });
+    }
   }
 
 }

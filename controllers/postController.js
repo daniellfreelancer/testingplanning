@@ -143,7 +143,7 @@ const postController = {
     // },
     createPost: async (req, res) => {
         try {
-            const { user, commentsAllow, text, videoPost } = req.body;
+            const { user, commentsAllow, text, videoPost, classroom, workshop } = req.body;
 
             if (!req.file) {
                 return res.status(400).json({ message: 'Sin imagen cargada' });
@@ -218,7 +218,9 @@ const postController = {
                 commentsAllow,
                 comments: [],
                 text,
-                videoPost
+                videoPost,
+                classroom,
+                workshop
             });
 
             await newPost.save();
@@ -402,7 +404,6 @@ const postController = {
     getAllPosts: async (req, res) => {
         try {
             // Obtener todos los posts ordenados por fecha de creación descendente
-            // const posts = await Post.find().sort({ createdAt: -1 }).populate(PostQueryPopulate)
 
             const posts = await Post.find()
                 .sort({ createdAt: -1 })
@@ -531,7 +532,57 @@ const postController = {
             console.error(error);
             return res.status(500).json({ message: 'Error deleting reply' });
         }
-    }
+    },
+    getPostsByFilter: async (req, res) => {
+        try {
+            // Recibir el parámetro para filtrar (puede ser 'classroom' o 'workshop')
+            const filterType = req.query.filterType; // o req.params.filterType, dependiendo de cómo lo envíes
+            const filterValue = req.query.filterValue; // El valor del ID de classroom o workshop
+            const limit = parseInt(req.query.limit) || 0; // 0 significa sin límite
+    
+            let filter = {};
+            if (filterType && filterValue) {
+                filter[filterType] = filterValue;
+            }
+    
+            // Obtener todos los posts con el filtro aplicado, ordenados por fecha de creación descendente
+            const posts = await Post.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .populate({
+                    path: 'user',
+                    select: 'name lastName role imgUrl',
+                })
+                .populate({
+                    path: 'comments',
+                    select: 'user replies text student',
+                    populate: [
+                        {
+                            path: 'user student',
+                            select: 'name lastName imgUrl role',
+                        },
+                        {
+                            path: 'replies',
+                            select: 'name lastName role imgUrl user text student',
+                            populate: {
+                                path: 'user student',
+                                select: 'name lastName imgUrl role',
+                            },
+                        },
+                    ],
+                });
+
+
+            return res.status(200).json({ response: posts, message: "Posts", success: true });
+
+
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error fetching posts' });
+        }
+    },
+    
 };
 
 module.exports = postController;

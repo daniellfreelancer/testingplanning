@@ -8,6 +8,8 @@ const postSchema = new mongoose.Schema({
     text: { type: String },
     videoPost:{type: Boolean},
     comments: [ { type : mongoose.Types.ObjectId, ref: 'comment', required: false }], // Uso del esquema embebido para los comentarios
+    classroom: { type : mongoose.Types.ObjectId, ref: 'classroom', required: false },
+    workshop: { type : mongoose.Types.ObjectId, ref: 'workshop', required: false },
 }, {
     timestamps: true,
 });

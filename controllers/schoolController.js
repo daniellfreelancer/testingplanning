@@ -299,6 +299,63 @@ const schoolControllers = {
         success: false
       });
     }
+  },
+  deleteSchool: async (req, res) => {
+
+    try {
+      const { id } = req.params
+
+      const deletedSchool = await Schools.findByIdAndDelete(id) 
+
+      if (deletedSchool) {
+        res.status(200).json({
+          message: 'Escuela eliminada',
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        });
+      }
+
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al eliminar escuela',
+        success: false
+      });
+    }
+  },
+  updateSchool : async (req, res) => {
+    const {id} = req.params;
+    const update = req.body;
+  
+    try {
+      // Actualizar la escuela y obtener el documento actualizado
+      const updatedSchool = await Schools.findByIdAndUpdate(id, update, { new: true });
+
+      await updatedSchool.save();
+
+      if (updatedSchool) {
+        res.status(200).json({
+          message: 'Escuela actualizada',
+          response: updatedSchool,
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al actualizar escuela',
+        success: false
+      });
+    }
   }
 
 }

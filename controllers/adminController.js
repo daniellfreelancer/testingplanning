@@ -801,7 +801,7 @@ const userController = {
   },
   getAdmins: async (req, res) => {
     try {
-      let admins = await UserAdmin.find().sort({ name: 1 })
+      let admins = await UserAdmin.find({ role: { $in: ['SUVM', 'SUAD'] }}).sort({ name: 1 })
 
       if (admins) {
         res.status(200).json({
@@ -1029,6 +1029,33 @@ const userController = {
 
 
   },
+  deleteUser: async (req, res) => {
+    try {
+      const userId = req.params._id; // Recibir el _id del usuario desde los parámetros de la ruta
+      const user = await UserAdmin.findById(userId);
+  
+      if (user) {
+        await UserAdmin.deleteOne({ _id: userId });
+        res.status(200).json({
+          message: "Usuario eliminado con éxito",
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: "Usuario no encontrado",
+          success: false
+        });
+      }
+    } catch (error) { 
+      console.log(error);
+      res.status(500).json({
+        message: error.message,
+        success: false
+      });
+    }
+  },
+  
+
 };
 
 module.exports = userController;

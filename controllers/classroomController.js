@@ -303,7 +303,7 @@ const classroomController = {
             success: false
           });
         }
-      }
+      },
     
 
 }

@@ -1,35 +1,5 @@
 const Institution = require('../models/institution')
 
-// const institutionPopulateQuery = [
-//   {
-//     path: 'teachers',
-//     select: 'name lastName email role rut logged',
-//   },
-//   {
-//     path: 'admins',
-//     select: 'name lastName email role rut logged',
-//   },
-//   {
-//     path: 'schools',
-//     populate: {
-//       path: 'admins teachers students',
-//       select: 'name lastName email role rut logged phone age weight size gender',
-//     },
-//   },
-//   {
-//     path: 'schools',
-//     populate: {
-//       path: 'classrooms',
-//       select: 'grade level planner classHistory students',
-//       populate: {
-//         path: 'teacher teacherSubstitute',
-//         select: 'name lastName email role rut logged',
-//       },
-//     },
-//   },
-
-// ];
-
 const institutionPopulateQuery = [
   {
     path: 'teachers',
@@ -106,30 +76,6 @@ const instiController = {
   },
   readInstitutions: async (req, res) => {
     try {
-      // let allInstitutions = await Institution
-      //   .find()
-      //   .populate({
-      //     path: 'teachers',
-      //     select: 'name lastName email role rut logged',
-      //   })
-      //   .populate({
-      //     path: 'admins',
-      //     select: 'name lastName email role rut logged',
-      //   })
-      //   .populate({
-      //     path: 'schools',
-      //     populate: {
-      //       path: 'admins',
-      //       select: 'name lastName email role rut logged',}
-      //   })
-      //   .populate({
-      //     path: 'schools',
-      //     populate :{
-      //       path: 'classrooms',
-      //       select : 'grade level'
-      //     }
-      //   });
-
       const allInstitutions = await Institution.find().populate(institutionPopulateQuery);
 
       if (allInstitutions.length > 0) {
@@ -333,11 +279,7 @@ const instiController = {
     }
   },
   institutionById: async (req, res) => {
-
-
     let { id } = req.params;
-
-
     try {
 
       const instiFund = await Institution.findById(id).populate(institutionPopulateQuery);
@@ -361,7 +303,68 @@ const instiController = {
     }
 
 
+  },
+  deleteInstitution: async (req, res) => {
+
+    try {
+      const { id } = req.params
+
+      const deletedInstitution = await Institution.findByIdAndDelete(id)
+
+
+
+      if (deletedInstitution) {
+        res.status(200).json({
+          message: 'Institución eliminada',
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al eliminar institución',
+        success: false
+      });
+    }
+  },
+  updateInstitution: async (req, res) => {
+    const _id = req.params.id;
+    const update = req.body;
+  
+    try {
+      // Actualiza directamente sin necesidad de llamar a save()
+      const updatedInstitution = await Institution.findByIdAndUpdate(
+        _id, 
+        update, 
+        { new: true, runValidators: true } // Opciones para retornar el documento actualizado y ejecutar validadores
+      );
+  
+      if (updatedInstitution) {
+        res.status(200).json({
+          message: 'Institución actualizada',
+          response: updatedInstitution,
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al actualizar institución',
+        success: false
+      });
+    }
   }
+  
 
 
 

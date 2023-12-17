@@ -14,6 +14,7 @@ router.get('/posts', postController.getAllPosts);
 router.put('/posts/edit-text', postController.editPostText);
 router.put('/posts/comment/reply/edit', postController.editReply); // Editar un reply de un comentario
 router.delete('/posts/comment/reply/delete/:replyId/comment/:parentCommentId', postController.deleteReply); // Eliminar un reply de un comentario
+router.get('/postsApp', postController.getPostsByFilter)
 
 
 // Rutas para los Comentarios
