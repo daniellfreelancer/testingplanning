@@ -431,7 +431,7 @@ const userController = {
                   expiresIn: 60 * 60 * 24
                 }
               );
-              await student.populate('school program workshop')
+              await student.populate('classroom school program workshop')
 
               const loginStudent = {
                 id: student._id,
@@ -487,7 +487,7 @@ const userController = {
                 expiresIn: 60 * 60 * 24
               }
             );
-            await student.populate('school program workshop')
+            await student.populate('classroom school program workshop')
 
             const loginStudent = {
               id: student._id,
