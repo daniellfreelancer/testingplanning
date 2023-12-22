@@ -18,23 +18,27 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
   let sleepLevel = 0;
   let stressLevel = 0;
   let fatigueLevel = 0;
-  let muscleLevel =0;
+  let muscleLevel = 0;
   let moodLevel = 0;
 
   for (const studentId of arrayStudentsForSurvey) {
-    const newSurvey = new Survey({
-      classroom: classroomId,
-      vmClass: resumeId,
-      student: studentId,
-      sleepLevel,
-      stressLevel,
-      fatigueLevel,
-      muscleLevel,
-      moodLevel,
-      status
-    })
 
-    surveys.push(newSurvey);
+
+    if (studentId.attendance == 'true') {
+      const newSurvey = new Survey({
+        classroom: classroomId,
+        vmClass: resumeId,
+        student: studentId,
+        sleepLevel,
+        stressLevel,
+        fatigueLevel,
+        muscleLevel,
+        moodLevel,
+        status
+      })
+
+      surveys.push(newSurvey);
+    }
   }
 
   await Survey.insertMany(surveys);
@@ -159,8 +163,8 @@ const resumeVMClassController = {
           classroom.classHistory.push(resumeId)
           await classroom.save();
 
-              // Crear encuestas para los estudiantes
-    await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
+          // Crear encuestas para los estudiantes
+          await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
 
 
 
@@ -180,9 +184,9 @@ const resumeVMClassController = {
         console.log(error)
       }
 
-   
 
-    // Aqui se crean las encuestas
+
+      // Aqui se crean las encuestas
 
 
 

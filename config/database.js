@@ -30,5 +30,5 @@ switch (process.env.NODE_ENV) {
 }
 
 mongoose.connect(dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log(`Conectado a MongoDB en el ambiente ${process.env.NODE_ENV}`))
+  .then(() => console.log(`Conectado a MongoDB en el ambiente ${process.env.NODE_ENV ? process.env.NODE_ENV : "BD-Test" }`))
   .catch(err => console.error('Error al conectar con MongoDB', err));

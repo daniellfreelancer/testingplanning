@@ -107,6 +107,25 @@ const momentscontroller = {
   getAllMoments: async (req, res) => {
     try {
 
+      // Utilizamos el método `find` para obtener todos los momentos
+      const moments = await Moments.find()
+        .populate({
+          path: 'user',
+          select: '_id name lastName imgUrl', // Seleccionamos los campos que deseamos mostrar del usuario
+        })
+        .sort({ createdAt: -1 }) // Ordenamos por fecha de creación de mayor a menor
+        .exec();
+
+      // Respondemos con los momentos y los datos del usuario
+      return res.status(200).json({ moments });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error fetching moments' });
+    }
+  },
+  getMomentsByType: async (req, res) => {
+    try {
+
       // Recibir el parámetro para filtrar (puede ser 'classroom' o 'workshop')
       const filterType = req.query.filterType; // o req.params.filterType, dependiendo de cómo lo envíes
       const filterValue = req.query.filterValue; // El valor del ID de classroom o workshop
