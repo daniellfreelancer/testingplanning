@@ -52,33 +52,63 @@ const surveyController = {
         res.status(500).json({ error: 'Error al obtener encuestas completadas por estudiante' });
       }
     },
+    // updateSurveyStudent : async (req, res) => {
+    //     try {
+    //       const { surveyId } = req.params;
+    //       const { sleepLevel, stressLevel, fatigueLevel, muscleLevel, moodLevel } = req.body;
+      
+    //       const survey = await Survey.findOne({surveyId});
+      
+    //       if (!survey) {
+    //         return res.status(404).json({ message: 'Encuesta no encontrada' });
+    //       }
+      
+    //       // Actualiza los valores y el estado
+    //       survey.sleepLevel = sleepLevel;
+    //       survey.stressLevel = stressLevel;
+    //       survey.fatigueLevel = fatigueLevel;
+    //       survey.muscleLevel = muscleLevel;
+    //       survey.moodLevel = moodLevel;
+    //       survey.status = true;
+      
+    //       await survey.save();
+      
+    //       res.status(200).json({ message: 'Encuesta actualizada con éxito' });
+    //     } catch (error) {
+    //       console.error(error);
+    //       res.status(500).json({ error: 'Error al actualizar la encuesta del estudiante' });
+    //     }
+    //   }
     updateSurveyStudent : async (req, res) => {
-        try {
-          const { surveyId } = req.params;
-          const { sleepLevel, stressLevel, fatigueLevel, muscleLevel, moodLevel } = req.body;
-      
-          const survey = await Survey.findOne({surveyId});
-      
-          if (!survey) {
-            return res.status(404).json({ message: 'Encuesta no encontrada' });
-          }
-      
-          // Actualiza los valores y el estado
-          survey.sleepLevel = sleepLevel;
-          survey.stressLevel = stressLevel;
-          survey.fatigueLevel = fatigueLevel;
-          survey.muscleLevel = muscleLevel;
-          survey.moodLevel = moodLevel;
-          survey.status = true;
-      
-          await survey.save();
-      
-          res.status(200).json({ message: 'Encuesta actualizada con éxito' });
-        } catch (error) {
-          console.error(error);
-          res.status(500).json({ error: 'Error al actualizar la encuesta del estudiante' });
+      try {
+        const { surveyId } = req.params;
+        const { sleepLevel, stressLevel, fatigueLevel, muscleLevel, moodLevel } = req.body;
+  
+        // Utilizar findByIdAndUpdate para actualizar el documento
+        const survey = await Survey.findByIdAndUpdate(surveyId, {
+          sleepLevel,
+          stressLevel,
+          fatigueLevel,
+          muscleLevel,
+          moodLevel,
+          status: true
+        }, { new: true }); // { new: true } para obtener el documento actualizado
+  
+        if (!survey) {
+          return res.status(404).json({ message: 'Encuesta no encontrada' });
         }
+  
+        res.status(200).json({ 
+          message: 'Encuesta actualizada con éxito',
+          response: survey,
+          success: true
+         });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al actualizar la encuesta del estudiante' });
       }
+    }
+  
   };
 
 module.exports = surveyController

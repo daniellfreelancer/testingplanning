@@ -6,8 +6,6 @@ const Students = require('../models/student')
 
 
 const gradebookController = {
-
-
     createNote: async (req, res) => {
         let { title, classroom, notation, teacher, student } = req.body;
 

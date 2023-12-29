@@ -15,6 +15,6 @@ router.get('/student/pending/:studentId', getSurveyByStudentPending);
 router.get('/student/done/:studentId', getSurveyByStudentDone);
 
 // Ruta para actualizar la encuesta de un estudiante
-router.put('/student/update/:surveyId', updateSurveyStudent);
+router.patch('/student/update/:surveyId', updateSurveyStudent);
 
 module.exports = router;
