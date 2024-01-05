@@ -26,7 +26,8 @@ const studentSchema = new mongoose.Schema({
     notifications:[{type: Object}],
     from: [{type:String}],  // from google o formularios
     verified:{type:Boolean},    // si es verificado por codigos
-    code: {type:String}
+    code: {type:String},
+    fitData:[{type: mongoose.Types.ObjectId, ref:'fitdata', required: false}]
 
 },
 {
