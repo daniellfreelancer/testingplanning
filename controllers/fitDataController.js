@@ -28,11 +28,7 @@ const fitDataController = {
                 user,
                 student
             })
-
             await fitDataUser.save()
-
-
-
             if (userType === 'user') {
 
                 const userData = await Users.findById(user)
@@ -47,8 +43,6 @@ const fitDataController = {
 
                 userData.fitData.push(fitDataUser._id)
                 await userData.save()
-
-
             } else {
                 const userData  = await Students.findById(student)
 
@@ -59,16 +53,9 @@ const fitDataController = {
                         }
                     )
                 }
-
                 userData.fitData.push(fitDataUser._id)
-               
                 await userData.save()
-
-
             }
-
-
-
 
                 if (fitDataUser) {
                     res.status(200).json({
