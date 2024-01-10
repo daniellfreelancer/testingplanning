@@ -1,7 +1,6 @@
 const FitDataGoogle = require('../models/fitData')
 const Users = require('../models/admin')
 const Students = require('../models/student')
-const mongoose = require('mongoose');
 
 
 const queryPopulateUser = [
