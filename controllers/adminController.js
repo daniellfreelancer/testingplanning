@@ -199,6 +199,8 @@ const userController = {
         });
       }
 
+      let temporalPassword = "0000"
+
       let adminUser = await UserAdmin.findOne({ email });
 
       if (!adminUser) {
@@ -211,9 +213,9 @@ const userController = {
         let bio = "";
         let weight = "";
         let size = "";
-        let verified = false;
+        let verified = true;
         let code = crypto.randomBytes(15).toString('hex');
-        password = bcryptjs.hashSync(password, 10);
+        password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10) ;
 
         adminUser = await new UserAdmin({
           email,

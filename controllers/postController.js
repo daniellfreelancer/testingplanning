@@ -484,27 +484,6 @@ const postController = {
             return res.status(500).json({ message: 'Error updating reply' });
         }
     },
-    // deleteReply: async (req, res) => {
-    //     try {
-    //         const { replyId } = req.params;
-
-    //         // Buscar el comentario que contiene el reply
-    //         const parentComment = await Comment.findOne({ 'replies._id': replyId });
-
-    //         if (!parentComment) {
-    //             return res.status(404).json({ message: 'Parent comment not found' });
-    //         }
-
-    //         // Eliminar el reply del comentario
-    //         parentComment.replies = parentComment.replies.filter(r => r._id.toString() !== replyId);
-    //         await parentComment.save();
-
-    //         return res.status(200).json({ message: 'Reply deleted successfully' });
-    //     } catch (error) {
-    //         console.error(error);
-    //         return res.status(500).json({ message: 'Error deleting reply' });
-    //     }
-    // }
     deleteReply: async (req, res) => {
         try {
             const { parentCommentId, replyId } = req.params;
@@ -539,12 +518,10 @@ const postController = {
             const filterType = req.query.filterType; // o req.params.filterType, dependiendo de cómo lo envíes
             const filterValue = req.query.filterValue; // El valor del ID de classroom o workshop
             const limit = parseInt(req.query.limit) || 0; // 0 significa sin límite
-    
             let filter = {};
             if (filterType && filterValue) {
                 filter[filterType] = filterValue;
             }
-    
             // Obtener todos los posts con el filtro aplicado, ordenados por fecha de creación descendente
             const posts = await Post.find(filter)
                 .sort({ createdAt: -1 })
@@ -571,12 +548,7 @@ const postController = {
                         },
                     ],
                 });
-
-
             return res.status(200).json({ response: posts, message: "Posts", success: true });
-
-
-
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Error fetching posts' });

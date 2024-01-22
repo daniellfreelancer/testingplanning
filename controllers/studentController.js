@@ -58,7 +58,7 @@ const studentController = {
                     message: "No se puede crear su cuenta, por favor contacte a su administrador",
                     success: false
                 })
-            }
+            }let temporalPassword = "0000"
 
             let newStudent = await Students.findOne({ rut })
 
@@ -71,8 +71,9 @@ const studentController = {
                     let logged = false;
                     let imgUrl
                     let tasks = []
+                    let verified = true;
 
-                    password = bcryptjs.hashSync(password, 10)
+                    password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10) ;
                     newStudent = await new Students({
                         rut,
                         password,
@@ -93,7 +94,8 @@ const studentController = {
                         program,
                         bio,
                         imgUrl,
-                        tasks
+                        tasks,
+                        verified
                     }).save()
 
                     if (req.file) {
