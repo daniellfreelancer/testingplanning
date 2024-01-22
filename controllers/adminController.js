@@ -249,7 +249,8 @@ const userController = {
 
         res.status(201).json({
           message: "Usuario creado correctamente",
-          success: true
+          success: true,
+          response: adminUser._id
         });
       } else {
         if (adminUser.from.includes(from)) {
