@@ -58,7 +58,8 @@ const studentController = {
                     message: "No se puede crear su cuenta, por favor contacte a su administrador",
                     success: false
                 })
-            }let temporalPassword = "0000"
+            }
+            let temporalPassword = "vitalmove"
 
             let newStudent = await Students.findOne({ rut })
 

@@ -199,7 +199,7 @@ const userController = {
         });
       }
 
-      let temporalPassword = "0000"
+      let temporalPassword = "vitalmove"
 
       let adminUser = await UserAdmin.findOne({ email });
 
