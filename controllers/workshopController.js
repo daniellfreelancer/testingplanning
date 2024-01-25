@@ -223,6 +223,44 @@ const workshopController = {
         success: false
       });
     }
+  },
+  updateWorkshop : async (req, res) => {
+
+    const {id} = req.params;
+    const update = req.body;
+
+    try {
+
+      const updatedWorkshop = await Workshops.findByIdAndUpdate(id, update, {new: true})
+
+
+      await updatedWorkshop.save()
+
+
+      if (updatedWorkshop) {
+        res.status(201).json({
+          message:'El taller ha sido actualizado correctamente',
+          workshop: updatedWorkshop,
+          success:true
+          })
+      } else {
+        res.status(404).json({
+          message: 'Taller no encontrado',
+          success: false
+        });
+      }
+
+      
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al actualizar el taller',
+        success: false
+      });
+    }
+
+
+
   }
 
 

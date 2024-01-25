@@ -5,7 +5,10 @@ const Teachers = require('../models/admin')
 const programPopulateQuery = [
   {
     path: 'teachers',
-    select: 'name lastName email role rut logged program wokrshops',
+    select: 'name lastName email role rut logged phone imgUrl',
+    options: {
+      sort: { 'lastName': 1 }
+    }
   },
   {
     path: 'admins',

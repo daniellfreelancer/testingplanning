@@ -6,11 +6,14 @@ const Teachers = require('../models/admin')
 const institutionPopulateQuery = [
   {
     path: 'teachers',
-    select: 'name lastName email role rut logged',
+    select: 'name lastName email role rut logged phone imgUrl',
+    options: {
+      sort: { 'lastName': 1 }
+    }
   },
   {
     path: 'admins',
-    select: 'name lastName email role rut logged',
+    select: 'name lastName email role rut logged phone imgUrl ',
   },
   {
     path: 'students',

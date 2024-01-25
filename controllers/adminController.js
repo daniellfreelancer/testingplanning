@@ -232,7 +232,7 @@ const userController = {
           workshop,
           program,
           weight,
-          size,
+          size, 
           age,
           gender,
           phone,

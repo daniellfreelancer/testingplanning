@@ -3,6 +3,8 @@ const bcryptjs = require('bcryptjs');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto')
 const Tasks = require('../models/tasks')
+const Classrooms = require('../models/classroom')
+const Workshops = require('../models/workshop')
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -74,7 +76,7 @@ const studentController = {
                     let tasks = []
                     let verified = true;
 
-                    password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10) ;
+                    password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10);
                     newStudent = await new Students({
                         rut,
                         password,
@@ -384,7 +386,71 @@ const studentController = {
         } catch (error) {
             return res.status(500).json({ success: false, message: 'Error al actualizar la tarea', error: error.message });
         }
+    },
+    getStudentsByfilter: async (req, res) => {
+
+        try {
+
+            const filterType = req.query.filterType
+            const filterValue = req.query.filterValue
+            const limit = parseInt(req.query.limit) || 0; // 0 significa sin límite
+
+            if (filterType === 'classroom') {
+
+                const classroom = await Classrooms.findById(filterValue)
+                    .limit(limit)
+                    .populate({
+                        path: 'students',
+                        select: 'name lastName imgUrl logged size age email phone',
+                        options: {
+                            sort: { 'lastName': 1 }
+                        }
+                    })
+
+                if (classroom) {
+
+                    res.status(200).json({
+                        success: true,
+                        response: classroom.students
+                    })
+
+                } else {
+                    return res.status(404).json({
+                        success: false,
+                        message: "No se encontraron estudiantes"
+                    });
+                }
+            }
+            if (filterType === 'workshop') {
+                const workshop = await Workshops.findById(filterValue)
+                    .limit(limit)
+                    .populate({
+                        path: 'students',
+                        select: 'name lastName imgUrl logged size age email phone',
+                        options: {
+                            sort: { 'lastName': 1 }
+                        }
+                    })
+
+                if (workshop) {
+                    res.status(200).json({
+                        success: true,
+                        count: workshop.students,
+                    })
+                } else {
+                    return res.status(404).json({
+                        success: false,
+                        message: "No se encontraron estudiantes"
+                    });
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({ message: 'Error al intentar traer los estudiantes' });
+        }
+
     }
+
 
 }
 
