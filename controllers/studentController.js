@@ -431,7 +431,7 @@ const studentController = {
                 if (workshop) {
                     res.status(200).json({
                         success: true,
-                        count: workshop.students,
+                        response: workshop.students,
                     })
                 } else {
                     return res.status(404).json({
