@@ -394,18 +394,19 @@ const studentController = {
             const filterType = req.query.filterType
             const filterValue = req.query.filterValue
             const limit = parseInt(req.query.limit) || 0; // 0 significa sin límite
+            let options = {
+                path: 'students',
+                select: 'name lastName imgUrl logged size age email phone',
+                options: {
+                    sort: { 'lastName': 1 },
+                    limit: limit // Aplicar el límite aquí
+                }
+            };
 
             if (filterType === 'classroom') {
 
                 const classroom = await Classrooms.findById(filterValue)
-                    .limit(limit)
-                    .populate({
-                        path: 'students',
-                        select: 'name lastName imgUrl logged size age email phone',
-                        options: {
-                            sort: { 'lastName': 1 }
-                        }
-                    })
+                .populate(options);
 
                 if (classroom) {
 
@@ -422,15 +423,10 @@ const studentController = {
                 }
             }
             if (filterType === 'workshop') {
+
                 const workshop = await Workshops.findById(filterValue)
-                    .limit(limit)
-                    .populate({
-                        path: 'students',
-                        select: 'name lastName imgUrl logged size age email phone',
-                        options: {
-                            sort: { 'lastName': 1 }
-                        }
-                    })
+                .populate(options);
+
 
                 if (workshop) {
                     res.status(200).json({
