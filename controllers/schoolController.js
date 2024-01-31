@@ -205,6 +205,14 @@ const schoolControllers = {
         });
       }
 
+      if (school.teachers.includes(teacherId)) {
+        return res.status(200).json({
+          message: 'El profesor ya se encuentra asignado a esta escuela',
+          success: true
+        });
+      }
+  
+
       // Agregar el teacherId al campo 'teachers' del objeto school
       school.teachers.push(teacherId);
 
@@ -217,7 +225,7 @@ const schoolControllers = {
         await teacher.save()
       }
       return res.status(200).json({
-        message: 'Id de profesor agregado a la Escuela',
+        message: 'Profesor agregado a la Escuela con exito',
         success: true
       });
 

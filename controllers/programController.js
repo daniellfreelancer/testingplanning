@@ -186,6 +186,15 @@ const programControllers = {
         });
       }
 
+      if (program.teachers.includes(teacherId)) {
+        return res.status(200).json({
+          message: 'El profesor ya se encuentra asignado a este programa',
+          success: true
+        });
+      }
+
+
+
       program.teachers.push(teacherId);
       await program.save();
 
@@ -196,7 +205,7 @@ const programControllers = {
       }
 
       return res.status(200).json({
-        message: 'Id de profesor agregado al Programa',
+        message: 'Profesor agregado al Programa con exito',
         success: true
       });
 
