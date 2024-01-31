@@ -141,9 +141,9 @@ const classroomController = {
   
           // Verificar si el teacher ya está agregado al salón de clase
           if (classroom.teacher.includes(teacherId)) {
-              return res.status(400).json({
-                  message: 'El profesor ya está agregado a este salón de clase',
-                  success: false
+              return res.status(200).json({
+                  message: 'El profesor ya se encuentra asignado a este salón de clase',
+                  success: true
               });
           }
   
@@ -178,7 +178,7 @@ const classroomController = {
           await teacher.save();
   
           return res.status(200).json({
-              message: 'Id de profesor agregado al salón de clase y id de salón agregado al profesor',
+              message: 'Profesor asignado al salon de clase con exito',
               success: true
           });
       } catch (error) {

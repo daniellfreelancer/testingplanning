@@ -82,6 +82,13 @@ const workshopController = {
         });
       }
 
+      if ( workshop.teacher.includes(teacherId)) {
+        return res.status(200).json({
+          message: 'El profesor ya se encuentra asignado a este taller',
+          success: true
+      });
+      }
+
       // Agregar el nuevo id profesor al taller
       workshop.teacher.push(teacherId);
 
@@ -89,13 +96,20 @@ const workshopController = {
       await workshop.save();
 
       const teacher = await Teachers.findById(teacherId)
-      if (teacher) {
-        teacher.workshop.push(workshopId);
-        await teacher.save()
-      }
+
+      if (teacher.classroom.includes(workshopId)) {
+        return res.status(400).json({
+            message: 'Este taller ya está agregado al profesor',
+            success: false
+        });
+    } else {
+      teacher.workshop.push(workshopId);
+      await teacher.save()
+    }
+
 
       return res.status(200).json({
-        message: 'Id de profesor agregado al taller',
+        message: 'Profesor agregado al taller con exito',
         success: true
       });
 
@@ -262,7 +276,7 @@ const workshopController = {
 
 
   },
-  
+
 
 
 }
