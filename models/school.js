@@ -7,6 +7,7 @@ const schoolSchema = new mongoose.Schema({
     teachers:[{type: mongoose.Types.ObjectId, ref:'user'}],
     classrooms: [{type: mongoose.Types.ObjectId, ref:'classroom'}],
     students: [{type: mongoose.Types.ObjectId, ref:'student'}],
+    institution:[{type: mongoose.Types.ObjectId, ref:'insti'}],
     address:{type: String, required: true},
     email: {type: String,required: true},  
     phone: {type: String, required: true},

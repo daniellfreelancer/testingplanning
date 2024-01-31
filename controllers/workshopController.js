@@ -261,7 +261,8 @@ const workshopController = {
 
 
 
-  }
+  },
+  
 
 
 }

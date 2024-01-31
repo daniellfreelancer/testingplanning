@@ -1,4 +1,6 @@
 const Institution = require('../models/institution')
+const Schools = require('../models/school')
+const Programs = require('../models/program')
 
 const institutionPopulateQuery = [
   {
@@ -103,7 +105,6 @@ const instiController = {
     try {
 
       const { institutionId, adminId } = req.body
-
 
       // Buscar la institución por su id
       const institution = await Institution.findById(institutionId);
@@ -232,7 +233,19 @@ const instiController = {
       // Guardar los cambios en la base de datos
       await institution.save();
 
-      return res.status(200).json({
+      const school = await Schools.findById(schoolId)
+
+      if (!school) {
+        return res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        })
+      }
+
+      school.institution.push(institutionId)
+      await school.save()
+
+      return res.status(201).json({
         message: 'Id de escuela agregado a la institución',
         success: true
       });
@@ -264,6 +277,19 @@ const instiController = {
 
       // Guardar los cambios en la base de datos
       await institution.save();
+
+      const program = await Programs.findById(programId)
+
+      if(!program) {
+        return res.status(404).json({
+          message: 'Programa no encontrado',
+          success: false
+        });
+      }
+
+      program.institution.push(institutionId)
+
+      await  program.save()
 
       return res.status(200).json({
         message: 'Id del programa agregado a la institución',
