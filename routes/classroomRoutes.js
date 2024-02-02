@@ -11,6 +11,6 @@ router.get('/find/:id', classroomById)
 router.patch('/new-student', addStudentToClassroom)
 router.get('/read-by-camp', getClassRoomsAll)
 router.put('/update/:id', updateClassroom)
-router.delete('/delete/:id',  deleteClassroom);
+router.delete('/delete/:id/school/:schoolId',  deleteClassroom);
 
 module.exports = router

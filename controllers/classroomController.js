@@ -1,6 +1,7 @@
 const ClassRoom = require('../models/classroom')
 const Students = require('../models/student')
 const Users = require('../models/admin')
+const Schools = require('../models/school')
 
 const classroomQueryPopulate = [
   {
@@ -313,7 +314,7 @@ const classroomController = {
       const updatedClassroom = await ClassRoom.findByIdAndUpdate(
         classroomId,
         update,
-        { new: true, runValidators: true } //devuelve los cambios hechos
+        { new: true } //devuelve los cambios hechos
       )
 
       if (updatedClassroom) {
@@ -342,15 +343,23 @@ const classroomController = {
   deleteClassroom : async (req, res) => {
 
     try {
-      const { id } = req.params
+      const { id, schoolId } = req.params
 
-      const deletedClassroom = await ClassRoom.findByIdAndDelete(id)
+      const school = await Schools.findById(schoolId)
+      if (school) {
+        
+        const schoolIndex = school.classrooms.indexOf(id)
 
+        school.classrooms.splice(schoolIndex, 1)
 
-      if (deletedClassroom) {
+        await  school.save()
+
+        const deletedClassroom = await ClassRoom.findByIdAndDelete(id)
+
         res.status(200).json({
           message: 'Curso eliminado con exito',
-          success: true
+          success: true,
+          response: deletedClassroom
         });
       } else {
         res.status(404).json({

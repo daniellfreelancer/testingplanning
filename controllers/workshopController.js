@@ -1,6 +1,7 @@
 const Workshops = require('../models/workshop')
 const Students = require('../models/student')
 const Teachers = require('../models/admin')
+const Programs = require('../models/program')
 
 const workshopQueryPopulate = [
   {
@@ -244,13 +245,8 @@ const workshopController = {
     const update = req.body;
 
     try {
-
       const updatedWorkshop = await Workshops.findByIdAndUpdate(id, update, {new: true})
-
-
       await updatedWorkshop.save()
-
-
       if (updatedWorkshop) {
         res.status(201).json({
           message:'El taller ha sido actualizado correctamente',
@@ -264,7 +260,6 @@ const workshopController = {
         });
       }
 
-      
     } catch (error) {
       console.log(error);
       res.status(400).json({
@@ -272,10 +267,44 @@ const workshopController = {
         success: false
       });
     }
-
-
-
   },
+    deleteWorkshop : async (req,res)=>{
+
+      try {
+
+        const { id, programId } = req.params    
+        
+        const program = await Programs.findById(programId)
+
+        if (program) {
+
+          let index = program.workshops.indexOf(id)
+
+          program.workshops.splice(index, 1)
+
+          await program.save()
+
+          const deletedWorkshop = await Workshops.findByIdAndDelete(id)
+
+          res.status(200).json({
+            message: 'Taller eliminado con exito',
+            success: true,
+            response: deletedWorkshop
+          });
+
+        }
+        
+      } catch (error) {
+        console.log(error);
+        res.status(400).json({
+          message: 'Error al eliminar el taller',
+          success: false
+        });
+      }
+
+
+      
+    }
 
 
 
