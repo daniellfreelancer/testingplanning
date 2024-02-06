@@ -12,7 +12,7 @@ const resumeQueryPopulate = [
   }
 ]
 
-const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId) => {
+const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId, workshopId) => {
   const surveys = [];
   let status = false;
 
@@ -27,7 +27,8 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
 
     if (studentId.attendance == 'true') {
       const newSurvey = new Survey({
-        classroom: classroomId,
+        classroom: classroomId ? classroomId : "",
+        workshop: workshopId ? workshopId : "",
         vmClass: resumeId,
         student: studentId,
         sleepLevel,
