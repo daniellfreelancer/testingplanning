@@ -4,7 +4,12 @@ const surveySchema = new mongoose.Schema({
     classroom: {
         type: mongoose.Types.ObjectId,
         ref: 'classroom',
-        required: true,
+        required: false,
+    },
+    workshop: {
+        type: mongoose.Types.ObjectId,
+        ref: 'workshop',
+        required: false,
     },
     vmClass: {
         type: mongoose.Types.ObjectId,

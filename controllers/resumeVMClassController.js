@@ -1,5 +1,6 @@
 const ResumeVmClass = require('../models/resumeVMclass');
 const ClassRoom = require('../models/classroom')
+const Workshop = require('../models/workshop')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const upLoadFiles = require('../s3')
 const crypto = require('crypto')
@@ -81,24 +82,27 @@ const resumeVMClassController = {
         classroomId
       } = req.body;
 
-      // Crear una nueva instancia del modelo
-      const resume = new ResumeVmClass({
-        imgFirstVMClass,
-        imgSecondVMClass,
-        imgThirdVMClass,
-        byTeacher,
-        plannerClass,
-        elapsedClassTime,
-        startClassTime,
-        endClassTime,
-        extraActivities,
-        presentStudents,
-        evaluationNotation,
-        observationsClass,
-        plannerNoClass,
-        classroomId
 
-      });
+
+      // Crear una nueva instancia del modelo
+      // const resume = new ResumeVmClass({
+      //   imgFirstVMClass,
+      //   imgSecondVMClass,
+      //   imgThirdVMClass,
+      //   byTeacher,
+      //   plannerClass,
+      //   elapsedClassTime,
+      //   startClassTime,
+      //   endClassTime,
+      //   extraActivities,
+      //   presentStudents,
+      //   evaluationNotation,
+      //   observationsClass,
+      //   plannerNoClass,
+      //   classroomId
+      // });
+
+      const resume = new ResumeVmClass(req.body);
 
 
       if (req.files && req.files['imgFirstVMClass']) {
@@ -157,22 +161,50 @@ const resumeVMClassController = {
       const arrayStudentsForSurvey = resume.presentStudents;
 
       try {
-        const classroom = await ClassRoom.findById(req.body.classroomId)
 
-        if (classroom) {
-          classroom.classHistory.push(resumeId)
-          await classroom.save();
+        if (req.body.classroomId) {
+          const classroom = await ClassRoom.findById(req.body.classroomId)
+          if (classroom) {
+            classroom.classHistory.push(resumeId)
+            await classroom.save();
+  
+            // Crear encuestas para los estudiantes
+            await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
+            res.status(200).json({
+              message: 'VMClass Finalizado con exito',
+              success: true,
+              response: resume
+            });
+        }
 
-          // Crear encuestas para los estudiantes
-          await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
+        if (req.body.workshopId) {
+          const workshop = await Workshop.findById(req.body.workshopId)
+
+          if (workshop) {
+
+            workshop.workshopHistory.push(resumeId)
+            await workshop.save()
+            await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.workshopId);
+            res.status(200).json({
+              message: 'VMClass Finalizado con exito',
+              success: true,
+              response: resume
+
+            });
+
+
+          }
+
+
+
+        }
+     
 
 
 
 
-          res.status(200).json({
-            message: 'VMClass Finalizado con exito',
-            success: true
-          });
+
+
         } else {
           res.status(400).json({
             message: "Error al crear resumen de clase",

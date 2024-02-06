@@ -4,7 +4,9 @@ const mongoose = require('mongoose')
 const resumeVMSchema = new mongoose.Schema({
     byTeacher:{type: mongoose.Types.ObjectId, ref:'user'},
     plannerClass:{type: mongoose.Types.ObjectId, ref:'planification', required: false},
-    classroomId:{type: mongoose.Types.ObjectId, ref:'classroom'},
+    workshopClass:{type: mongoose.Types.ObjectId, ref:'workshopPlanification', required: false},
+    classroomId:{type: mongoose.Types.ObjectId, ref:'classroom', required: false},
+    workshopId:{type: mongoose.Types.ObjectId, ref:'workshop', required: false},
     plannerNoClass: {type:Array},
     elapsedClassTime:{type: Number},
     startClassTime:{type: String},
