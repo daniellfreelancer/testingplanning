@@ -37,6 +37,14 @@ const workshopQueryPopulate = [
 
     },
   },
+  {
+    path: 'workshopHistory',
+    populate: {
+      path: 'byTeacher workshopId',
+      select: 'name lastName email name'
+    },
+
+  }
 
 ]
 

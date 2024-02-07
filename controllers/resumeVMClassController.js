@@ -12,7 +12,7 @@ const resumeQueryPopulate = [
   }
 ]
 
-const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId, workshopId) => {
+const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId) => {
   const surveys = [];
   let status = false;
 
@@ -27,8 +27,40 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
 
     if (studentId.attendance == 'true') {
       const newSurvey = new Survey({
-        classroom: classroomId ? classroomId : "",
-        workshop: workshopId ? workshopId : "",
+        classroom: classroomId,
+        vmClass: resumeId,
+        student: studentId,
+        sleepLevel,
+        stressLevel,
+        fatigueLevel,
+        muscleLevel,
+        moodLevel,
+        status
+      })
+
+      surveys.push(newSurvey);
+    }
+  }
+
+  await Survey.insertMany(surveys);
+};
+
+const createSurveysForStudentsWorkshop = async (resumeId, arrayStudentsForSurvey, workshopId) => {
+  const surveys = [];
+  let status = false;
+
+  let sleepLevel = 0;
+  let stressLevel = 0;
+  let fatigueLevel = 0;
+  let muscleLevel = 0;
+  let moodLevel = 0;
+
+  for (const studentId of arrayStudentsForSurvey) {
+
+
+    if (studentId.attendance == 'true') {
+      const newSurvey = new Survey({
+        workshop: workshopId,
         vmClass: resumeId,
         student: studentId,
         sleepLevel,
@@ -58,11 +90,7 @@ const resumeVMClassController = {
         secretAccessKey: process.env.AWS_SECRET_KEY_VMCLASS,
       },
     })
-
-
     const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
-
-
 
     try {
       // Extraer los campos necesarios de req.body
@@ -80,30 +108,31 @@ const resumeVMClassController = {
         evaluationNotation,
         observationsClass,
         plannerNoClass,
-        classroomId
+        classroomId,
+        workshopClass,
+        workshopId
       } = req.body;
 
+      //   Crear una nueva instancia del modelo
+      const resume = new ResumeVmClass({
+        imgFirstVMClass,
+        imgSecondVMClass,
+        imgThirdVMClass,
+        byTeacher,
+        plannerClass,
+        elapsedClassTime,
+        startClassTime,
+        endClassTime,
+        extraActivities,
+        presentStudents,
+        evaluationNotation,
+        observationsClass,
+        plannerNoClass,
+        classroomId,
+        workshopClass,
+        workshopId
+      });
 
-
-      // Crear una nueva instancia del modelo
-      // const resume = new ResumeVmClass({
-      //   imgFirstVMClass,
-      //   imgSecondVMClass,
-      //   imgThirdVMClass,
-      //   byTeacher,
-      //   plannerClass,
-      //   elapsedClassTime,
-      //   startClassTime,
-      //   endClassTime,
-      //   extraActivities,
-      //   presentStudents,
-      //   evaluationNotation,
-      //   observationsClass,
-      //   plannerNoClass,
-      //   classroomId
-      // });
-
-      const resume = new ResumeVmClass(req.body);
 
 
       if (req.files && req.files['imgFirstVMClass']) {
@@ -121,7 +150,6 @@ const resumeVMClassController = {
 
         resume.imgFirstVMClass = fileName;
       }
-
       // Verificar si se cargó la imagen del campo imgSecondVMClass
       if (req.files && req.files['imgSecondVMClass']) {
         const fileContent = req.files['imgSecondVMClass'][0].buffer;
@@ -168,7 +196,7 @@ const resumeVMClassController = {
           if (classroom) {
             classroom.classHistory.push(resumeId)
             await classroom.save();
-  
+
             // Crear encuestas para los estudiantes
             await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
             res.status(200).json({
@@ -176,7 +204,8 @@ const resumeVMClassController = {
               success: true,
               response: resume
             });
-        }
+          }
+        }  
 
         if (req.body.workshopId) {
           const workshop = await Workshop.findById(req.body.workshopId)
@@ -185,47 +214,22 @@ const resumeVMClassController = {
 
             workshop.workshopHistory.push(resumeId)
             await workshop.save()
-            await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.workshopId);
+            await createSurveysForStudentsWorkshop(resumeId, arrayStudentsForSurvey, req.body.workshopId);
             res.status(200).json({
               message: 'VMClass Finalizado con exito',
               success: true,
               response: resume
-
             });
-
-
           }
-
-
-
-        }
-     
-
-
-
-
-
-
-        } else {
-          res.status(400).json({
-            message: "Error al crear resumen de clase",
-            success: false,
-          });
         }
 
       } catch (error) {
         console.log(error)
+        return res.status(500).send({
+          message: "Error al guardar el VMClass en la base de datos.",
+          success: false
+          })
       }
-
-
-
-      // Aqui se crean las encuestas
-
-
-
-
-
-
 
     } catch (error) {
       console.log(error);
