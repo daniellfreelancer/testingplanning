@@ -40,7 +40,7 @@ const workshopQueryPopulate = [
   {
     path: 'workshopHistory',
     populate: {
-      path: 'byTeacher workshopId',
+      path: 'byTeacher workshopId workshopClass',
       select: 'name lastName email name'
     },
 
