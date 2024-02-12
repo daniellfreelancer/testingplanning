@@ -7,6 +7,9 @@ const classroomQueryPopulate = [
   {
     path: 'teacher teacherSubstitute',
     select: 'name lastName email role rut logged classroom workshop program school imgUrl ',
+    options: {
+      sort: { 'lastName': 1 } // ordenar por el campo "name" en orden ascendente
+    }
   },
   {
     path: 'students',
@@ -16,7 +19,7 @@ const classroomQueryPopulate = [
       select: 'grade level section name  title description fileStudent status classroom notation teacher dueDate deliveryDate feedback gradeBook'
     },
     options: {
-      sort: { 'students.lastName': 1 } // ordenar por el campo "name" en orden ascendente
+      sort: { 'lastName': 1 } // ordenar por el campo "name" en orden ascendente
     }
   },
   {

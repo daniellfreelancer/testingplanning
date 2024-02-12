@@ -23,7 +23,7 @@ const institutionPopulateQuery = [
       select: 'grade level section name'
     },
     options: {
-      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+      sort: { 'lastName': 1 } // ordenar por el campo "name" en orden ascendente
     }
   },
   {
@@ -44,6 +44,15 @@ const institutionPopulateQuery = [
       sort: { 'lastName': 1 }
     }
   },
+  ,
+  {
+    path: 'workshops',
+    select: 'name address phone email planner classHistory student',
+    populate: {
+      path: 'teacher teacherSubstitute students planner',
+      select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
+    }
+  }
 ];
 
 
@@ -188,6 +197,41 @@ const schoolControllers = {
       console.log(error);
       return res.status(400).json({
         message: 'Error al agregar id de salon de clase a la Escuela',
+        success: false
+      });
+    }
+  },
+  addWorkshopToSchool: async (req, res) => {
+    try {
+
+      const { schoolId, workshopId } = req.body
+
+
+      // Buscar la institución por su id
+      const school = await Schools.findById(schoolId);
+
+      if (!school) {
+        return res.status(404).json({
+          message: 'Escuela no encontrada',
+          success: false
+        });
+      }
+
+      // Agregar el nuevo id de admin a la propiedad "classrooms" de la institución
+      school.workshops.push(workshopId);
+
+      // Guardar los cambios en la base de datos
+      await school.save();
+
+      return res.status(200).json({
+        message: 'Taller agregado a la escuela con exito',
+        success: true
+      });
+
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({
+        message: 'Error al agregar taller a la Escuela',
         success: false
       });
     }
