@@ -6,6 +6,9 @@ const institutionPopulateQuery = [
   {
     path: 'teachers',
     select: 'name lastName email role rut logged',
+    options: {
+      sort: { 'lastName': 1 }
+    }
   },
   {
     path: 'admins',
