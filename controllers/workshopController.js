@@ -325,19 +325,15 @@ const workshopController = {
           success: false
         });
       }
-
       const studentIndex = workshop.students.indexOf(studentId)
-
       if (studentIndex === -1) {
         return res.status(404).json({
           message: 'El Estudiante no se encuentra en el taller',
           success: false
         });
       }
-
       workshop.students.splice(studentIndex, 1)
       await workshop.save()
-
     const student = await Students.findById(studentId)
     if (!student) {
       return res.status(404).json({
@@ -345,9 +341,7 @@ const workshopController = {
         success: false
       });
     }
-
     const workshopIndex = student.workshop.indexOf(workshopId)
-
     if (workshopIndex === -1){
       return res.status(404).json({
         message: 'El Estudiante no se encuentra en el taller',
@@ -370,10 +364,36 @@ const workshopController = {
       });
     }
 
+  },
+
+  removeStudentWorkshop : async (req, res) => {
+
+    const { studentId, workshopId } = req.body
+    try {
+      const workshop = await  Workshops.findByIdAndUpdate(workshopId, { $pull: { students: studentId } }, { new: true })
+      const student = await  Students.findByIdAndUpdate(studentId, { $pull: { workshop: workshopId } }, { new: true })
+
+      if (student) {
+        res.status(200).json({
+          message: "Estudiante y taller actualizados con exito",
+          success: true,
+          response:{
+            student: student,
+            workshop: workshop
+          }
+        })
+      }
+
+      
+    } catch (error) {
+      return res.status(404).json({
+        message: 'Error al intentar eliminar el estudiante del taller',
+        success: false
+      });
+    }
+
+   
   }
-
-
-
 }
 
 module.exports = workshopController
