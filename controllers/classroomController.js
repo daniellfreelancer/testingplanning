@@ -1,4 +1,5 @@
 const ClassRoom = require('../models/classroom')
+const Workshop = require('../models/workshop')
 const Students = require('../models/student')
 const Users = require('../models/admin')
 const Schools = require('../models/school')
@@ -280,7 +281,7 @@ const classroomController = {
     } catch (error) {
       console.log(error);
       return res.status(400).json({
-        message: 'Error al agregar id de estudiante a la Escuela',
+        message: 'Error al agregar id de estudiante al curso',
         success: false
       });
     }
@@ -343,19 +344,19 @@ const classroomController = {
 
 
   },
-  deleteClassroom : async (req, res) => {
+  deleteClassroom: async (req, res) => {
 
     try {
       const { id, schoolId } = req.params
 
       const school = await Schools.findById(schoolId)
       if (school) {
-        
+
         const schoolIndex = school.classrooms.indexOf(id)
 
         school.classrooms.splice(schoolIndex, 1)
 
-        await  school.save()
+        await school.save()
 
         const deletedClassroom = await ClassRoom.findByIdAndDelete(id)
 
@@ -372,7 +373,7 @@ const classroomController = {
       }
 
 
-      
+
     } catch (error) {
       console.log(error);
       res.status(400).json({
@@ -383,6 +384,55 @@ const classroomController = {
 
 
 
+
+  },
+  removeStudentFromClassroom: async (req, res) => {
+
+    try {
+      const { studentId, classroomId } = req.body
+      const classroom = await ClassRoom.findById(classroomId)
+      if (!classroom) {
+        return res.status(404).json({
+          message: 'Classroom no encontrada',
+          success: false
+        });
+      }
+
+      const studentIndex = classroom.students.indexOf(studentId)
+
+      if (studentIndex === -1) {
+        return res.status(404).json({
+          message: 'El Estudiante no se encuentra en el curso',
+          success: false
+        });
+      }
+
+      classroom.students.splice(studentIndex, 1)
+      await classroom.save()
+
+    const student = await Students.findById(studentId)
+    if (!student) {
+      return res.status(404).json({
+        message: 'Estudiante no encontrado',
+        success: false
+      });
+    }
+
+    student.classroom = [];
+    await student.save()
+
+    return res.status(200).json({
+      message: 'Estudiante eliminado correctamente',
+      success: true
+    });
+
+    } catch (error) {
+      console.log(error);
+      return res.status(400).json({
+        message: 'Error al eliminar el estudiante del curso',
+        success: false
+      });
+    }
 
   }
 
