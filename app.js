@@ -35,6 +35,7 @@ const userNotifications = require('./routes/tokenRoutes')
 const userNotificationsApp = require('./routes/notificationRoutes')
 const userSurvey = require('./routes/surveyRoutes')
 const userFitData = require('./routes/fitData.routes')
+const userArduino = require('./routes/arduino.routes')
 
 var app = express();
 
@@ -83,6 +84,7 @@ app.use('/push', userNotifications)
 app.use('/notification', userNotificationsApp)
 app.use('/survey', userSurvey)
 app.use('/googlefit', userFitData)
+app.use('/devices', userArduino)
 
 
 // catch 404 and forward to error handler
