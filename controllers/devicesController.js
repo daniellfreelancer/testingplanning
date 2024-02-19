@@ -24,6 +24,12 @@ async function getToken() {
     }
 }
 
+const devicesQueryPopulate = [
+    {path: 'school program deviceName',
+     select : 'name'
+}
+]
+
 const devicesController = {
 
     getArduinoData: async (req, res) => {
@@ -164,7 +170,7 @@ const devicesController = {
 
         try {
 
-            const devices = await Devices.find().sort('deviceName');
+            const devices = await Devices.find().populate(devicesQueryPopulate).sort('deviceName');
 
             if (devices.length > 0) {
                 res.status(200).json({
