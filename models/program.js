@@ -12,6 +12,7 @@ const programSchema = new mongoose.Schema({
     email: {type: String,required: true},  
     phone: {type: String, required: true},
     rut: {type: String, required: true}, 
+    devices: [{type: mongoose.Types.ObjectId, ref:'device'}]
 },
 {
     timestamps: true,
