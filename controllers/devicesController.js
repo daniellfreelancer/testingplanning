@@ -120,7 +120,7 @@ const devicesController = {
     },
     createDevice: async (req, res) => {
 
-        let { deviceId, deviceName, deviceBpa, deviceBpm, deviceSteps, deviceStatus, deviceConnected } = req.body;
+        let { deviceId, deviceName, deviceBpa, deviceBpm, deviceSteps, deviceStatus, deviceConnected, href } = req.body;
 
         try {
             // Busca si ya existe un dispositivo con el mismo deviceId
@@ -146,7 +146,8 @@ const devicesController = {
                 deviceStatus,
                 deviceConnected,
                 school,
-                program
+                program,
+                href
             };
             const device = new Devices(deviceData);
             await device.save();
@@ -327,11 +328,9 @@ const devicesController = {
         try {
             const program = await Programs.findById(programId);
 
-            
-    
             if (!program) {
                 return res.status(404).json({
-                    message: 'Escuela no encontrada',
+                    message: 'Programa no encontrado',
                     success: false
                 });
             }

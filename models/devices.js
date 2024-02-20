@@ -4,9 +4,10 @@ const deviceSchema = new mongoose.Schema({
 
     deviceId: {type: String},
     deviceName: {type: String},
-    deviceBpa: { type: Number, required: true },
-    deviceBpm:{ type: Number, required: true },
+    deviceBpa: { type: Number},
+    deviceBpm:{ type: Number},
     deviceSteps: { type: Number },
+    href:{type: String},
     deviceStatus: {type: Boolean, default: false},
     deviceConnected: {type: Boolean},
     school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
