@@ -10,6 +10,7 @@ router.patch('/new-workshop', addWorkshopToProgram )
 router.patch('/new-student', addStudentToProgram )
 router.get('/find/:id', programById )
 router.get('/read-by-camp', getProgramAll)
+router.get('/list', getProgramAll)
 
 router.delete('/delete-program/:id', deleteProgram)
 router.put('/update-program/:id', updateProgram)

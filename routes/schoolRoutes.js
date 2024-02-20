@@ -12,6 +12,7 @@ router.patch('/new-student', addStudentToSchool)
 router.delete('/delete-admin', removeAdminFromSchool)
 router.get('/find/:id', schoolById)
 router.get('/read-by-camp', getSchoolAll)
+router.get('/list', getSchoolAll)
 router.delete('/delete-school/:id', deleteSchool)
 router.put('/update-school/:id', updateSchool)
 
