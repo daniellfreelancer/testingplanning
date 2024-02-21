@@ -13,7 +13,11 @@ const deviceSchema = new mongoose.Schema({
     school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
     program: [{type: mongoose.Types.ObjectId, ref:'program', required: false}],
 
-})
+},
+{
+    timestamps: true,
+}
+)
 
 const DEVICE = mongoose.model( 'device', deviceSchema )
 

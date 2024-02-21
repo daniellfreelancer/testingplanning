@@ -25,9 +25,10 @@ async function getToken() {
 }
 
 const devicesQueryPopulate = [
-    {path: 'school program deviceName',
-     select : 'name'
-}
+    {
+        path: 'school program deviceName',
+        select: 'name'
+    }
 ]
 
 const devicesController = {
@@ -264,13 +265,13 @@ const devicesController = {
 
             const schoolIndex = device.school.indexOf(schoolId)
             device.school.splice(schoolIndex, 1);
-            await  device.save();
-    
+            await device.save();
+
             return res.status(200).json({
                 message: 'Dispositivo removido de la Escuela exitosamente!',
                 success: true
             });
-    
+
         } catch (error) {
             console.log(error);
             return res.status(400).json({
@@ -335,8 +336,8 @@ const devicesController = {
                 });
             }
 
-            const deviceIndex =  program.devices.indexOf(deviceId);
-            program.devices.splice(deviceIndex,1);
+            const deviceIndex = program.devices.indexOf(deviceId);
+            program.devices.splice(deviceIndex, 1);
             await program.save();
 
             const device = await Devices.findById(deviceId);
@@ -347,15 +348,15 @@ const devicesController = {
                 });
             }
 
-            const programIndex =  device.program.indexOf(programId);
-            device.program.splice(programIndex , 1 );
+            const programIndex = device.program.indexOf(programId);
+            device.program.splice(programIndex, 1);
             await device.save();
 
             return res.status(200).json({
                 message: 'Dispositivo removido del programa exitosamente!',
                 success: true
             });
-    
+
         } catch (error) {
             console.log(error);
             return res.status(400).json({
@@ -365,24 +366,24 @@ const devicesController = {
         }
     },
     updateDevice: async (req, res) => {
-        const { deviceId } = req.params; 
+        const { deviceId } = req.params;
         const updateData = req.body;
         try {
             const updatedDevice = await Devices.findByIdAndUpdate(deviceId, updateData, { new: true });
-    
+
             if (!updatedDevice) {
                 return res.status(404).json({
                     message: 'Dispositivo no encontrado',
                     success: false
                 });
             }
-    
+
             return res.status(200).json({
                 message: 'Dispositivo actualizado con éxito',
                 success: true,
                 device: updatedDevice
             });
-    
+
         } catch (error) {
             console.log(error);
             return res.status(400).json({
@@ -419,7 +420,74 @@ const devicesController = {
 
 
 
+    },
+    getDevicesBySchool: async (req, res) => {
+        const { schoolId } = req.params;
+
+        try {
+            const devices = await Devices.find()
+                .populate(devicesQueryPopulate)
+                .sort('deviceName');
+
+            const devicesInSchool = devices.filter(device => {
+                return device.school.some(school => school._id.toString() === schoolId);
+            });
+
+            if (devicesInSchool.length > 0) {
+                res.status(200).json({
+                    response: devicesInSchool,
+                    message: "Dispositivos encontrados para la escuela con ID " + schoolId,
+                    success: true
+                });
+            } else {
+                res.status(200).json({
+                    response: [],
+                    message: "No hay dispositivos asociados a la escuela con ID " + schoolId,
+                    success: true
+                });
+            }
+        } catch (error) {
+            console.log(error);
+            res.status(400).json({
+                message: "Error al obtener la información de los dispositivos",
+                success: false
+            });
+        }
+    },
+    getDevicesByProgram: async (req, res) => {
+        const { programId } = req.params;
+
+        try {
+            const devices = await Devices.find()
+                .populate(devicesQueryPopulate)
+                .sort('deviceName');
+
+            const devicesInProgram = devices.filter(device => {
+                return device.program.some(program => program._id.toString() === programId);
+            });
+
+            if (devicesInProgram.length > 0) {
+                res.status(200).json({
+                    response: devicesInProgram,
+                    message: "Dispositivos encontrados para el programa con ID " + programId,
+                    success: true
+                });
+            } else {
+                res.status(200).json({
+                    response: [],
+                    message: "No hay dispositivos asociados a el programa con ID " + programId,
+                    success: true
+                });
+            }
+        } catch (error) {
+            console.log(error);
+            res.status(400).json({
+                message: "Error al obtener la información de los dispositivos",
+                success: false
+            });
+        }
     }
+
 
 }
 

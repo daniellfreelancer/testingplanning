@@ -1,5 +1,5 @@
 const express = require('express');
-const { getArduinoData, getArduinoDevices, createDevice, getDevices, deleteDevice, addDevicesToSchool, removeDevicesFromSchool, updateDevice, addDevicesToProgram, removeDevicesFromProgram } = require('../controllers/devicesController');
+const { getArduinoDevices, createDevice, getDevices, deleteDevice, addDevicesToSchool, removeDevicesFromSchool, updateDevice, addDevicesToProgram, removeDevicesFromProgram, getDevicesBySchool, getDevicesByProgram } = require('../controllers/devicesController');
 const router = express.Router();
 
 
@@ -16,6 +16,9 @@ router.put('/remove-device-from-school', removeDevicesFromSchool); //revisar
 
 router.post('/add-device-to-program', addDevicesToProgram)
 router.put('/remove-device-from-program', removeDevicesFromProgram)
+
+router.get('/find/:schoolId', getDevicesBySchool)
+router.get('/find/:programId', getDevicesByProgram)
 
 
 
