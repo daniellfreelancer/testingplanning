@@ -17,8 +17,8 @@ router.put('/remove-device-from-school', removeDevicesFromSchool); //revisar
 router.post('/add-device-to-program', addDevicesToProgram)
 router.put('/remove-device-from-program', removeDevicesFromProgram)
 
-router.get('/find/:schoolId', getDevicesBySchool)
-router.get('/find/:programId', getDevicesByProgram)
+router.get('/find/school/:schoolId', getDevicesBySchool)
+router.get('/find/program/:programId', getDevicesByProgram)
 
 
 
