@@ -970,11 +970,6 @@ const userController = {
     const { rut } = req.params;
 
     try {
-
-
-
-
-
     } catch (error) {
       console.log(error);
       res.status(400).json({
@@ -1057,6 +1052,42 @@ const userController = {
       });
     }
   },
+  resetPasswordInsideApp : async (req, res) => {
+
+    const { email, newPassword } = req.body;
+
+    try {
+
+      let adminUser = await UserAdmin.findOne({ email });
+      let studentUser = await Students.findOne({ email });
+      const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+
+      if (adminUser) {
+        adminUser.password = hashedPassword;
+        await adminUser.save();
+        res.status(200).json({
+          message: 'Contraseña restablecida con éxito',
+          success: true
+        });
+      }
+
+      if (studentUser) {
+        studentUser.password = hashedPassword;
+        await studentUser.save();
+        res.status(200).json({
+          message: 'Contraseña restablecida con éxito',
+          success: true
+        });
+      }
+
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Ocurrió un error al restablecer la contraseña, intente nuevamente',
+        success: false
+      });
+    }
+  }
   
 
 };
