@@ -382,7 +382,7 @@ const sendResetMail = async (email, code) => {
                                                 restablecer&nbsp; tu contraseña ingresa al
                                                 siguiente
                                                 <a
-                                                  href="https://gestion.vitalmove.cl/auth/reset-password/$%7Bcode%7D/$%7Bemail%7D"
+                                                  href="https://gestion.vitalmove.cl/auth/reset-password/${code}/${email}"
                                                   target="_blank"
                                                   title="Restablecer contraseña"
                                                   style="
