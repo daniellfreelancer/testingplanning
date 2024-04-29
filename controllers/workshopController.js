@@ -48,6 +48,8 @@ const workshopQueryPopulate = [
 
 ]
 
+
+
 const workshopController = {
 
   createWorkshop: async (req, res) => {
@@ -59,13 +61,13 @@ const workshopController = {
 
         res.status(200).json({
           response: newWorkshop,
-          message: "taller educativo creado con exito",
+          message: "Taller creado con exito",
           success: true
         })
 
       } else {
         res.status(404).json({
-          message: "No se pudo crear taller educativo con exito",
+          message: "No se pudo crear el taller con exito",
           success: false
         })
       }
@@ -73,6 +75,7 @@ const workshopController = {
       console.log(error)
       res.status(400).json({
         message: "Error al crear taller educativo",
+        error: error,
         success: false
       })
     }
@@ -91,11 +94,11 @@ const workshopController = {
         });
       }
 
-      if ( workshop.teacher.includes(teacherId)) {
+      if (workshop.teacher.includes(teacherId)) {
         return res.status(200).json({
           message: 'El profesor ya se encuentra asignado a este taller',
           success: true
-      });
+        });
       }
 
       // Agregar el nuevo id profesor al taller
@@ -108,13 +111,13 @@ const workshopController = {
 
       if (teacher.classroom.includes(workshopId)) {
         return res.status(400).json({
-            message: 'Este taller ya está agregado al profesor',
-            success: false
+          message: 'Este taller ya está agregado al profesor',
+          success: false
         });
-    } else {
-      teacher.workshop.push(workshopId);
-      await teacher.save()
-    }
+      } else {
+        teacher.workshop.push(workshopId);
+        await teacher.save()
+      }
 
 
       return res.status(200).json({
@@ -247,20 +250,20 @@ const workshopController = {
       });
     }
   },
-  updateWorkshop : async (req, res) => {
+  updateWorkshop: async (req, res) => {
 
-    const {id} = req.params;
+    const { id } = req.params;
     const update = req.body;
 
     try {
-      const updatedWorkshop = await Workshops.findByIdAndUpdate(id, update, {new: true})
+      const updatedWorkshop = await Workshops.findByIdAndUpdate(id, update, { new: true })
       await updatedWorkshop.save()
       if (updatedWorkshop) {
         res.status(201).json({
-          message:'El taller ha sido actualizado correctamente',
+          message: 'El taller ha sido actualizado correctamente',
           workshop: updatedWorkshop,
-          success:true
-          })
+          success: true
+        })
       } else {
         res.status(404).json({
           message: 'Taller no encontrado',
@@ -276,44 +279,44 @@ const workshopController = {
       });
     }
   },
-    deleteWorkshop : async (req,res)=>{
+  deleteWorkshop: async (req, res) => {
 
-      try {
+    try {
 
-        const { id, programId } = req.params    
-        
-        const program = await Programs.findById(programId)
+      const { id, programId } = req.params
 
-        if (program) {
+      const program = await Programs.findById(programId)
 
-          let index = program.workshops.indexOf(id)
+      if (program) {
 
-          program.workshops.splice(index, 1)
+        let index = program.workshops.indexOf(id)
 
-          await program.save()
+        program.workshops.splice(index, 1)
 
-          const deletedWorkshop = await Workshops.findByIdAndDelete(id)
+        await program.save()
 
-          res.status(200).json({
-            message: 'Taller eliminado con exito',
-            success: true,
-            response: deletedWorkshop
-          });
+        const deletedWorkshop = await Workshops.findByIdAndDelete(id)
 
-        }
-        
-      } catch (error) {
-        console.log(error);
-        res.status(400).json({
-          message: 'Error al eliminar el taller',
-          success: false
+        res.status(200).json({
+          message: 'Taller eliminado con exito',
+          success: true,
+          response: deletedWorkshop
         });
+
       }
 
+    } catch (error) {
+      console.log(error);
+      res.status(400).json({
+        message: 'Error al eliminar el taller',
+        success: false
+      });
+    }
 
-      
-    },
-  removeStudentFromWorkshop : async (req, res) => {
+
+
+  },
+  removeStudentFromWorkshop: async (req, res) => {
 
     try {
 
@@ -334,27 +337,27 @@ const workshopController = {
       }
       workshop.students.splice(studentIndex, 1)
       await workshop.save()
-    const student = await Students.findById(studentId)
-    if (!student) {
-      return res.status(404).json({
-        message: 'Estudiante no encontrado',
-        success: false
-      });
-    }
-    const workshopIndex = student.workshop.indexOf(workshopId)
-    if (workshopIndex === -1){
-      return res.status(404).json({
-        message: 'El Estudiante no se encuentra en el taller',
-        success: false
-      });
-    }
-    student.workshop.splice(workshopIndex, 1)
-    await student.save()
+      const student = await Students.findById(studentId)
+      if (!student) {
+        return res.status(404).json({
+          message: 'Estudiante no encontrado',
+          success: false
+        });
+      }
+      const workshopIndex = student.workshop.indexOf(workshopId)
+      if (workshopIndex === -1) {
+        return res.status(404).json({
+          message: 'El Estudiante no se encuentra en el taller',
+          success: false
+        });
+      }
+      student.workshop.splice(workshopIndex, 1)
+      await student.save()
 
-    return res.status(200).json({
-      message: 'Estudiante eliminado correctamente',
-      success: true
-    });
+      return res.status(200).json({
+        message: 'Estudiante eliminado correctamente',
+        success: true
+      });
 
     } catch (error) {
       console.log(error);
@@ -366,25 +369,25 @@ const workshopController = {
 
   },
 
-  removeStudentWorkshop : async (req, res) => {
+  removeStudentWorkshop: async (req, res) => {
 
     const { studentId, workshopId } = req.body
     try {
-      const workshop = await  Workshops.findByIdAndUpdate(workshopId, { $pull: { students: studentId } }, { new: true })
-      const student = await  Students.findByIdAndUpdate(studentId, { $pull: { workshop: workshopId } }, { new: true })
+      const workshop = await Workshops.findByIdAndUpdate(workshopId, { $pull: { students: studentId } }, { new: true })
+      const student = await Students.findByIdAndUpdate(studentId, { $pull: { workshop: workshopId } }, { new: true })
 
       if (student) {
         res.status(200).json({
           message: "Estudiante y taller actualizados con exito",
           success: true,
-          response:{
+          response: {
             student: student,
             workshop: workshop
           }
         })
       }
 
-      
+
     } catch (error) {
       return res.status(404).json({
         message: 'Error al intentar eliminar el estudiante del taller',
@@ -392,7 +395,7 @@ const workshopController = {
       });
     }
 
-   
+
   }
 }
 
