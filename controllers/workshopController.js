@@ -5,7 +5,7 @@ const Programs = require('../models/program')
 
 const workshopQueryPopulate = [
   {
-    path: 'teacher teacherSubstitute',
+    path: 'teacher ',
     select: 'name lastName email role rut logged imgUrl workshop program',
   },
   {

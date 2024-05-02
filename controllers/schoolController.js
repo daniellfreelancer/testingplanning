@@ -47,9 +47,9 @@ const institutionPopulateQuery = [
   ,
   {
     path: 'workshops',
-    select: 'name address phone email planner classHistory student',
+    select: 'name address phone email planner classHistory student ageRange days hours',
     populate: {
-      path: 'teacher teacherSubstitute students planner',
+      path: 'teacher students planner',
       select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
     }
   }
