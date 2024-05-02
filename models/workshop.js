@@ -12,7 +12,7 @@ const workshopSchema = new mongoose.Schema({
     phone: {type: String},
     ageRange: {type: Array},
     days : {type: Array},
-    hours : {type: Array}
+    hours : {type: Object}
 
 })
 
