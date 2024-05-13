@@ -18,8 +18,9 @@ const adminSchema = new mongoose.Schema({
     size:{type: Number},
     classroom: [{type: mongoose.Types.ObjectId, ref:'classroom', required: false}],
     school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
-    workshop: [{type: mongoose.Types.ObjectId, ref:'workshop'}],
-    program: [{type: mongoose.Types.ObjectId, ref:'program'}],
+    workshop: [{type: mongoose.Types.ObjectId, ref:'workshop', required: false}],
+    program: [{type: mongoose.Types.ObjectId, ref:'program', required: false}],
+    institution: {type: mongoose.Types.ObjectId, ref:'insti', required: false},
     notifications:[{type: Object}],
     from: [{type:String}],  // from google o formularios
     verified:{type:Boolean},    // si es verificado por codigos

@@ -1,6 +1,7 @@
 const Institution = require('../models/institution')
 const Schools = require('../models/school')
 const Programs = require('../models/program')
+const Admins = require('../models/admin')
 
 const institutionPopulateQuery = [
   {
@@ -47,7 +48,7 @@ const institutionPopulateQuery = [
   },
   {
     path: 'programs',
-    populate:{
+    populate: {
       path: 'admins teachers workshops students'
     }
   }
@@ -61,14 +62,37 @@ const instiController = {
 
     try {
 
+      const {
+        name,
+        rut,
+        address,
+        phone,
+        email,
+        admins
+      } = req.body
+
       const newInsti = await new Institution(req.body).save()
 
       if (newInsti) {
+
+        let idInstitution = newInsti._id;
+        let idAdmin = admins;
+        let admin = await Admins.findById(idAdmin)
+        admin.institution = idInstitution
+        admin.save()
+
         res.status(201).json({
           response: newInsti,
-          success: true
+          success: true,
+          message: "La institución ha sido creada con exito"
         })
+
       }
+
+
+
+
+
 
     } catch (error) {
       console.log(error)
@@ -264,7 +288,7 @@ const instiController = {
   addProgramToInstitution: async (req, res) => {
     try {
 
-      const { institutionId, programId  } = req.body
+      const { institutionId, programId } = req.body
 
       // Buscar la institución por su id
       const institution = await Institution.findById(institutionId);
@@ -283,7 +307,7 @@ const instiController = {
 
       const program = await Programs.findById(programId)
 
-      if(!program) {
+      if (!program) {
         return res.status(404).json({
           message: 'Programa no encontrado',
           success: false
@@ -292,7 +316,7 @@ const instiController = {
 
       program.institution.push(institutionId)
 
-      await  program.save()
+      await program.save()
 
       return res.status(200).json({
         message: 'Id del programa agregado a la institución',
@@ -364,15 +388,15 @@ const instiController = {
   updateInstitution: async (req, res) => {
     const _id = req.params.id;
     const update = req.body;
-  
+
     try {
       // Actualiza directamente sin necesidad de llamar a save()
       const updatedInstitution = await Institution.findByIdAndUpdate(
-        _id, 
-        update, 
+        _id,
+        update,
         { new: true, runValidators: true } // Opciones para retornar el documento actualizado y ejecutar validadores
       );
-  
+
       if (updatedInstitution) {
         res.status(200).json({
           message: 'Institución actualizada',
@@ -393,7 +417,7 @@ const instiController = {
       });
     }
   }
-  
+
 
 
 
