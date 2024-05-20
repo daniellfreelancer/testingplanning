@@ -215,7 +215,7 @@ const userController = {
         let size = "";
         let verified = true;
         let code = crypto.randomBytes(15).toString('hex');
-        password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10) ;
+        password = password.length > 0 ? bcryptjs.hashSync(password, 10) : bcryptjs.hashSync(temporalPassword, 10);
 
         adminUser = await new UserAdmin({
           email,
@@ -232,7 +232,7 @@ const userController = {
           workshop,
           program,
           weight,
-          size, 
+          size,
           age,
           gender,
           phone,
@@ -335,7 +335,7 @@ const userController = {
                 verified: admin.verified,
                 code: admin.code,
                 from: admin.from,
-                institution:admin.institution
+                institution: admin.institution
 
               };
 
@@ -417,70 +417,14 @@ const userController = {
 
 
 
-          if (from === 'app') {
-            await userLoginValidator.validateAsync(req.body)
-            const studentPass = student.password.filter(userpassword =>
-              bcryptjs.compareSync(password, userpassword)
-            );
+        if (from === 'app') {
+          await userLoginValidator.validateAsync(req.body)
+          const studentPass = student.password.filter(userpassword =>
+            bcryptjs.compareSync(password, userpassword)
+          );
 
-            if (studentPass.length > 0) {
-              // Código existente para inicio de sesión exitoso del estudiante
-              const token = jwt.sign(
-                {
-                  id: student._id,
-                  role: student.role
-                },
-                process.env.KEY_JWT,
-                {
-                  expiresIn: 60 * 60 * 24
-                }
-              );
-              await student.populate('classroom school program workshop')
-
-              const loginStudent = {
-                id: student._id,
-                email: student.email,
-                name: student.name,
-                lastName: student.lastName,
-                role: student.role,
-                logged: student.logged,
-                age: student.age,
-                weight: student.weight,
-                size: student.size,
-                classroom: student.classroom,
-                school: student.school,
-                gender: student.gender,
-                rut: student.rut,
-                imgUrl: student.imgUrl,
-                phone: student.phone,
-                gender: student.gender,
-                school_representative: student.school_representative,
-                workshop: student.workshop,
-                program: student.program,
-                bio: student.bio,
-                tasks: student.tasks
-              };
-
-              student.logged = true;
-              await student.save();
-
-              return res.status(200).json({
-                message: 'Bienvenido, inicio de sesión exitoso',
-                success: true,
-                response: {
-                  student: loginStudent,
-                  token: token
-                }
-              })
-            } else {
-              return res.status(400).json({
-                message: 'Contraseña incorrecta para el estudiante, verifica e intenta nuevamente',
-                success: false
-              });
-            }
-
-          } else if (from === 'app-google') {
-
+          if (studentPass.length > 0) {
+            // Código existente para inicio de sesión exitoso del estudiante
             const token = jwt.sign(
               {
                 id: student._id,
@@ -528,13 +472,69 @@ const userController = {
                 token: token
               }
             })
-
           } else {
             return res.status(400).json({
-              message: 'Acceso restringido, no puedes acceder desde este sitio',
+              message: 'Contraseña incorrecta para el estudiante, verifica e intenta nuevamente',
               success: false
             });
           }
+
+        } else if (from === 'app-google') {
+
+          const token = jwt.sign(
+            {
+              id: student._id,
+              role: student.role
+            },
+            process.env.KEY_JWT,
+            {
+              expiresIn: 60 * 60 * 24
+            }
+          );
+          await student.populate('classroom school program workshop')
+
+          const loginStudent = {
+            id: student._id,
+            email: student.email,
+            name: student.name,
+            lastName: student.lastName,
+            role: student.role,
+            logged: student.logged,
+            age: student.age,
+            weight: student.weight,
+            size: student.size,
+            classroom: student.classroom,
+            school: student.school,
+            gender: student.gender,
+            rut: student.rut,
+            imgUrl: student.imgUrl,
+            phone: student.phone,
+            gender: student.gender,
+            school_representative: student.school_representative,
+            workshop: student.workshop,
+            program: student.program,
+            bio: student.bio,
+            tasks: student.tasks
+          };
+
+          student.logged = true;
+          await student.save();
+
+          return res.status(200).json({
+            message: 'Bienvenido, inicio de sesión exitoso',
+            success: true,
+            response: {
+              student: loginStudent,
+              token: token
+            }
+          })
+
+        } else {
+          return res.status(400).json({
+            message: 'Acceso restringido, no puedes acceder desde este sitio',
+            success: false
+          });
+        }
 
       }
 
@@ -805,7 +805,7 @@ const userController = {
   },
   getAdmins: async (req, res) => {
     try {
-      let admins = await UserAdmin.find({ role: { $in: ['SUVM', 'SUAD'] }}).sort({ name: 1 })
+      let admins = await UserAdmin.find({ role: { $in: ['SUVM', 'SUAD'] } }).sort({ name: 1 })
 
       if (admins) {
         res.status(200).json({
@@ -828,6 +828,46 @@ const userController = {
         success: false
       })
     }
+  },
+  getTeachers: async (req, res) => {
+
+    try {
+
+      const teachers = await UserAdmin.find({ role: { $in: ['SUPF'] } }).sort({ name: 1 })
+
+
+      if (teachers) {
+
+        res.status(200).json({
+          response: teachers,
+          message: "Profesores registrados",
+          success: true
+        })
+
+      } else {
+
+        res.status(404).json({
+          message: "No hay profesores asociados",
+          success: false
+        })
+
+      }
+
+
+
+    } catch (error) {
+
+      console.log(error)
+
+      res.status(400).json({
+        message: error.message,
+        success: false
+      })
+
+    }
+
+
+
   },
   resetPassword: async (req, res) => {
 
@@ -980,14 +1020,14 @@ const userController = {
     }
 
 
-  }, 
-  emailToResetPassword : async (req, res) => {
+  },
+  emailToResetPassword: async (req, res) => {
     const { email } = req.body;
     try {
 
       let adminUser = await UserAdmin.findOne({ email });
       let studentUser = await Students.findOne({ email });
-  
+
       if (!adminUser && !studentUser) {
         return res.status(404).json({
           message: 'Usuario no encontrado, comunícate con el administrador',
@@ -995,7 +1035,7 @@ const userController = {
         });
       }
       const code = crypto.randomBytes(15).toString('hex')
-  
+
       if (adminUser) {
         adminUser.code = code
         await adminUser.save()
@@ -1005,7 +1045,7 @@ const userController = {
           success: true
         });
       }
-  
+
       if (studentUser) {
         studentUser.code = code
         await studentUser.save()
@@ -1015,14 +1055,14 @@ const userController = {
           success: true
         });
       }
-  
+
     } catch (error) {
       console.log(error);
       res.status(500).json({
         message: 'Ocurrió un error al restablecer la contraseña',
         success: false
       });
-      
+
     }
 
 
@@ -1032,7 +1072,7 @@ const userController = {
     try {
       const userId = req.params._id; // Recibir el _id del usuario desde los parámetros de la ruta
       const user = await UserAdmin.findById(userId);
-  
+
       if (user) {
         await UserAdmin.deleteOne({ _id: userId });
         res.status(200).json({
@@ -1045,7 +1085,7 @@ const userController = {
           success: false
         });
       }
-    } catch (error) { 
+    } catch (error) {
       console.log(error);
       res.status(500).json({
         message: error.message,
@@ -1053,7 +1093,7 @@ const userController = {
       });
     }
   },
-  resetPasswordInsideApp : async (req, res) => {
+  resetPasswordInsideApp: async (req, res) => {
 
     const { email, newPassword } = req.body;
 
@@ -1089,7 +1129,7 @@ const userController = {
       });
     }
   }
-  
+
 
 };
 

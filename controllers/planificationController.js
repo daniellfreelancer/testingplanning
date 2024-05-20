@@ -303,6 +303,46 @@ const planificationController = {
         success: false
       });
     }
+  },
+  getPlanifications : async (req, res) => {
+
+    try {
+      
+      const planifications = await Planification.find()
+
+      if (planifications) {
+
+        res.status(201).json({
+          message: 'Planificaciones encontradas',
+          success: true,
+          response: planifications
+        })
+
+
+      } else {
+
+        res.status(400).json({
+          message: 'No se encontraron planificaciones',
+          success: false
+          })
+
+
+      }
+
+
+
+    } catch (error) {
+
+      res.status(400).json({
+        message: 'Error al intentar obtener las planificaciones',
+        success: false
+        
+      })
+      
+    }
+
+
+
   }
 
 

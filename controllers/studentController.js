@@ -445,6 +445,34 @@ const studentController = {
             return res.status(500).json({ message: 'Error al intentar traer los estudiantes' });
         }
 
+    },
+    getStudents : async (req, res) => {
+
+        try {
+            
+            const students = await Students.find()
+
+            if ( students ) {
+                res.status(200).json({
+                    success: true,
+                    response: students
+                    })
+            } else {
+                return res.status(404).json({
+                    success: false,
+                    message: "No se encontraron estudiantes"
+                    });
+            }
+
+
+        } catch (error) {
+
+            console.log(error)
+            return res.status(500).json({ message: 'Error al intentar traer los estudiantes' });
+            
+        }
+
+
     }
 
 
