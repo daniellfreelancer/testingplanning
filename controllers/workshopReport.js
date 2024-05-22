@@ -2,6 +2,13 @@ const WorkshopReport = require('../models/reportByWorkshop')
 
 
 
+const  queryPopulate = [
+    {
+        path: 'institution workshop',
+        select:'name address phone'
+    }
+]
+
 
 const workshopReport = {
 
@@ -35,7 +42,7 @@ const workshopReport = {
     getReports: async (req, res) => {
         try {
 
-            const reports = await WorkshopReport.find()
+            const reports = await WorkshopReport.find().populate(queryPopulate)
 
             if (reports) {
 
@@ -119,7 +126,7 @@ const workshopReport = {
         const { id } = req.params;
 
         try {
-            const reports = await WorkshopReport.find({ reportedBy: id }).populate();
+            const reports = await WorkshopReport.find({ reportedBy: id }).populate(queryPopulate);
 
             if (reports.length === 0) {
                 return res.status(404).json({ message: 'No ha realizado ningun reporte' });
@@ -146,7 +153,7 @@ const workshopReport = {
 
         try {
 
-            const reports = await WorkshopReport.find({ workshop: id }).populate()
+            const reports = await WorkshopReport.find({ workshop: id }).populate(queryPopulate)
 
             if (reports.length === 0) {
                 return res.status(404).json({ message: 'No ha realizado ningun reporte para este taller' });
@@ -170,7 +177,7 @@ const workshopReport = {
         const { id } = req.params
 
         try {
-            const reports = await WorkshopReport.find({ institution: id }).populate()
+            const reports = await WorkshopReport.find({ institution: id }).populate(queryPopulate)
 
             if (reports) {
                 res.status(200).json({
