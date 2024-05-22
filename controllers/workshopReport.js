@@ -71,7 +71,7 @@ const workshopReport = {
 
         try {
 
-            const report = await WorkshopReport.findById(id)
+            const report = await WorkshopReport.findById(id).populate(queryPopulate)
 
             if (report) {
                 res.status(200).json({
