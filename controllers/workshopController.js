@@ -33,18 +33,19 @@ const workshopQueryPopulate = [
   {
     path: 'workshopHistory',
     populate: {
-      path: 'plannerClass',
-
-    },
-  },
-  {
-    path: 'workshopHistory',
-    populate: {
       path: 'byTeacher workshopId workshopClass',
       select: 'name lastName email name'
     },
+    
 
-  }
+  },
+{
+  path: 'workshopHistory',
+  populate: {
+    path: 'workshopClass',
+  },
+}
+
 
 ]
 
