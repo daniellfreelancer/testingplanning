@@ -335,7 +335,11 @@ const userController = {
                 verified: admin.verified,
                 code: admin.code,
                 from: admin.from,
-                institution: admin.institution
+                institution: admin.institution,
+                idFront: admin.idFront,
+                idBack: admin.idBack,
+                backgroundDoc: admin.backgroundDoc,
+                otherDocs: admin.otherDocs
 
               };
 
@@ -392,7 +396,12 @@ const userController = {
               program: admin.program,
               verified: admin.verified,
               code: admin.code,
-              from: admin.from
+              from: admin.from,
+              institution: admin.institution,
+              idFront: admin.idFront,
+              idBack: admin.idBack,
+              backgroundDoc: admin.backgroundDoc,
+              otherDocs: admin.otherDocs
 
             };
 
