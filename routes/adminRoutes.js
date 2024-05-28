@@ -1,7 +1,8 @@
 var express = require('express');
 var router = express.Router();
 const {signUp, getAdmins, resetPassword, signIn, signOut, updateUser, emailToResetPassword, deleteUser, resetPasswordInsideApp, getTeachers}  = require('../controllers/adminController')
-const upload = require('../libs/docsStorage')
+const upload = require('../libs/docsStorage');
+const { idFrontUpload, idBackUpload, backgroundUpload, otherDocsUpload } = require('../controllers/docsController');
 
 router.post('/register',upload.single('imgUrl') ,signUp)
 router.post('/login',signIn)
@@ -13,5 +14,9 @@ router.post('/reset-password',emailToResetPassword)
 router.delete('/user/:_id', deleteUser);
 router.put('/reset-from-app', resetPasswordInsideApp)
 router.get('/teachers', getTeachers)
+router.patch('/upload-id-front/:id', upload.single('idFront'), idFrontUpload )
+router.patch('/upload-id-back/:id', upload.single('idBack'), idBackUpload)
+router.patch('/upload-background/:id', upload.single('backgroundDoc'), backgroundUpload)
+router.patch('/upload-other-docs/:id', upload.single('otherDocs'), otherDocsUpload)
 
 module.exports = router;
