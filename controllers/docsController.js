@@ -43,6 +43,7 @@ const docsController = {
                 res.status(200).json({
                     message: 'Archivo cargado con exito',
                     success: true,
+                    response: fileName
                 });
 
             } else {
@@ -87,6 +88,7 @@ const docsController = {
                 res.status(200).json({
                     message: 'Archivo cargado con exito',
                     success: true,
+                    response: fileName
                 });
 
             } else {
@@ -135,6 +137,7 @@ const docsController = {
                 res.status(200).json({
                     message: 'Archivo cargado con exito',
                     success: true,
+                    response: fileName
                 });
 
             } else {
@@ -181,6 +184,7 @@ const docsController = {
                 res.status(200).json({
                     message: 'Archivo cargado con exito',
                     success: true,
+                    response: fileName
                 });
 
             } else {
