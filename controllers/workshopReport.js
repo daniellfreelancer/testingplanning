@@ -2,10 +2,10 @@ const WorkshopReport = require('../models/reportByWorkshop')
 
 
 
-const  queryPopulate = [
+const queryPopulate = [
     {
         path: 'institution workshop',
-        select:'name address phone'
+        select: 'name address phone'
     }
 ]
 
@@ -196,6 +196,33 @@ const workshopReport = {
                 message: 'Error al obtener los reportes'
             });
         }
+    },
+    getReportByClass: async (req, res) => {
+        const { id } = req.params
+
+        try {
+            const report = await WorkshopReport.findOne({ workshopClass: id })
+
+            if (report) {
+                res.status(200).json({
+                    message: 'Reporte encontrado',
+                    data: report,
+                    success: true
+                });
+            } else {
+                return res.status(404).json({
+                    message: 'No ha realizado ningun reporte para esta clase',
+                    success: false
+                });
+            }
+
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({
+                message: 'Error al obtener el reporte de la clase'
+            });
+        }
+
     }
 }
 

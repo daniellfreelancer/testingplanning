@@ -19,7 +19,8 @@ const reportSchema = new mongoose.Schema({
     relevantEvents: { type: String, required: true },
     obstaclesPresented: { type: String, required: true },
     solutionsPresented: { type: String, required: true },
-    improveAspects: { type: String, required: true }
+    improveAspects: { type: String, required: true },
+    workshopClass :{ type: mongoose.Types.ObjectId, ref: 'resumeVMClass', required: true }
 }, {
     timestamps: true
 })
