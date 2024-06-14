@@ -37,6 +37,7 @@ const userSurvey = require('./routes/surveyRoutes')
 const userFitData = require('./routes/fitData.routes')
 const userArduino = require('./routes/arduino.routes')
 const userWorkshopReport = require('./routes/workshopReport.routes')
+const userDusunSmartwatch = require('./routes/dusunSM.routes')
 
 var app = express();
 
@@ -87,6 +88,7 @@ app.use('/survey', userSurvey)
 app.use('/googlefit', userFitData)
 app.use('/devices', userArduino)
 app.use('/workshop-report', userWorkshopReport)
+app.use('/dusun-sw', userDusunSmartwatch)
 
 
 // catch 404 and forward to error handler
