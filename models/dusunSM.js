@@ -8,7 +8,7 @@ const dusunSMSchema = new mongoose.Schema({
     Hr: { type: Number },
     Temperature: {type: String},
     dev_name: {type: String},
-    user: {type: mongoose.Types.ObjectId, ref:'user', require: false},
+    student: {type: mongoose.Types.ObjectId, ref:'student', require: false},
     plannerClass:{type: mongoose.Types.ObjectId, ref:'planification', required: false},
     workshopClass:{type: mongoose.Types.ObjectId, ref:'workshopPlanification', required: false},
 
