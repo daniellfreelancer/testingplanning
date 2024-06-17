@@ -7,7 +7,11 @@ const dusunSMSchema = new mongoose.Schema({
     data: {type: String},
     Hr: { type: Number },
     Temperature: {type: String},
-    dev_name: {type: String}
+    dev_name: {type: String},
+    user: {type: mongoose.Types.ObjectId, ref:'user', require: false},
+    plannerClass:{type: mongoose.Types.ObjectId, ref:'planification', required: false},
+    workshopClass:{type: mongoose.Types.ObjectId, ref:'workshopPlanification', required: false},
+
 }, {
     timestamps: true
 })
