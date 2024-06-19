@@ -44,6 +44,9 @@ const workshopQueryPopulate = [
   populate: {
     path: 'workshopClass',
   },
+    options: {
+      sort: { 'createdAt': -1 }
+    }
 }
 
 
