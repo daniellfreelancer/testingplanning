@@ -27,8 +27,8 @@ const studentSchema = new mongoose.Schema({
     from: [{type:String}],  // from google o formularios
     verified:{type:Boolean},    // si es verificado por codigos
     code: {type:String},
-    fitData:[{type: mongoose.Types.ObjectId, ref:'fitdata', required: false}]
-
+    fitData:[{type: mongoose.Types.ObjectId, ref:'fitdata', required: false}],
+    controlParental:{type:Boolean}
 },
 {
     timestamps: true,

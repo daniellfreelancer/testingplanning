@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-const {signUp, getAdmins, resetPassword, signIn, signOut, updateUser, emailToResetPassword, deleteUser, resetPasswordInsideApp, getTeachers}  = require('../controllers/adminController')
+const {signUp, getAdmins, resetPassword, signIn, signOut, updateUser, emailToResetPassword, deleteUser, resetPasswordInsideApp, getTeachers, controlParentalActive}  = require('../controllers/adminController')
 const upload = require('../libs/docsStorage');
 const { idFrontUpload, idBackUpload, backgroundUpload, otherDocsUpload } = require('../controllers/docsController');
 
@@ -8,6 +8,7 @@ router.post('/register',upload.single('imgUrl') ,signUp)
 router.post('/login',signIn)
 router.post('/logout', signOut)
 router.post('/reset', resetPassword)
+router.post('/control-parental', controlParentalActive);
 router.get('/users', getAdmins)
 router.patch('/update/:rut', upload.single('imgUrl'), updateUser)
 router.post('/reset-password',emailToResetPassword)

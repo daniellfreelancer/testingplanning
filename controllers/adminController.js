@@ -1137,6 +1137,79 @@ const userController = {
         success: false
       });
     }
+  },
+  controlParental: async (req, res) => {
+
+    const { email } = req.body
+
+    try {
+      let studentUser = await Students.findOne({ email });
+      let adminUser = await UserAdmin.findOne({ email });
+
+      if (studentUser) {
+        studentUser.controlParental = !studentUser.controlParental ? true : false
+        await studentUser.save()
+        res.status(200).json({
+          message: 'Control parental activado con éxito',
+          success: true
+        });
+      } else if (adminUser) {
+
+        adminUser.controlParental = !adminUser.controlParental ? true : false
+        await adminUser.save()
+        res.status(200).json({
+          message: 'Control parental activado con éxito',
+          success: true
+        });
+      } else {
+        res.status(400).json({
+          message: 'No se encontró el usuario',
+          success: false
+        })
+      }
+
+    } catch (error) {
+      console.log(error)
+      res.status(500).json({
+        message: 'Ocurrió un error al activar el control parental, intente nuevamente',
+        success: false
+      });
+    }
+  },
+  controlParentalActive : async (req, res) => {
+    const { email } = req.body;
+  
+    if (!email) {
+      return res.status(400).json({
+        message: 'Correo electrónico es requerido',
+        success: false
+      });
+    }
+  
+    try {
+      let user = await Students.findOne({ email }) || await UserAdmin.findOne({ email });
+  
+      if (user) {
+        user.controlParental = user.controlParental === null || user.controlParental === undefined ? true : !user.controlParental;
+        await user.save();
+        res.status(200).json({
+          message: `Control parental ${user.controlParental ? 'activado' : 'desactivado'} con éxito`,
+          success: true
+        });
+      } else {
+        res.status(404).json({
+          message: 'No se encontró el usuario',
+          success: false
+        });
+      }
+  
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Ocurrió un error al activar el control parental, intente nuevamente',
+        success: false
+      });
+    }
   }
 
 

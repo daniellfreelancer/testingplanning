@@ -30,6 +30,7 @@ const adminSchema = new mongoose.Schema({
     idBack: { type: String },
     backgroundDoc: { type: String },
     otherDocs: { type: String },
+    controlParental:{type:Boolean}
 
 
 })
