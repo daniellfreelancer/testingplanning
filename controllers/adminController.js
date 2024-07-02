@@ -339,7 +339,8 @@ const userController = {
                 idFront: admin.idFront,
                 idBack: admin.idBack,
                 backgroundDoc: admin.backgroundDoc,
-                otherDocs: admin.otherDocs
+                otherDocs: admin.otherDocs,
+                controlParental: admin.controlParental
 
               };
 
@@ -401,7 +402,8 @@ const userController = {
               idFront: admin.idFront,
               idBack: admin.idBack,
               backgroundDoc: admin.backgroundDoc,
-              otherDocs: admin.otherDocs
+              otherDocs: admin.otherDocs,
+              controlParental: admin.controlParental
 
             };
 
@@ -467,7 +469,8 @@ const userController = {
               workshop: student.workshop,
               program: student.program,
               bio: student.bio,
-              tasks: student.tasks
+              tasks: student.tasks,
+            controlParental: student.controlParental
             };
 
             student.logged = true;
@@ -523,7 +526,8 @@ const userController = {
             workshop: student.workshop,
             program: student.program,
             bio: student.bio,
-            tasks: student.tasks
+            tasks: student.tasks,
+            controlParental: student.controlParental
           };
 
           student.logged = true;
