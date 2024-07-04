@@ -1198,7 +1198,8 @@ const userController = {
         await user.save();
         res.status(200).json({
           message: `Control parental ${user.controlParental ? 'activado' : 'desactivado'} con éxito`,
-          success: true
+          success: true,
+          controlParental: user.controlParental
         });
       } else {
         res.status(404).json({
