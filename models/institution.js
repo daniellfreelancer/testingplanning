@@ -11,6 +11,7 @@ const instiSchema = new mongoose.Schema({
     email: {type: String,required: true},
     phone: {type: String, required: true},
     rut: {type: String, required: true},
+    hubId: {type: Number, required: false},
 },
 {
     timestamps: true,

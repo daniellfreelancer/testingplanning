@@ -12,7 +12,8 @@ const workshopSchema = new mongoose.Schema({
     phone: {type: String},
     ageRange: {type: Array},
     days : {type: Array},
-    hours : {type: Object}
+    hours : {type: Object},
+    hubId: {type: Number, require: false}
 
 })
 
