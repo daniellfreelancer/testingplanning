@@ -39,6 +39,7 @@ const userArduino = require('./routes/arduino.routes')
 const userWorkshopReport = require('./routes/workshopReport.routes')
 const userDusunSmartwatch = require('./routes/dusunSM.routes')
 const chileafDevices = require('./routes/vmDevices.routes')
+const chileafStocks = require('./routes/chileafStock.routes')
 
 var app = express();
 
@@ -91,6 +92,7 @@ app.use('/devices', userArduino)
 app.use('/workshop-report', userWorkshopReport)
 app.use('/dusun-sw', userDusunSmartwatch)
 app.use('/chileaf', chileafDevices)
+app.use('/chileaf-stocks', chileafStocks)
 
 
 // catch 404 and forward to error handler
