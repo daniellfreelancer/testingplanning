@@ -110,7 +110,7 @@ const resumeVMClassController = {
         plannerNoClass,
         classroomId,
         workshopClass,
-        workshopId
+        workshopId,
       } = req.body;
 
       //   Crear una nueva instancia del modelo
