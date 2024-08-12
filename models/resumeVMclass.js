@@ -18,6 +18,7 @@ const resumeVMSchema = new mongoose.Schema({
     imgFirstVMClass:{type: String},
     imgSecondVMClass:{type: String},
     imgThirdVMClass:{type: String},
+    fitData:{ type: Array, required: false}
 
 },
 {
