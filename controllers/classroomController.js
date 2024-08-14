@@ -42,7 +42,7 @@ const classroomQueryPopulate = [
     path: 'classHistory',
     populate: {
       path: 'byTeacher classroomId',
-      select: 'name lastName email grade level section'
+      select: 'name lastName email grade level section hubId'
     },
 
   }
