@@ -12,6 +12,7 @@ const instiSchema = new mongoose.Schema({
     phone: {type: String, required: true},
     rut: {type: String, required: true},
     hubId: {type: Number, required: false},
+    subscriptions: [{ type: String, required: false }] 
 },
 {
     timestamps: true,

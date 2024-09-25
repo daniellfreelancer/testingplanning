@@ -40,6 +40,7 @@ const userWorkshopReport = require('./routes/workshopReport.routes')
 const userDusunSmartwatch = require('./routes/dusunSM.routes')
 const chileafDevices = require('./routes/vmDevices.routes')
 const chileafStocks = require('./routes/chileafStock.routes')
+const medicalRegistert = require('./routes/medicalRegister.routes')
 
 var app = express();
 
@@ -93,6 +94,7 @@ app.use('/workshop-report', userWorkshopReport)
 app.use('/dusun-sw', userDusunSmartwatch)
 app.use('/chileaf', chileafDevices)
 app.use('/chileaf-stocks', chileafStocks)
+app.use('/medical', medicalRegistert)
 
 
 // catch 404 and forward to error handler

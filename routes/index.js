@@ -3,7 +3,7 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'VitalMove Planning' });
+  res.render('index', { title: 'VitalMove API Backend' });
 });
 
 module.exports = router;

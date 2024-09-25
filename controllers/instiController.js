@@ -55,6 +55,31 @@ const institutionPopulateQuery = [
 
 ];
 
+const studentsPopulate = [
+  {
+    path: 'schools programs',
+    populate: {
+      path: 'students',
+      select: 'name lastName email rut phone age weight size gender',
+      options: {
+        collation: { locale: 'es', strength: 2 },
+        sort: { name: 1 }
+      }
+    }
+  },
+  // {
+  //   path: 'programs',
+  //   populate: {
+  //     path: 'workshops students',
+  //     select: 'name lastName email rut phone age weight size gender',
+  //     options: {
+  //       collation: { locale: 'es', strength: 2 },
+  //       sort: { name: 1 }
+  //     }
+  //   }
+  // },
+]
+
 
 const instiController = {
 
@@ -416,10 +441,123 @@ const instiController = {
         success: false
       });
     }
+  },
+  addSubscriptions: async (req, res) => {
+    try {
+      const { id } = req.params
+      const { subscriptions } = req.body
+
+      const institution = await Institution.findByIdAndUpdate(id, { $push: { subscriptions } }, { new: true })
+
+      if (institution) {
+        res.status(201).json({
+          message: 'Suscripciones agregadas exitosamente',
+          data: institution,
+          success: true
+        })
+      } else {
+        res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      res.status(400).json({
+        message: 'Hubo un error al agregar suscripciones',
+        success: false
+      })
+    }
+  },
+  removeSubscriptions: async (req, res) => {
+    try {
+      const { id } = req.params
+      const { subscriptions } = req.body
+
+      const institution = await Institution.findByIdAndUpdate(id, { $pull: { subscriptions } }, { new: true })
+
+      if (institution) {
+        res.status(200).json({
+          message: 'Suscripciones eliminadas exitosamente',
+          data:institution,
+          success: true
+        })
+      } else {
+        res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      res.status(400).json({
+        message: 'Hubo un error al eliminar suscripciones',
+        success: false
+      })
+    }
+  },
+  getStudentsByInstitution: async (req, res) => {
+    let { id } = req.params;
+
+    try {
+      // Busca la institución por ID y realiza el query populate
+      const institution = await Institution.findById(id).populate(studentsPopulate);
+
+      if (!institution) {
+        return res.status(404).json({
+          message: "No se pudo encontrar la institución",
+          success: false
+        });
+      }
+
+      // Inicializar un array para acumular todos los estudiantes
+      let students = [];
+
+      // Iterar sobre las escuelas de la institución
+      institution.schools.forEach(school => {
+        // Agregar los estudiantes de cada escuela
+        if (school.students) {
+          students.push(...school.students);
+        }
+
+        // Iterar sobre las aulas y agregar los estudiantes de cada aula
+        // if (school.classrooms) {
+        //     school.classrooms.forEach(classroom => {
+        //         if (classroom.students) {
+        //             students.push(...classroom.students);
+        //         }
+        //     });
+        // }
+      });
+
+      // Iterar sobre los programas de la institución
+      institution.programs.forEach(program => {
+        if (program.students) {
+          students.push(...program.students);
+        }
+      });
+
+      // Eliminar duplicados usando el campo '_id' de cada estudiante
+      let uniqueStudents = [...new Map(students.map(student => [student._id.toString(), student])).values()];
+
+      // Ordenar de forma insensible a mayúsculas y minúsculas por el campo "name"
+      uniqueStudents.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+
+      // Responder con el array de estudiantes únicos
+      res.status(200).json({
+        message: "Estudiantes obtenidos con éxito",
+        data: uniqueStudents,
+        success: true
+      });
+
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener estudiantes de la institución",
+        success: false
+      });
+    }
   }
-
-
-
 
 }
 
