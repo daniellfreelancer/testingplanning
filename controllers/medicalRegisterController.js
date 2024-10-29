@@ -176,7 +176,8 @@ const medicalController = {
                 success: false
             })
         }
-    }
+    },
+
 
 }
 

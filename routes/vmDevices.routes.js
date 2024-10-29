@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllVmDevices, getVmDevicesByHubId, vmDevicesByResume, getLastTimeHub, getLastRegister } = require('../controllers/vmDeviceController');
+const { getAllVmDevices, getVmDevicesByHubId, vmDevicesByResume, getLastTimeHub, getLastRegister, getLastHundredRegister } = require('../controllers/vmDeviceController');
 const router = express.Router();
 
 
@@ -14,5 +14,7 @@ router.get('/vmdevices-resume/:hubId/:startTimeClass/:endTimeClass', vmDevicesBy
 router.get('/hub-time/:hubId/time/:currentTime', getLastTimeHub)
 
 router.get('/last-20-register/:hubId', getLastRegister)
+router.get('/last-100-register/:hubId', getLastHundredRegister)
+
 
 module.exports = router;

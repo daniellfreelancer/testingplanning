@@ -113,7 +113,28 @@ const devicesCLController = {
             
         }
 
+    },
+    getLastHundredRegister: async (req, res) => {
+        try {
+            const vmDevices = await VmDeviceModel.find()
+                .sort({ timestamp: -1 })
+                .limit(100);
+
+            if (!vmDevices) {
+                return res.status(404).json({ message: 'No se encontraron registros' });
+            }
+
+            res.status(200).json({
+                response: vmDevices,
+                message: 'Últimos 100 registros obtenidos con éxito',
+                success: true,
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Error al obtener los últimos 100 registros' });
+        }
     }
+    
 
 }
 
