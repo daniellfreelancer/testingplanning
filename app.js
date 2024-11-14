@@ -42,6 +42,7 @@ const chileafDevices = require('./routes/vmDevices.routes')
 const chileafStocks = require('./routes/chileafStock.routes')
 const medicalRegistert = require('./routes/medicalRegister.routes')
 const requerimentRegister = require('./routes/requeriments.routes')
+const hrvRegister = require('./routes/hrv.routes');
 
 var app = express();
 
@@ -97,6 +98,7 @@ app.use('/chileaf', chileafDevices)
 app.use('/chileaf-stocks', chileafStocks)
 app.use('/medical', medicalRegistert)
 app.use('/requeriment', requerimentRegister)
+app.use('/hrv', hrvRegister)
 
 
 // catch 404 and forward to error handler

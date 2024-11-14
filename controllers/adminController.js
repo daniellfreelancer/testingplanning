@@ -6,6 +6,7 @@ const Students = require('../models/student')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const Joi = require('joi')
 const sendResetMail = require('./mailResetPassword')
+const sendWelcomeMail = require('./mailRegisterUserAdmin')
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -39,6 +40,16 @@ const userLoginValidator = Joi.object({
       "string.empty": "El origen es requerido"
     })
 })
+
+function generateRandomPassword(length = 8) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+      const randomIndex = crypto.randomInt(0, characters.length);
+      password += characters[randomIndex];
+  }
+  return password;
+}
 
 
 
@@ -199,7 +210,8 @@ const userController = {
         });
       }
 
-      let temporalPassword = "vitalmove"
+      //let temporalPassword = "8pxae778"
+      let temporalPassword = generateRandomPassword();
 
       let adminUser = await UserAdmin.findOne({ email });
 
@@ -252,6 +264,7 @@ const userController = {
           success: true,
           response: adminUser._id
         });
+        sendWelcomeMail(email, temporalPassword, name)
       } else {
         if (adminUser.from.includes(from)) {
           res.status(200).json({

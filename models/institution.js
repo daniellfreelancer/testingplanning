@@ -7,12 +7,15 @@ const instiSchema = new mongoose.Schema({
     teachers:[{type: mongoose.Types.ObjectId, ref:'user'}],
     schools:[{type: mongoose.Types.ObjectId, ref:'school'}],
     programs:[{type: mongoose.Types.ObjectId, ref:'program'}],
+    clubs:[{type: mongoose.Types.ObjectId, ref:'club'}],
     address:{type: String, required: true},
     email: {type: String,required: true},
     phone: {type: String, required: true},
     rut: {type: String, required: true},
     hubId: {type: Number, required: false},
-    subscriptions: [{ type: String, required: false }] 
+    subscriptions: [{ type: String, required: false }],
+    type: {type: String, required: true},
+    membership:[{type: mongoose.Types.ObjectId, ref:''}],
 },
 {
     timestamps: true,
