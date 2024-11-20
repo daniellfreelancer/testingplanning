@@ -831,7 +831,7 @@ const userController = {
   },
   getAdmins: async (req, res) => {
     try {
-      let admins = await UserAdmin.find({ role: { $in: ['SUVM', 'SUAD', 'SUMD', 'SUMR'] } }).sort({ name: 1 })
+      let admins = await UserAdmin.find({ role: { $in: ['SUVM', 'SUAD', 'SUMD', 'SUMR', 'SUAF', 'SUSF'] } }).sort({ name: 1 })
 
       if (admins) {
         res.status(200).json({
