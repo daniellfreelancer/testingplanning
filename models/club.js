@@ -13,9 +13,9 @@ const clubSchema = new mongoose.Schema({
     teachers: [{ type: mongoose.Types.ObjectId, ref: 'user' }],
     institution:[{type: mongoose.Types.ObjectId, ref:'insti'}],
     categories:[{type: mongoose.Types.ObjectId, ref:'sportCategory'}],
-    season: [{type:string}],
+    season: [{type: String}],
     fixture:[{type: mongoose.Types.ObjectId, ref:''}],
-    championship :[{type: mongoose.Types.ObjectId, ref:''}]
+    championship :[{type: mongoose.Types.ObjectId, ref:''}],
 },{
     timestamps: true,
 })
