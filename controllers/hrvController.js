@@ -218,7 +218,78 @@ const hrvController = {
 
         }
 
+    },  
+    getHRVNoDuplicates : async (req, res) => {
+        try {
+            // Pipeline de agregación para obtener los HRV únicos por usuario o estudiante
+            const hrvData = await HRV.aggregate([
+                // Agrupamos por user y student, seleccionando el último registro por timestamps
+                {
+                    $group: {
+                        _id: {
+                            user: "$user",
+                            student: "$student",
+                        },
+                        latestHRV: { $first: "$$ROOT" }, // Obtenemos el documento completo
+                        createdAt: { $max: "$createdAt" }, // Aseguramos que sea el más reciente
+                    }
+                },
+                {
+                    $replaceRoot: { newRoot: "$latestHRV" } // Reemplazamos el root con el documento completo
+                },
+                {
+                    $sort: { createdAt: -1 } // Ordenamos por fecha descendente
+                }
+            ]);
+    
+            res.status(200).json({
+                success: true,
+                data: hrvData,
+            });
+        } catch (error) {
+            console.error('Error fetching HRV data without duplicates:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching HRV data without duplicates',
+                error: error.message,
+            });
+        }
     },
+    getHRVUsersStudent : async (req, res) => {
+        try {
+        // Obtener todos los registros de HRV y poblar los campos necesarios
+        const hrvRecords = await HRV.find()
+            .populate('user', 'name lastName age imgUrl size weight role') // Población de user
+            .populate('student', 'name lastName age imgUrl size weight role') // Población de student
+            .sort({ createdAt: -1 }); // Ordenar por fecha de creación de forma descendente
+
+            // Usar un objeto para almacenar los registros únicos
+            const uniqueHRV = {};
+    
+            hrvRecords.forEach(record => {
+                // Clave única basada en user o student
+                const key = record.user ? record.user.toString() : record.student.toString();
+    
+                // Solo agregar si no existe ya en el objeto uniqueHRV
+                if (!uniqueHRV[key]) {
+                    uniqueHRV[key] = record;
+                } else {
+                    // Si ya existe, comparar las fechas y mantener el más reciente
+                    if (record.createdAt > uniqueHRV[key].createdAt) {
+                        uniqueHRV[key] = record;
+                    }
+                }
+            });
+    
+            // Convertir el objeto a un array
+            const result = Object.values(uniqueHRV);
+    
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error('Error fetching HRV records:', error);
+            return res.status(500).json({ message: 'Error fetching HRV records', error });
+        }
+    }
 
 }
 
