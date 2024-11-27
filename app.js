@@ -43,7 +43,8 @@ const chileafStocks = require('./routes/chileafStock.routes')
 const medicalRegistert = require('./routes/medicalRegister.routes')
 const requerimentRegister = require('./routes/requeriments.routes')
 const hrvRegister = require('./routes/hrv.routes');
-const sportClub = require('./routes/clubes.routes')
+const sportClub = require('./routes/clubes.routes');
+const sportCategory = require('./routes/sportCategories.routes');
 
 var app = express();
 
@@ -101,6 +102,7 @@ app.use('/medical', medicalRegistert)
 app.use('/requeriment', requerimentRegister)
 app.use('/hrv', hrvRegister)
 app.use('/sportclub', sportClub)
+app.use('/sportcategory', sportCategory)
 
 
 // catch 404 and forward to error handler

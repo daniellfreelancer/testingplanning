@@ -3,7 +3,8 @@ const Institution = require('../models/institution')
 const Trainers = require('../models/admin')
 const Players = require('../models/student')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const crypto = require('crypto')
+const crypto = require('crypto');
+const path = require('path');
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -19,6 +20,14 @@ const clientAWS = new S3Client({
 })
 
 const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
+const clubQueryPopulate = [
+    {
+        path : 'categories teacher students',
+        select : 'name'
+    }
+
+]
 
 const ClubController = {
     createClub : async (req, res) => {
@@ -98,7 +107,7 @@ const ClubController = {
     getClubById : async (req, res) => {
         try {
 
-            let club = await Clubs.findById(req.params.id)
+            let club = await Clubs.findById(req.params.id).populate(clubQueryPopulate)
 
             if (club) {
                 res.status(200).json({
