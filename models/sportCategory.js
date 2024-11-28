@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 
 const sportCategorySchema = new mongoose.Schema({
     name:{type: String},
-    teacher:[{type: mongoose.Types.ObjectId, ref:'user'}],
+    teachers:[{type: mongoose.Types.ObjectId, ref:'user'}],
     students:[{type: mongoose.Types.ObjectId, ref:'student'}],
     club:[{type: mongoose.Types.ObjectId, ref:'club'}],
     trainingPlanner:[ {type: mongoose.Types.ObjectId, ref:''}],

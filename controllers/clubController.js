@@ -23,8 +23,8 @@ const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const clubQueryPopulate = [
     {
-        path : 'categories teacher students',
-        select : 'name'
+        path : 'categories teachers students institution',
+        select : 'name lastName email gender age size gender'
     }
 
 ]
