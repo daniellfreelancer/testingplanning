@@ -12,6 +12,8 @@ const hrvSchema = new mongoose.Schema({
     pnn50 : {type: Number},
     rrMean : {type: Number},
     device : {type: String},
+    measurement : {type: String},
+    survey: {type: Object}
 
 },{
     timestamps: true,
