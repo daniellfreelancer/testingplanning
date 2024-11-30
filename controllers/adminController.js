@@ -53,6 +53,8 @@ function generateRandomPassword(length = 8) {
 
 
 
+
+
 const userController = {
   signUp: async (req, res) => {
     // let {
@@ -1228,6 +1230,82 @@ const userController = {
         success: false
       });
     }
+  },
+  getUserDetail : async (req, res) =>{
+
+    const { id } = req.params;
+
+    try {
+      // Intentar encontrar al estudiante
+      let student = await Students.findById(id)
+        .select('name lastName email role age size gender weight imgUrl classroom program school workshop') // Selecciona solo los campos deseados
+        .populate({
+          path: 'classroom',
+          select: 'name grade level' // Selecciona solo los campos deseados de classroom
+        })
+        .populate({
+          path: 'program',
+          select: 'name grade level' // Selecciona solo los campos deseados de program
+        })
+        .populate({
+          path: 'school',
+          select: 'name grade level' // Selecciona solo los campos deseados de school
+        })
+        .populate({
+          path: 'workshop',
+          select: 'name grade level' // Selecciona solo los campos deseados de workshop
+        });
+  
+      if (student) {
+        return res.status(200).json({
+          response: student,
+          success: true,
+          message: 'Usuario encontrado'
+        });
+      }
+  
+      // Intentar encontrar al usuario admin
+      let user = await UserAdmin.findById(id)
+        .select('name lastName email role age size gender weight imgUrl classroom program school workshop') // Selecciona solo los campos deseados
+        .populate({
+          path: 'classroom',
+          select: 'name grade level' // Selecciona solo los campos deseados de classroom
+        })
+        .populate({
+          path: 'program',
+          select: 'name grade level' // Selecciona solo los campos deseados de program
+        })
+        .populate({
+          path: 'school',
+          select: 'name grade level' // Selecciona solo los campos deseados de school
+        })
+        .populate({
+          path: 'workshop',
+          select: 'name grade level' // Selecciona solo los campos deseados de workshop
+        });
+  
+      if (user) {
+        return res.status(200).json({
+          response: user,
+          success: true,
+          message: 'Usuario encontrado'
+        });
+      }
+  
+      return res.status(404).json({
+        message: 'No se encontró el usuario',
+        success: false
+      });
+  
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Ocurrió un error al buscar el usuario',
+        success: false
+      });
+    }
+
+
   }
 
 
