@@ -32,6 +32,10 @@ const programPopulateQuery = [
       path: 'teacher students planner',
       select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'
     }
+  },
+  {
+    path: 'institution',
+    select: 'name address phone email type',
   }
 ];
 
