@@ -259,8 +259,8 @@ const hrvController = {
         try {
         // Obtener todos los registros de HRV y poblar los campos necesarios
         const hrvRecords = await HRV.find()
-            .populate('user', 'name lastName age imgUrl size weight role') // Población de user
-            .populate('student', 'name lastName age imgUrl size weight role') // Población de student
+            .populate('user', 'name lastName age imgUrl size weight role rut') // Población de user
+            .populate('student', 'name lastName age imgUrl size weight role rut') // Población de student
             .sort({ createdAt: -1 }); // Ordenar por fecha de creación de forma descendente
 
             // Usar un objeto para almacenar los registros únicos
