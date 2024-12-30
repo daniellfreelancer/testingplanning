@@ -51,6 +51,15 @@ const institutionPopulateQuery = [
     populate: {
       path: 'admins teachers workshops students'
     }
+  },
+  {
+    path: 'clubs',
+    options: {
+      sort: { 'name': 1 }
+    }
+  },
+  {
+    path: 'director adminsOffice',
   }
 
 ];

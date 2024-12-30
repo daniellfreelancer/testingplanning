@@ -239,6 +239,94 @@ const ClubController = {
         }
 
 
+    },
+    addPlayer: async (req, res) => {
+        try {
+            const {clubId, playerId } = req.params;
+
+            const club = await Clubs.findById(clubId)
+
+            if (!club) {
+                return res.status(404).json({
+                    message: 'Club no encontrado',
+                    success: false
+                });
+            }
+
+            club.students.push(playerId)
+            await club.save()
+
+            const player = await Players.findById(playerId)
+            if (!player) {
+                return res.status(404).json({
+                    message: 'Jugador no encontrado',
+                    success: false
+                });
+            }
+            player.clubs.push(clubId)
+            await player.save()
+
+            res.status(201).json({
+                message: 'Jugador agregado al club con éxito',
+                success: true,
+                response:{
+                    club: club,
+                    player: player
+                }
+            })
+
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: 'Error al agregar jugador al club',
+                error: error.message,
+                success: false
+            });
+            
+        }
+    },
+    // delete player from club
+    removePlayer: async (req, res) => {
+        try {
+            const { clubId, playerId } = req.params;
+
+            const club = await Clubs.findByIdAndUpdate(clubId, { $pull: { students: playerId } }, { new: true });
+
+            if (!club) {
+                return res.status(404).json({
+                    message: 'Club no encontrado',
+                    success: false
+                });
+            }
+
+            const player = await Players.findByIdAndUpdate(playerId, { $pull: { clubs: clubId } }, { new: true });
+
+            if (!player) {
+                return res.status(404).json({
+                    message: 'Jugador no encontrado',
+                    success: false
+                });
+            }
+
+            res.status(200).json({
+                message: 'Jugador eliminado del club con éxito',
+                success: true,
+                response:{
+                    club: club,
+                    player: player
+                }
+            });
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: 'Error al eliminar jugador del club',
+                error: error.message,
+                success: false
+            });
+            
+        }
     }
 
 }
