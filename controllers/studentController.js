@@ -51,7 +51,10 @@ const studentController = {
             workshop,
             program,
             school_representative,
-            bio, from } = req.body
+            bio, 
+            from,
+            role
+         } = req.body
 
         try {
 
@@ -70,7 +73,7 @@ const studentController = {
                 newStudent = await Students.findOne({ email })
 
                 if (!newStudent) {
-                    let role = "ESTU";
+                //    let role = "ESTU";
                     let logged = false;
                     let imgUrl
                     let tasks = []
@@ -98,7 +101,8 @@ const studentController = {
                         bio,
                         imgUrl,
                         tasks,
-                        verified
+                        verified,
+                        role
                     }).save()
 
                     if (req.file) {
