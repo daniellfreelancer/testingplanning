@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const sharp = require('sharp');
 const Institution = require('../models/institution')
 const Club = require('../models/club')
+const Player = require('../models/student')
 
 const bucketRegion = process.env.AWS_BUCKET_REGION
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -82,67 +83,67 @@ const membershipController = {
     //         return res.status(500).json({ message: 'Error al crear las membresías', error });
     //     }
     // }
-    async createMembership(req, res) {
-        const { year, institutionId, amount } = req.params;
+    // async createMembership(req, res) {
+    //     const { year, institutionId, amount } = req.params;
 
-        try {
-            // Buscar la institución por su ID y poblar los clubes y sus estudiantes
-            const institution = await Institution.findById(institutionId).populate({
-                path: 'clubs',
-                populate: {
-                    path: 'students', // Asegúrate de que el modelo de Club tenga una referencia a los estudiantes
-                    model: 'student' // Asegúrate de que el modelo de estudiantes esté correctamente referenciado
-                }
-            });
+    //     try {
+    //         // Buscar la institución por su ID y poblar los clubes y sus estudiantes
+    //         const institution = await Institution.findById(institutionId).populate({
+    //             path: 'clubs',
+    //             populate: {
+    //                 path: 'students', // Asegúrate de que el modelo de Club tenga una referencia a los estudiantes
+    //                 model: 'student' // Asegúrate de que el modelo de estudiantes esté correctamente referenciado
+    //             }
+    //         });
 
-            if (!institution) {
-                return res.status(404).json({ message: 'Institución no encontrada' });
-            }
+    //         if (!institution) {
+    //             return res.status(404).json({ message: 'Institución no encontrada' });
+    //         }
 
-            // Crear membresías para cada estudiante en cada club
-            const memberships = [];
+    //         // Crear membresías para cada estudiante en cada club
+    //         const memberships = [];
 
-            for (const club of institution.clubs) {
-                // Verificar si club.students es un array
-                if (Array.isArray(club.students)) {
-                    for (const student of club.students) {
-                        const membership = new Membership({
-                            student: student._id,
-                            year: year,
-                            club: club._id,
-                            institution: institution._id,
-                            amount: amount,
-                            statusMembership:"activo",
-                            january: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null,paymentPrice: null  },
-                            february: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            march: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            april: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            may: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            june: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            july: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            august: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            september: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            october: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            november: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
-                            december: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  }
-                        });
+    //         for (const club of institution.clubs) {
+    //             // Verificar si club.students es un array
+    //             if (Array.isArray(club.students)) {
+    //                 for (const student of club.students) {
+    //                     const membership = new Membership({
+    //                         student: student._id,
+    //                         year: year,
+    //                         club: club._id,
+    //                         institution: institution._id,
+    //                         amount: amount,
+    //                         statusMembership:"activo",
+    //                         january: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null,paymentPrice: null  },
+    //                         february: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         march: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         april: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         may: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         june: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         july: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         august: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         september: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         october: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         november: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  },
+    //                         december: { status: 'pendiente', recipe: null, paymentType: null, paymentDate:null, paymentPrice: null  }
+    //                     });
 
-                        memberships.push(membership.save());
-                    }
-                } else {
-                    console.warn(`Club ${club.name} no tiene estudiantes o no es un array.`);
-                }
-            }
+    //                     memberships.push(membership.save());
+    //                 }
+    //             } else {
+    //                 console.warn(`Club ${club.name} no tiene estudiantes o no es un array.`);
+    //             }
+    //         }
 
-            // Esperar a que todas las membresías se guarden
-            const savedMemberships = await Promise.all(memberships);
+    //         // Esperar a que todas las membresías se guarden
+    //         const savedMemberships = await Promise.all(memberships);
 
-            return res.status(201).json({ message: 'Membresías creadas exitosamente', memberships: savedMemberships });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error al crear las membresías', error });
-        }
-    },
+    //         return res.status(201).json({ message: 'Membresías creadas exitosamente', memberships: savedMemberships });
+    //     } catch (error) {
+    //         console.error(error);
+    //         return res.status(500).json({ message: 'Error al crear las membresías', error });
+    //     }
+    // },
     async createMembershipNewMembers(req, res) {
         const { clubId, year, amount } = req.params;
 
@@ -235,7 +236,7 @@ const membershipController = {
         }
     },
     async updatePayment(req, res) {
-        const { studentId, year, month } = req.body;
+        const { studentId, year, month, status } = req.body;
 
         try {
             // Buscar la membresía por studentId y year
@@ -276,6 +277,7 @@ const membershipController = {
 
             // Actualizar el campo paymentDate con la fecha actual
             membership[month].paymentDate = new Date();
+            membership[month].status = status; // Actualizar el estado del mes correspondiente
 
             // Guardar los cambios en la base de datos
             await membership.save();
@@ -403,10 +405,163 @@ const membershipController = {
             return res.status(500).json({ message: 'Error al actualizar la membresía', error });
             
         }
+    },
+    async createMembership(req, res) {
+        const { year, institutionId, amount } = req.params;
+    
+        try {
+            // Buscar la institución por su ID y poblar los clubes y sus estudiantes
+            const institution = await Institution.findById(institutionId).populate({
+                path: 'clubs',
+                populate: {
+                    path: 'students',
+                    model: 'student'
+                }
+            });
+    
+            if (!institution) {
+                return res.status(404).json({ message: 'Institución no encontrada' });
+            }
+    
+            // Crear membresías para cada estudiante en cada club
+            const memberships = [];
+    
+            for (const club of institution.clubs) {
+                // Verificar si club.students es un array
+                if (Array.isArray(club.students)) {
+                    for (const student of club.students) {
+                        // Comprobar si ya existe una membresía activa para el año actual
+                        const existingMembership = await Membership.findOne({
+                            student: student._id,
+                            year: year,
+                            club: club._id,
+                            institution: institution._id,
+                            statusMembership: "activo"
+                        });
+    
+                        if (!existingMembership) {
+                            const membership = new Membership({
+                                student: student._id,
+                                year: year,
+                                club: club._id,
+                                institution: institution._id,
+                                amount: amount,
+                                statusMembership: "activo",
+                                january: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                february: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                march: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                april: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                may: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                june: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                july: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                august: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                september: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                october: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                november: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null },
+                                december: { status: 'pendiente', recipe: null, paymentType: null, paymentDate: null, paymentPrice: null }
+                            });
+    
+                            memberships.push(membership.save());
+                        } else {
+                            console.log(`Membresía ya existe para el estudiante ${student._id} en el club ${club._id} para el año ${year}`);
+                        }
+                    }
+                } else {
+                    console.warn(`Club ${club.name} no tiene estudiantes o no es un array.`);
+                }
+            }
+    
+            // Esperar a que todas las membresías se guarden
+            const savedMemberships = await Promise.all(memberships);
+    
+            return res.status(201).json({ message: 'Membresías creadas exitosamente', memberships: savedMemberships });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error al crear las membresías', error });
+        }
+    },
+    async updateMembershipAmount(req, res) {
+        const { clubId, amount } = req.params;
+    
+        try {
+            // Validar que los parámetros sean válidos
+            if (!clubId || !amount) {
+                return res.status(400).json({ message: 'El clubId y el amount son obligatorios' });
+            }
+    
+            // Buscar las membresías de los estudiantes del club
+            const memberships = await Membership.find({
+                club: clubId
+            });
+    
+            if (!memberships || memberships.length === 0) {
+                return res.status(404).json({ message: 'No se encontraron membresías para el club especificado' });
+            }
+    
+            // Actualizar el campo amount de cada membresía
+            const updatedMemberships = await Promise.all(
+                memberships.map(async (membership) => {
+                    membership.amount = amount;
+                    return membership.save();
+                })
+            );
+    
+            return res.status(200).json({ 
+                message: 'El campo amount se actualizó correctamente en todas las membresías del club',
+                updatedMemberships
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error al actualizar el campo amount', error });
+        }
+    },
+    async getMembershipsPlayersClub(req, res) {
+        const { clubId, year } = req.params;
+    
+        try {
+            // Validar que los parámetros sean válidos
+            if (!clubId || !year) {
+                return res.status(400).json({ message: 'El clubId y el year son obligatorios' });
+            }
+    
+            // Buscar el club y poblar sus estudiantes
+            const club = await Club.findById(clubId).populate('students');
+    
+            if (!club) {
+                return res.status(404).json({ message: 'Club no encontrado' });
+            }
+    
+            // Obtener los IDs de los estudiantes del club
+            const studentIds = club.students.map(student => student._id);
+    
+            // Buscar las membresías que coincidan con el club, el año y los estudiantes
+            const memberships = await Membership.find({
+                club: clubId,
+                year: year,
+                student: { $in: studentIds }
+            });
+    
+            // Verificar si todos los estudiantes tienen membresía
+            const totalStudents = studentIds.length;
+            const totalMemberships = memberships.length;
+            const allStudentsHaveMemberships = totalStudents === totalMemberships;
+    
+            if (!memberships || memberships.length === 0) {
+                return res.status(404).json({ message: 'No se encontraron membresías para los estudiantes del club en el año especificado' });
+            }
+    
+            return res.status(200).json({ 
+                message: 'Membresías encontradas',
+                memberships,
+                allStudentsHaveMemberships,
+                missingStudents: totalStudents - totalMemberships
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error al buscar las membresías', error });
+        }
     }
-
-
-
+    
 }
 
 module.exports = membershipController;  //exportando el controlador para que se pueda usar en otros
