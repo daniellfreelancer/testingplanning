@@ -259,8 +259,8 @@ const hrvController = {
         try {
         // Obtener todos los registros de HRV y poblar los campos necesarios
         const hrvRecords = await HRV.find()
-            .populate('user', 'name lastName age imgUrl size weight role rut') // Población de user
-            .populate('student', 'name lastName age imgUrl size weight role rut') // Población de student
+            .populate('user', 'name lastName age imgUrl size weight') // Población de user
+            .populate('student', 'name lastName age imgUrl size weight') // Población de student
             .sort({ createdAt: -1 }); // Ordenar por fecha de creación de forma descendente
 
             // Usar un objeto para almacenar los registros únicos
@@ -268,7 +268,7 @@ const hrvController = {
     
             hrvRecords.forEach(record => {
                 // Clave única basada en user o student
-                const key = record.user ? record.user.toString() : record.student.toString();
+                const key = record?.user ? record?.user?.toString() : record?.student?.toString();
     
                 // Solo agregar si no existe ya en el objeto uniqueHRV
                 if (!uniqueHRV[key]) {
