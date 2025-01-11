@@ -1,5 +1,5 @@
 var express = require('express');
-const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent } = require('../controllers/hrvController');
+const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults } = require('../controllers/hrvController');
 var router = express.Router();
 
 //rutas
@@ -12,6 +12,9 @@ router.get('/get-hrv-user/:userId', getHRVsHistoryByUser);
 router.get('/get-hrv-devices/:macAddress', getHRVsHistoryByDevice)
 router.get('/hrv-list', getHRVNoDuplicates)
 router.get('/list', getHRVUsersStudent)
+router.get('/list/today/:userType/:userId/:date', getTodayHRVResults);
+router.get('/list/today/:userType/:studentId/:date', getTodayHRVResults);
+
 
 
 

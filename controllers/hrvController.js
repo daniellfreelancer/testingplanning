@@ -126,7 +126,6 @@ const hrvController = {
         }
 
     },
-    // obtener los registros historios de un student
     getHRVsHistoryByStudentId : async (req, res) => {
 
         try {
@@ -157,7 +156,6 @@ const hrvController = {
         }
 
     },
-    // obtener los registros historios de un user
     getHRVsHistoryByUser : async (req, res) => {
 
         try {
@@ -289,7 +287,74 @@ const hrvController = {
             console.error('Error fetching HRV records:', error);
             return res.status(500).json({ message: 'Error fetching HRV records', error });
         }
-    }
+    },
+    getTodayHRVResults: async (req, res) => {
+        try {
+          const { userType, date } = req.params;
+          
+          // 1. Convertir la fecha de cadena a objeto Date
+          const targetDate = new Date(date);
+          // Verificar si se pudo convertir correctamente
+          if (isNaN(targetDate.getTime())) {
+            return res.status(400).json({
+              message: "Fecha inválida. Formato esperado: YYYY-MM-DDTHH:mm:ss.sssZ",
+              success: false,
+            });
+          }
+      
+          // 2. Obtener el inicio y fin del día de la fecha proporcionada
+          const startOfDay = new Date(targetDate);
+          startOfDay.setUTCHours(0, 0, 0, 0);
+      
+          const endOfDay = new Date(targetDate);
+          endOfDay.setUTCHours(23, 59, 59, 999);
+      
+          // 3. Construir la query dinámicamente según el userType
+          let query = {
+            createdAt: {
+              $gte: startOfDay,
+              $lte: endOfDay
+            }
+          };
+      
+          if (userType === "user") {
+            query.user = req.params.userId; // Asegúrate de que 'userId' venga en el request
+          } else if (userType === "student") {
+            query.student = req.params.studentId; // Asegúrate de que 'studentId' venga en el request
+          } else {
+            return res.status(400).json({
+              message: "Tipo de usuario inválido. Solo se acepta 'user' o 'student'",
+              success: false,
+            });
+          }
+      
+          // 4. Realizar la búsqueda en la colección HRV
+          const hrvList = await HRV.find(query);
+      
+          // 5. Verificar si se encontraron resultados
+          if (hrvList && hrvList.length > 0) {
+            return res.status(200).json({
+              message: "Listado de HRVs para el día especificado",
+              success: true,
+              data: hrvList,
+            });
+          } else {
+            return res.status(404).json({
+              message: "No se encontraron HRVs para el día indicado",
+              success: false,
+            });
+          }
+      
+        } catch (error) {
+          console.error("Error en getTodayHRVResults:", error);
+          return res.status(500).json({
+            message: "Error interno del servidor",
+            success: false,
+            error: error.message,
+          });
+        }
+      },
+      
 
 }
 
