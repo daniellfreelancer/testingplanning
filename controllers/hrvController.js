@@ -354,7 +354,51 @@ const hrvController = {
           });
         }
       },
-      
+    getLastSevenrRDataByUser : async (req, res) => {
+
+        try {
+
+            let {id, userType} = req.params;
+
+            let hrvList
+
+            if (userType === 'user') {
+                hrvList = await HRV.find({ user: id }).sort({ createdAt: -1 }).limit(7);
+            } else if (userType === 'student') {
+                hrvList = await HRV.find({ student: id }).sort({ createdAt: -1 }).limit(7);
+            } else {
+                res.status(400).json({
+                    message: "Tipo de usuario inválido. Solo se acepta 'user' o'student'",
+                    success: false,
+                })
+                return;
+            }
+
+            if (hrvList) {
+                res.status(200).json({
+                    message: "ultimos 7 HRVs",
+                    success: true,
+                    data: hrvList,
+                })
+            } else {
+                res.status(404).json({
+                    message: "No se encontraron HRVs para el estudiante",
+                    success: false,
+                })
+            }
+
+            
+        } catch (error) {
+
+            res.status(500).json({
+                message: "Error interno del servidor",
+                success: false,
+                error: error.message,
+            })
+            
+        }
+
+    }
 
 }
 
