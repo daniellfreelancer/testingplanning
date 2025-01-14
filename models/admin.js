@@ -35,7 +35,8 @@ const adminSchema = new mongoose.Schema({
     backgroundDoc: { type: String },
     otherDocs: { type: String },
     controlParental: { type: Boolean },
-    vmRole: [{ type: String }]
+    vmRole: [{ type: String }],
+    vitalmoveCategory: {type: String}
 
 })
 

@@ -36,7 +36,8 @@ const studentSchema = new mongoose.Schema({
     vmRole: [{ type: String }],
     skills:[{ type: Object }],
     quality:[{ type: Object }],
-    membership:[{ type: Object }]
+    membership:[{ type: Object }],
+    vitalmoveCategory: {type: String}
 },
 {
     timestamps: true,
