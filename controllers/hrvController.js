@@ -575,6 +575,116 @@ const hrvController = {
             error: error.message,
           });
         }
+      },
+      getHrvStats : async (req, res) => {
+        try {
+            // 1. Definir el inicio y fin del día en horario local
+            const now = new Date();
+            const startOfDay = new Date(now);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(now);
+            endOfDay.setHours(23, 59, 59, 999);
+        
+            // 2. Obtener TODOS los documentos de la colección HRV
+            //    (para saber todas las combinaciones user-student y encontrar su última medición)
+            const allHrvDocs = await HRV.find({})
+            .sort({ createdAt: -1 })
+              .populate("user", "name lastName imgUrl vitalmoveCategory")
+              .populate("student", "name lastName imgUrl vitalmoveCategory");
+        
+            // 3. Obtener las mediciones SOLO del día de hoy, ordenadas por createdAt DESC
+            //    (para construir el arreglo todayMeasurements)
+            const hrvToday = await HRV.find({
+              createdAt: { $gte: startOfDay, $lte: endOfDay },
+            })
+              .sort({ createdAt: -1 })
+              .populate("user", "name lastName imgUrl vitalmoveCategory")
+              .populate("student", "name lastName imgUrl vitalmoveCategory");
+        
+            /*
+              Estructura para agrupar las mediciones de hoy por combinación (userId)-(studentId).
+              Clave:  `${userId}-${studentId}`
+              Valor:  array de HRVs de hoy para ese par (orden descendente).
+            */
+            const todayMap = new Map();
+            hrvToday.forEach((doc) => {
+              const userId = doc.user ? doc.user._id.toString() : "null";
+              const studentId = doc.student ? doc.student._id.toString() : "null";
+              const key = `${userId}-${studentId}`;
+              if (!todayMap.has(key)) {
+                todayMap.set(key, []);
+              }
+              todayMap.get(key).push(doc);
+            });
+        
+            /*
+              allCombosMap almacenará la información de cada (user, student):
+              - user (objeto populado)
+              - student (objeto populado)
+              - lastMeasurementDate (la última medición global que exista)
+            */
+            const allCombosMap = new Map();
+        
+            /*
+              Recorremos todos los documentos (allHrvDocs) para:
+              1. Construir la combinación (userId)-(studentId).
+              2. Guardar o actualizar la última medición en lastMeasurementDate.
+            */
+            allHrvDocs.forEach((doc) => {
+              const userId = doc.user ? doc.user._id.toString() : "null";
+              const studentId = doc.student ? doc.student._id.toString() : "null";
+              const key = `${userId}-${studentId}`;
+        
+              // Si no existe aún en el mapa, lo creamos
+              if (!allCombosMap.has(key)) {
+                allCombosMap.set(key, {
+                  user: doc.user || null,
+                  student: doc.student || null,
+                  lastMeasurementDate: doc.createdAt, // Inicializamos con la fecha de este doc
+                });
+              } else {
+                // Si ya existe, vemos si la fecha actual es mayor que la almacenada
+                const existingEntry = allCombosMap.get(key);
+                if (doc.createdAt > existingEntry.lastMeasurementDate) {
+                  existingEntry.lastMeasurementDate = doc.createdAt;
+                }
+              }
+            });
+        
+            // 4. Construimos la respuesta final
+            const responseArray = [];
+        
+            // Recorremos todas las combinaciones en allCombosMap
+            for (let [key, comboData] of allCombosMap.entries()) {
+              // comboData: { user, student, lastMeasurementDate }
+        
+              // Buscamos si en todayMap hay mediciones del día de hoy para esta combinación
+              const measurements = todayMap.get(key) || [];
+        
+              // Tomamos las últimas 4 (ya están ordenadas DESC)
+              const last4 = measurements.slice(0, 4);
+        
+              // Armamos el objeto de respuesta
+              responseArray.push({
+                user: comboData.user,
+                student: comboData.student,
+                todayMeasurements: last4,
+                lastMeasurementDate: comboData.lastMeasurementDate, // <-- se agrega aquí
+              });
+            }
+        
+            return res.status(200).json({
+              success: true,
+              data: responseArray,
+            });
+          } catch (error) {
+            console.error("Error en getHrvListUser:", error);
+            return res.status(500).json({
+              success: false,
+              message: "Error interno del servidor",
+              error: error.message,
+            });
+          }
       }
 
 }
