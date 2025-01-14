@@ -1,10 +1,11 @@
 var express = require('express');
-const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser } = require('../controllers/hrvController');
+const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser, getHrvListUser, getHrvListComplete } = require('../controllers/hrvController');
 var router = express.Router();
 
 //rutas
 router.post('/add-register', addHRV);
 router.get('/get-register', getHRVs);
+router.get('/get-register-list', getHrvListComplete);
 router.get('/hrv-by-id/:id', getHRVById);
 router.delete('/delete-hrv-register/:id', deleteHRV);
 router.get('/get-hrv-student/:studentId', getHRVsHistoryByStudentId);
