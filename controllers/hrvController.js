@@ -303,11 +303,16 @@ const hrvController = {
           }
       
           // 2. Obtener el inicio y fin del día de la fecha proporcionada
-          const startOfDay = new Date(targetDate);
-          startOfDay.setUTCHours(0, 0, 0, 0);
+        //   const startOfDay = new Date(targetDate);
+        //   startOfDay.setUTCHours(0, 0, 0, 0);
       
-          const endOfDay = new Date(targetDate);
-          endOfDay.setUTCHours(23, 59, 59, 999);
+        //   const endOfDay = new Date(targetDate);
+        //   endOfDay.setUTCHours(23, 59, 59, 999);
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+    
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
       
           // 3. Construir la query dinámicamente según el userType
           let query = {
