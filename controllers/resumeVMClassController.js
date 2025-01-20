@@ -205,7 +205,7 @@ const resumeVMClassController = {
               response: resume
             });
           }
-        }  
+        }
 
         if (req.body.workshopId) {
           const workshop = await Workshop.findById(req.body.workshopId)
@@ -228,7 +228,7 @@ const resumeVMClassController = {
         return res.status(500).send({
           message: "Error al guardar el VMClass en la base de datos.",
           success: false
-          })
+        })
       }
 
     } catch (error) {
@@ -290,19 +290,19 @@ const resumeVMClassController = {
   },
   getResumeById: async (req, res) => {
     let { id } = req.params;
-  
+
     try {
       const resumeFund = await ResumeVmClass.findById(id)
         .populate('byTeacher', { name: 1, lastName: 1 })
         .populate('plannerClass')
         .populate('classroomId', { grade: 1, section: 1, level: 1 });
-  
+
       if (resumeFund) {
         // Ajustar el formato de "presentStudents" si llega como un array de strings
         if (Array.isArray(resumeFund.presentStudents) && typeof resumeFund.presentStudents[0] === 'string') {
           resumeFund.presentStudents = resumeFund.presentStudents.map(student => JSON.parse(student));
         }
-  
+
         res.status(200).json({
           response: resumeFund,
           success: true,
@@ -321,8 +321,42 @@ const resumeVMClassController = {
         success: false,
       });
     }
+  },
+  getResumeByTeacher: async (req, res) => {
+
+    // create get resume by teacher
+
+    try {
+
+      const { teacherId } = req.params
+
+      const resumes = await ResumeVmClass.find({ byTeacher: teacherId }) .sort({ createdAt: -1 })
+
+
+      if (resumes.length > 0) {
+        res.status(200).json({
+          response: resumes,
+          success: true,
+          message: "Resumen VMClass encontrados"
+        })
+
+      } else {
+        res.status(200).json({ message: "El profesor no ha realizado clases", success: true, response : [] })
+      }
+
+    } catch (error) {
+
+      console.log(error)
+      res.status(400).json({
+        message: "Error al realizar peticion de busqueda de busqueda",
+        success: false
+      })
+
+    }
+
+
   }
-  
+
 
 
 
