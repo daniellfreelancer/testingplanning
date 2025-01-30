@@ -46,6 +46,7 @@ const hrvRegister = require('./routes/hrv.routes');
 const sportClub = require('./routes/clubes.routes');
 const sportCategory = require('./routes/sportCategories.routes');
 const membershipFutbol = require('./routes/membershipFutbol.routes')
+const trainingApp = require('./routes/trainingApp.routes')
 
 var app = express();
 
@@ -105,6 +106,7 @@ app.use('/hrv', hrvRegister)
 app.use('/sportclub', sportClub)
 app.use('/sportcategory', sportCategory)
 app.use('/paymemt-admin', membershipFutbol)
+app.use('/training', trainingApp)
 
 
 // catch 404 and forward to error handler
