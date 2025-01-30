@@ -74,10 +74,10 @@ const trainingAppController = {
         try {
 
             if (typeUser === 'user') {
-                let user = await Users.findById(id).populate(trainingPopulateQuery)
+                let user = await Users.findById(id)
 
                 if (user) {
-                    let trainings = await Training.find({ user: user._id }).populate(trainingPopulateQuery)
+                    let trainings = await Training.find({ user: user._id }).sort({ createdAt: -1 })
 
                     if (trainings) {
                         res.status(200).json({
@@ -97,10 +97,10 @@ const trainingAppController = {
                     })
                 }
             } else {
-                let student = await Students.findById(id).populate(trainingPopulateQuery)
+                let student = await Students.findById(id)
 
                 if (student) {
-                    let trainings = await Training.find({ student: student._id }).populate(trainingPopulateQuery).sort({ createdAt: -1 })
+                    let trainings = await Training.find({ student: student._id }).sort({ createdAt: -1 })
 
                     if (trainings) {
                         res.status(200).json({
