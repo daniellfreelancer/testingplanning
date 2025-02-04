@@ -1,5 +1,5 @@
 var express = require('express');
-const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser, getHrvListUser, getHrvListComplete, getHrvStats } = require('../controllers/hrvController');
+const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser, getHrvListUser, getHrvListComplete, getHrvStats, getHrvListByInstitution } = require('../controllers/hrvController');
 var router = express.Router();
 
 //rutas
@@ -17,6 +17,7 @@ router.get('/list', getHRVUsersStudent)
 router.get('/list/today/:userType/:userId/:date', getTodayHRVResults);
 router.get('/list/today/:userType/:studentId/:date', getTodayHRVResults);
 router.get('/list/last-seven-hrv/:id/:userType', getLastSevenrRDataByUser);
+router.get('/hrv-by-institution/:institutionId', getHrvListByInstitution)
 
 
 
