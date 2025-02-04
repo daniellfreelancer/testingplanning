@@ -360,6 +360,48 @@ const hrvController = {
           });
         }
       },
+      getTodayHRVResultsEnard: async (req, res) => {
+        try {
+          const { userType, userId } = req.params;
+          
+                      // 1. Definir el inicio y fin del día en horario local
+                      const now = new Date();
+                      const startOfDay = new Date(now);
+                      startOfDay.setHours(0, 0, 0, 0);
+                      const endOfDay = new Date(now);
+                      endOfDay.setHours(23, 59, 59, 999);
+                  
+                      // 2. Obtener TODOS los documentos de la colección HRV
+                      //    (para saber todas las combinaciones user-student y encontrar su última medición)
+                      const allHrvDocs = await HRV.find({})
+                      .sort({ createdAt: -1 })
+                        .populate("user", "name lastName imgUrl vitalmoveCategory")
+                        .populate("student", "name lastName imgUrl vitalmoveCategory");
+
+      
+          if (userType === "user") {
+              
+
+          
+          } else if (userType === "student") {
+            
+          } else {
+            return res.status(400).json({
+              message: "Tipo de usuario inválido. Solo se acepta 'user' o 'student'",
+              success: false,
+            });
+          }
+
+      
+        } catch (error) {
+          console.error("Error en getTodayHRVResults:", error);
+          return res.status(500).json({
+            message: "Error interno del servidor",
+            success: false,
+            error: error.message,
+          });
+        }
+      },
     getLastSevenrRDataByUser : async (req, res) => {
 
         try {
@@ -948,7 +990,103 @@ const hrvController = {
             error: error.message,
           });
         }
+      },
+      getHrvListByUserFilter: async (req, res) => {
+        try {
+          // 1. Extraer los parámetros: userType, id (del usuario) y institucionId
+          const { userType, id, institucionId } = req.params;
+      
+          // Validar que userType sea 'student' o 'user'
+          if (!['student', 'user'].includes(userType)) {
+            return res.status(400).json({
+              success: false,
+              message: "Tipo de usuario inválido. Debe ser 'student' o 'user'."
+            });
+          }
+      
+          // 2. Buscar la institución y poblar sus programas y estudiantes
+          const institution = await INSTI.findById(institucionId).populate({
+            path: 'programs',
+            populate: {
+              path: 'students',
+              select: 'name lastName imgUrl vitalmoveCategory'
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({
+              success: false,
+              message: "Institución no encontrada."
+            });
+          }
+      
+          // 3. Extraer todos los IDs de los estudiantes de la institución
+          const studentIds = [];
+          institution.programs.forEach(program => {
+            if (program.students && program.students.length > 0) {
+              program.students.forEach(student => {
+                studentIds.push(student._id.toString());
+              });
+            }
+          });
+      
+          if (studentIds.length === 0) {
+            return res.status(200).json({
+              success: true,
+              data: []
+            });
+          }
+      
+          // 4. Definir el inicio y fin del día actual (horario local)
+          const now = new Date();
+          const startOfDay = new Date(now);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(now);
+          endOfDay.setHours(23, 59, 59, 999);
+      
+          // 5. Construir el filtro base: mediciones de hoy de los estudiantes de la institución
+          let filter = {
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfDay, $lte: endOfDay }
+          };
+      
+          // 6. Dependiendo del tipo de usuario, ajustar el filtro
+          if (userType === 'student') {
+            // Verificar que el estudiante esté asociado a la institución
+            if (!studentIds.includes(id)) {
+              return res.status(404).json({
+                success: false,
+                message: "Estudiante no encontrado en la institución."
+              });
+            }
+            // Filtrar por el id del estudiante
+            filter.student = id;
+          } else if (userType === 'user') {
+            // Filtrar por el id del usuario (quien realizó la medición)
+            filter.user = id;
+          }
+      
+          // 7. Consultar las mediciones HRV que cumplan con el filtro, ordenadas de forma descendente
+          const measurements = await HRV.find(filter)
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory")
+            .populate("student", "name lastName imgUrl vitalmoveCategory");
+      
+          // 8. Retornar únicamente el array de mediciones
+          return res.status(200).json({
+            success: true,
+            data: measurements
+          });
+        } catch (error) {
+          console.error("Error en getHrvListByInstitution:", error);
+          return res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+            error: error.message
+          });
+        }
       }
+      
       
       
 
