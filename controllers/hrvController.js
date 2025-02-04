@@ -1,4 +1,5 @@
 const HRV =  require('../models/hrv')
+const INSTI = require('../models/institution')
 
 
 
@@ -685,7 +686,271 @@ const hrvController = {
               error: error.message,
             });
           }
+      },
+      // getHrvListByInstitution: async (req, res) => {
+      //   try {
+      //     // 1. Obtener el ID de la institución desde los parámetros de la ruta
+      //     const { institutionId } = req.params;
+      
+      //     // 2. Buscar la institución y poblar el campo 'programs'
+      //     const institution = await INSTI.findById(institutionId).populate('programs');
+      //     if (!institution) {
+      //       return res.status(404).json({
+      //         success: false,
+      //         message: "Institución no encontrada",
+      //       });
+      //     }
+      
+      //     // 3. Extraer todos los IDs de estudiantes de cada programa de la institución
+      //     let studentIds = [];
+      //     institution.programs.forEach(program => {
+      //       if (program.students && program.students.length > 0) {
+      //         studentIds = studentIds.concat(program.students);
+      //       }
+      //     });
+      //     // Eliminar posibles duplicados
+      //     studentIds = [...new Set(studentIds.map(id => id.toString()))];
+      
+      //     // Si no hay estudiantes, se retorna un arreglo vacío
+      //     if (studentIds.length === 0) {
+      //       return res.status(200).json({
+      //         success: true,
+      //         data: [],
+      //       });
+      //     }
+      
+      //     // 4. Definir el inicio y fin del día actual (horario local)
+      //     const now = new Date();
+      //     const startOfDay = new Date(now);
+      //     startOfDay.setHours(0, 0, 0, 0);
+      //     const endOfDay = new Date(now);
+      //     endOfDay.setHours(23, 59, 59, 999);
+      
+      //     // 5. Obtener TODAS las mediciones HRV de los estudiantes filtrados por la institución
+      //     const allHrvDocs = await HRV.find({
+      //       student: { $in: studentIds }
+      //     })
+      //       .sort({ createdAt: -1 })
+      //       .populate("user", "name lastName imgUrl vitalmoveCategory")
+      //       .populate("student", "name lastName imgUrl vitalmoveCategory");
+      
+      //     // 6. Obtener las mediciones del día de hoy para estos estudiantes
+      //     const hrvToday = await HRV.find({
+      //       student: { $in: studentIds },
+      //       createdAt: { $gte: startOfDay, $lte: endOfDay }
+      //     })
+      //       .sort({ createdAt: -1 })
+      //       .populate("user", "name lastName imgUrl vitalmoveCategory")
+      //       .populate("student", "name lastName imgUrl vitalmoveCategory");
+      
+      //     // 7. Agrupar las mediciones de hoy por combinación (userId)-(studentId)
+      //     const todayMap = new Map();
+      //     hrvToday.forEach(doc => {
+      //       const userId = doc.user ? doc.user._id.toString() : "null";
+      //       const studentId = doc.student ? doc.student._id.toString() : "null";
+      //       const key = `${userId}-${studentId}`;
+      //       if (!todayMap.has(key)) {
+      //         todayMap.set(key, []);
+      //       }
+      //       todayMap.get(key).push(doc);
+      //     });
+      
+      //     // 8. Recorrer todas las mediciones (allHrvDocs) para obtener, por combinación, 
+      //     //    la última medición global.
+      //     const allCombosMap = new Map();
+      //     allHrvDocs.forEach(doc => {
+      //       const userId = doc.user ? doc.user._id.toString() : "null";
+      //       const studentId = doc.student ? doc.student._id.toString() : "null";
+      //       const key = `${userId}-${studentId}`;
+      //       if (!allCombosMap.has(key)) {
+      //         allCombosMap.set(key, {
+      //           user: doc.user || null,
+      //           student: doc.student || null,
+      //           lastMeasurementDate: doc.createdAt, // Inicializamos con la fecha de este documento
+      //         });
+      //       } else {
+      //         const existingEntry = allCombosMap.get(key);
+      //         if (doc.createdAt > existingEntry.lastMeasurementDate) {
+      //           existingEntry.lastMeasurementDate = doc.createdAt;
+      //         }
+      //       }
+      //     });
+      
+      //     // 9. Construir el arreglo de respuesta final
+      //     const responseArray = [];
+      //     for (let [key, comboData] of allCombosMap.entries()) {
+      //       // Obtener las mediciones del día (si existen) para la combinación user-student
+      //       const measurements = todayMap.get(key) || [];
+      //       // Tomar las últimas 4 mediciones (ya ordenadas descendentemente)
+      //       const last4 = measurements.slice(0, 4);
+      //       responseArray.push({
+      //         user: comboData.user,
+      //         student: comboData.student,
+      //         todayMeasurements: last4,
+      //         lastMeasurementDate: comboData.lastMeasurementDate,
+      //       });
+      //     }
+      
+      //     // 10. Ordenar el arreglo por apellido del estudiante (lastName) de forma alfabética
+      //     responseArray.sort((a, b) => {
+      //       if (
+      //         a.student &&
+      //         b.student &&
+      //         a.student.lastName &&
+      //         b.student.lastName
+      //       ) {
+      //         return a.student.lastName.localeCompare(b.student.lastName);
+      //       }
+      //       return 0;
+      //     });
+      
+      //     // 11. Retornar la respuesta
+      //     return res.status(200).json({
+      //       success: true,
+      //       data: responseArray,
+      //     });
+      //   } catch (error) {
+      //     console.error("Error en getHrvListByInstitution:", error);
+      //     return res.status(500).json({
+      //       success: false,
+      //       message: "Error interno del servidor",
+      //       error: error.message,
+      //     });
+      //   }
+      // }
+      getHrvListByInstitution: async (req, res) => {
+        try {
+          // 1. Obtener el ID de la institución
+          const { institutionId } = req.params;
+      
+          // 2. Buscar la institución y poblar:
+          //    - Los programas
+          //    - Dentro de cada programa, los estudiantes (con algunos campos)
+          const institution = await INSTI.findById(institutionId).populate({
+            path: 'programs',
+            populate: { 
+              path: 'students', 
+              select: 'name lastName imgUrl vitalmoveCategory' 
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({
+              success: false,
+              message: "Institución no encontrada",
+            });
+          }
+      
+          // 3. Extraer todos los estudiantes de cada programa y armamos un map
+          //    que tenga como clave el ID del estudiante y como valor la estructura de respuesta
+          const studentMap = new Map();
+          institution.programs.forEach(program => {
+            if (program.students && program.students.length > 0) {
+              program.students.forEach(student => {
+                const studentId = student._id.toString();
+                // Si aún no está en el map, lo agregamos
+                if (!studentMap.has(studentId)) {
+                  studentMap.set(studentId, {
+                    user: null,
+                    student: student,
+                    todayMeasurements: [],
+                    lastMeasurementDate: null
+                  });
+                }
+              });
+            }
+          });
+      
+          // Convertimos las llaves del map a un arreglo para filtrar en las consultas HRV
+          const studentIds = Array.from(studentMap.keys());
+          if (studentIds.length === 0) {
+            return res.status(200).json({
+              success: true,
+              data: [],
+            });
+          }
+      
+          // 4. Definir el inicio y fin del día actual (horario local)
+          const now = new Date();
+          const startOfDay = new Date(now);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(now);
+          endOfDay.setHours(23, 59, 59, 999);
+      
+          // 5. Obtener TODAS las mediciones HRV de los estudiantes filtrados (ordenadas DESC)
+          const allHrvDocs = await HRV.find({
+            student: { $in: studentIds }
+          })
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory")
+            .populate("student", "name lastName imgUrl vitalmoveCategory");
+      
+          // 6. Obtener las mediciones de hoy para estos estudiantes
+          const hrvTodayDocs = await HRV.find({
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+          })
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory")
+            .populate("student", "name lastName imgUrl vitalmoveCategory");
+      
+          // 7. Actualizar el map con la última medición global para cada estudiante
+          allHrvDocs.forEach(doc => {
+            const stuId = doc.student ? doc.student._id.toString() : null;
+            if (!stuId) return;
+            if (!studentMap.has(stuId)) return; // En teoría siempre existe
+            const entry = studentMap.get(stuId);
+            // Si no se ha definido aún lastMeasurementDate o si esta medición es más reciente, la asignamos
+            if (!entry.lastMeasurementDate || doc.createdAt > entry.lastMeasurementDate) {
+              entry.lastMeasurementDate = doc.createdAt;
+              entry.user = doc.user || null;
+            }
+          });
+      
+          // 8. Agrupar las mediciones de hoy por estudiante
+          const todayMap = new Map();
+          hrvTodayDocs.forEach(doc => {
+            const stuId = doc.student ? doc.student._id.toString() : null;
+            if (!stuId) return;
+            if (!todayMap.has(stuId)) {
+              todayMap.set(stuId, []);
+            }
+            todayMap.get(stuId).push(doc);
+          });
+      
+          // 9. Para cada estudiante, asignar las últimas 4 mediciones del día (si existen)
+          studentMap.forEach((entry, stuId) => {
+            const measurements = todayMap.get(stuId) || [];
+            entry.todayMeasurements = measurements.slice(0, 4);
+          });
+      
+          // 10. Convertir el map a un arreglo
+          let responseArray = Array.from(studentMap.values());
+      
+          // 11. Ordenar el arreglo por apellido del estudiante (lastName) de forma alfabética
+          responseArray.sort((a, b) => {
+            if (a.student.lastName && b.student.lastName) {
+              return a.student.lastName.localeCompare(b.student.lastName);
+            }
+            return 0;
+          });
+      
+          // 12. Retornar la respuesta
+          return res.status(200).json({
+            success: true,
+            data: responseArray,
+          });
+        } catch (error) {
+          console.error("Error en getHrvListByInstitution:", error);
+          return res.status(500).json({
+            success: false,
+            message: "Error interno del servidor",
+            error: error.message,
+          });
+        }
       }
+      
+      
 
 }
 
