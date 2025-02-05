@@ -872,7 +872,7 @@ const hrvController = {
             path: 'programs',
             populate: { 
               path: 'students', 
-              select: 'name lastName imgUrl vitalmoveCategory' 
+              select: 'name lastName imgUrl vitalmoveCategory age' 
             }
           });
       
@@ -924,8 +924,8 @@ const hrvController = {
             student: { $in: studentIds }
           })
             .sort({ createdAt: -1 })
-            .populate("user", "name lastName imgUrl vitalmoveCategory")
-            .populate("student", "name lastName imgUrl vitalmoveCategory");
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
       
           // 6. Obtener las mediciones de hoy para estos estudiantes
           const hrvTodayDocs = await HRV.find({
@@ -933,8 +933,8 @@ const hrvController = {
             createdAt: { $gte: startOfDay, $lte: endOfDay },
           })
             .sort({ createdAt: -1 })
-            .populate("user", "name lastName imgUrl vitalmoveCategory")
-            .populate("student", "name lastName imgUrl vitalmoveCategory");
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
       
           // 7. Actualizar el map con la última medición global para cada estudiante
           allHrvDocs.forEach(doc => {
