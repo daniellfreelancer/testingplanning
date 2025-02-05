@@ -375,8 +375,8 @@ const hrvController = {
                       //    (para saber todas las combinaciones user-student y encontrar su última medición)
                       const allHrvDocs = await HRV.find({})
                       .sort({ createdAt: -1 })
-                        .populate("user", "name lastName imgUrl vitalmoveCategory")
-                        .populate("student", "name lastName imgUrl vitalmoveCategory");
+                        .populate("user", "name age lastName imgUrl vitalmoveCategory")
+                        .populate("student", "name age lastName imgUrl vitalmoveCategory");
 
       
           if (userType === "user") {
@@ -1009,7 +1009,7 @@ const hrvController = {
             path: 'programs',
             populate: {
               path: 'students',
-              select: 'name lastName imgUrl vitalmoveCategory'
+              select: 'name lastName age imgUrl vitalmoveCategory'
             }
           });
       
@@ -1069,8 +1069,8 @@ const hrvController = {
           // 7. Consultar las mediciones HRV que cumplan con el filtro, ordenadas de forma descendente
           const measurements = await HRV.find(filter)
             .sort({ createdAt: -1 })
-            .populate("user", "name lastName imgUrl vitalmoveCategory")
-            .populate("student", "name lastName imgUrl vitalmoveCategory");
+            .populate("user", "name lastName age imgUrl vitalmoveCategory")
+            .populate("student", "name lastName age imgUrl vitalmoveCategory");
       
           // 8. Retornar únicamente el array de mediciones
           return res.status(200).json({
