@@ -1085,6 +1085,197 @@ const hrvController = {
             error: error.message
           });
         }
+      },
+      getHRVInsti : async (req, res) => {
+        try {
+          // 1. Obtener el ID de la institución y la fecha
+          const { institutionId } = req.params;
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+      
+          // 2. Convertir la fecha proporcionada a UTC
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+          
+          const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      
+          // 3. Buscar la institución y poblar programas con estudiantes
+          const institution = await INSTI.findById(institutionId).populate({
+            path: "programs",
+            populate: {
+              path: "students",
+              select: "name lastName imgUrl vitalmoveCategory age"
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({ success: false, message: "Institución no encontrada" });
+          }
+      
+          // 4. Crear un mapa de estudiantes
+          const studentMap = new Map();
+          institution.programs.forEach(program => {
+            program.students.forEach(student => {
+              const studentId = student._id.toString();
+              if (!studentMap.has(studentId)) {
+                studentMap.set(studentId, {
+                  user: null,
+                  student,
+                  todayMeasurements: [],
+                  lastMeasurementDate: null
+                });
+              }
+            });
+          });
+      
+          const studentIds = Array.from(studentMap.keys());
+          if (studentIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+          }
+      
+          // 5. Obtener todas las mediciones HRV ordenadas por fecha descendente
+          const allHrvDocs = await HRV.find({ student: { $in: studentIds } })
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      
+          // 6. Obtener mediciones HRV del día actual en UTC
+          const hrvTodayDocs = await HRV.find({
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+          })
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      
+          // 7. Asignar la última medición a cada estudiante
+          allHrvDocs.forEach(doc => {
+            const stuId = doc.student?._id.toString();
+            if (stuId && studentMap.has(stuId)) {
+              const entry = studentMap.get(stuId);
+              if (!entry.lastMeasurementDate || doc.createdAt > entry.lastMeasurementDate) {
+                entry.lastMeasurementDate = doc.createdAt;
+                entry.user = doc.user || null;
+              }
+            }
+          });
+      
+          // 8. Agrupar las mediciones de hoy por estudiante
+          const todayMap = new Map();
+          hrvTodayDocs.forEach(doc => {
+            const stuId = doc.student?._id.toString();
+            if (stuId) {
+              if (!todayMap.has(stuId)) {
+                todayMap.set(stuId, []);
+              }
+              todayMap.get(stuId).push(doc);
+            }
+          });
+      
+          // 9. Asignar las últimas 4 mediciones del día a cada estudiante
+          studentMap.forEach((entry, stuId) => {
+            entry.todayMeasurements = (todayMap.get(stuId) || []).slice(0, 4);
+          });
+      
+          // 10. Convertir el mapa a un array y ordenar por apellido
+          // const responseArray = Array.from(studentMap.values()).sort((a, b) =>
+          //   a.student.lastName.localeCompare(b.student.lastName)
+          // );
+      
+          // 10. Convertir el mapa a un array y ordenar primero los que tienen mediciones
+    const responseArray = Array.from(studentMap.values()).sort((a, b) => {
+      if (b.todayMeasurements.length !== a.todayMeasurements.length) {
+        return b.todayMeasurements.length - a.todayMeasurements.length;
+      }
+      return a.student.lastName.localeCompare(b.student.lastName);
+    });
+
+          return res.status(200).json({ success: true, data: responseArray });
+        } catch (error) {
+          console.error("Error en getHrvListByInstitution:", error);
+          return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+        }
+      },
+      getHRVtodayUser : async (req, res) =>{
+        try {
+          // 1. Extraer los parámetros: userType, id (del usuario) y institucionId
+          const { userType, id, institucionId } = req.params;
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+      
+          // Validar que userType sea 'student' o 'user'
+          if (!['student', 'user'].includes(userType)) {
+            return res.status(400).json({ success: false, message: "Tipo de usuario inválido. Debe ser 'student' o 'user'." });
+          }
+      
+          // 2. Convertir la fecha proporcionada a UTC
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+          
+          const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      
+
+          console.log("startOfDayUTC:", startOfDayUTC.toISOString());
+          console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+      
+
+          // 3. Buscar la institución y poblar programas con estudiantes
+          const institution = await INSTI.findById(institucionId).populate({
+            path: "programs",
+            populate: {
+              path: "students",
+              select: "name lastName imgUrl vitalmoveCategory age"
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({ success: false, message: "Institución no encontrada." });
+          }
+      
+          // 4. Extraer todos los IDs de los estudiantes de la institución
+          const studentIds = institution.programs.flatMap(program => program.students.map(student => student._id.toString()));
+      
+          if (studentIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+          }
+      
+          // 5. Construir el filtro base para obtener mediciones HRV de los estudiantes en la institución
+          let filter = {
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+          };
+      
+          // 6. Dependiendo del tipo de usuario, ajustar el filtro
+          if (userType === 'student') {
+            if (!studentIds.includes(id)) {
+              return res.status(404).json({ success: false, message: "Estudiante no encontrado en la institución." });
+            }
+            filter.student = id;
+          } else if (userType === 'user') {
+            filter.user = id;
+          }
+      
+          // 7. Consultar las mediciones HRV con el filtro
+          const measurements = await HRV.find(filter)
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      
+          return res.status(200).json({ success: true, data: measurements });
+        } catch (error) {
+          console.error("Error en getHrvTodayUser:", error);
+          return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+        }
       }
       
       
