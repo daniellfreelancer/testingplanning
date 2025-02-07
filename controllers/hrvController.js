@@ -1277,7 +1277,154 @@ const hrvController = {
           return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
         }
       }
+      ,getHRVLastSevenUser : async (req, res) =>{
+        try {
+          // 1. Extraer los parámetros: userType, id (del usuario) y institucionId
+          const { userType, id, institucionId } = req.params;
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
       
+          // Validar que userType sea 'student' o 'user'
+          if (!['student', 'user'].includes(userType)) {
+            return res.status(400).json({ success: false, message: "Tipo de usuario inválido. Debe ser 'student' o 'user'." });
+          }
+      
+          // 2. Convertir la fecha proporcionada a UTC y calcular los últimos 7 días
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+          
+          const startOfSevenDaysAgoUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate() - 6, 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      
+          console.log("startOfSevenDaysAgoUTC:", startOfSevenDaysAgoUTC.toISOString());
+          console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+      
+          // 3. Buscar la institución y poblar programas con estudiantes
+          const institution = await INSTI.findById(institucionId).populate({
+            path: "programs",
+            populate: {
+              path: "students",
+              select: "name lastName imgUrl vitalmoveCategory age"
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({ success: false, message: "Institución no encontrada." });
+          }
+      
+          // 4. Extraer todos los IDs de los estudiantes de la institución
+          const studentIds = institution.programs.flatMap(program => program.students.map(student => student._id.toString()));
+      
+          if (studentIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+          }
+      
+          // 5. Construir el filtro base para obtener mediciones HRV de los últimos 7 días
+          let filter = {
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfSevenDaysAgoUTC, $lte: endOfDayUTC }
+          };
+      
+          // 6. Dependiendo del tipo de usuario, ajustar el filtro
+          if (userType === 'student') {
+            if (!studentIds.includes(id)) {
+              return res.status(404).json({ success: false, message: "Estudiante no encontrado en la institución." });
+            }
+            filter.student = id;
+          } else if (userType === 'user') {
+            filter.user = id;
+          }
+      
+          // 7. Consultar las mediciones HRV con el filtro
+          const measurements = await HRV.find(filter)
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      
+          return res.status(200).json({ success: true, data: measurements });
+        } catch (error) {
+          console.error("Error en getHrvLastSevenDaysUser:", error);
+          return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+        }
+      },
+      getHRVLastThirtyUser : async (req, res) =>{
+        try {
+          // 1. Extraer los parámetros: userType, id (del usuario) y institucionId
+          const { userType, id, institucionId } = req.params;
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+      
+          // Validar que userType sea 'student' o 'user'
+          if (!['student', 'user'].includes(userType)) {
+            return res.status(400).json({ success: false, message: "Tipo de usuario inválido. Debe ser 'student' o 'user'." });
+          }
+      
+          // 2. Convertir la fecha proporcionada a UTC y calcular los últimos 7 días
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+          
+          const startOfSevenDaysAgoUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate() - 29, 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      
+          console.log("startOfSevenDaysAgoUTC:", startOfSevenDaysAgoUTC.toISOString());
+          console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+      
+          // 3. Buscar la institución y poblar programas con estudiantes
+          const institution = await INSTI.findById(institucionId).populate({
+            path: "programs",
+            populate: {
+              path: "students",
+              select: "name lastName imgUrl vitalmoveCategory age"
+            }
+          });
+      
+          if (!institution) {
+            return res.status(404).json({ success: false, message: "Institución no encontrada." });
+          }
+      
+          // 4. Extraer todos los IDs de los estudiantes de la institución
+          const studentIds = institution.programs.flatMap(program => program.students.map(student => student._id.toString()));
+      
+          if (studentIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+          }
+      
+          // 5. Construir el filtro base para obtener mediciones HRV de los últimos 7 días
+          let filter = {
+            student: { $in: studentIds },
+            createdAt: { $gte: startOfSevenDaysAgoUTC, $lte: endOfDayUTC }
+          };
+      
+          // 6. Dependiendo del tipo de usuario, ajustar el filtro
+          if (userType === 'student') {
+            if (!studentIds.includes(id)) {
+              return res.status(404).json({ success: false, message: "Estudiante no encontrado en la institución." });
+            }
+            filter.student = id;
+          } else if (userType === 'user') {
+            filter.user = id;
+          }
+      
+          // 7. Consultar las mediciones HRV con el filtro
+          const measurements = await HRV.find(filter)
+            .sort({ createdAt: -1 })
+            .populate("user", "name lastName imgUrl vitalmoveCategory age")
+            .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      
+          return res.status(200).json({ success: true, data: measurements });
+        } catch (error) {
+          console.error("Error en getHrvLastSevenDaysUser:", error);
+          return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+        }
+      }
       
       
 
