@@ -1434,8 +1434,68 @@ const hrvController = {
           console.error("Error en getHrvLastSevenDaysUser:", error);
           return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
         }
-      }
+      },
+      getHRVtodayUserMaster : async (req, res) =>{
+        try {
+          // 1. Extraer los parámetros: userType, id (del usuario) y institucionId
+          const { userType, id } = req.params;
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+            return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+          
+          const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
       
+
+          console.log("startOfDayUTC:", startOfDayUTC.toISOString());
+          console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+
+          if (userType === "user"){
+            if (!id) {
+              return res.status(400).json({ success: false, message: "ID del usuario requerido" });
+            }
+
+            const filter = {
+              user: id,
+              createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+            };
+
+            const measurements = await HRV.find(filter)
+             .sort({ createdAt: -1 })
+             .populate("user", "name lastName imgUrl vitalmoveCategory age")
+             .populate("student", "name lastName imgUrl vitalmoveCategory age");
+
+            return res.status(200).json({ success: true, data: measurements });
+          } if (userType === 'student') {
+            if (!id) {
+              return res.status(400).json({ success: false, message: "ID del estudiante requerido" });
+            }
+
+            const filter = {
+              student: id,
+              createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+            };
+
+            const measurements = await HRV.find(filter)
+             .sort({ createdAt: -1 })
+             .populate("user", "name lastName imgUrl vitalmoveCategory age")
+             .populate("student", "name lastName imgUrl vitalmoveCategory age");
+
+            return res.status(200).json({ success: true, data: measurements });
+          } else {
+            return res.status(400).json({ success: false, message: "Tipo de usuario inválido. Debe ser 'user' o'student'." });
+          }
+
+      } catch {
+        console.error("Error en getHRVtodayUserMaster:", error);
+        return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+      }
+    }
       
 
 }
