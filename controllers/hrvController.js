@@ -621,19 +621,29 @@ const hrvController = {
       },
       getHrvStats : async (req, res) => {
         try {
+          let { date } = req.query;
+          if (!date) {
+            return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+      
             // 1. Definir el inicio y fin del día en horario local
-            const now = new Date();
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(now);
-            endOfDay.setHours(23, 59, 59, 999);
+            const adminDate = new Date(date);
+            if (isNaN(adminDate.getTime())) {
+              return res.status(400).json({ success: false, message: "Fecha inválida" });
+            }
+            const startOfDay = new Date(Date.UTC(adminDate.getUTCFullYear(), adminDate.getUTCMonth(), adminDate.getUTCDate(), 0, 0, 0, 0));
+            const endOfDay = new Date(Date.UTC(adminDate.getUTCFullYear(), adminDate.getUTCMonth(), adminDate.getUTCDate(), 23, 59, 59, 999));
         
+            console.log("startOfDayUTC:", startOfDay.toISOString());
+            console.log("endOfDayUTC:", endOfDay.toISOString());
+        
+
             // 2. Obtener TODOS los documentos de la colección HRV
             //    (para saber todas las combinaciones user-student y encontrar su última medición)
-            const allHrvDocs = await HRV.find({})
+            const allHrvDocs = await HRV.find()
             .sort({ createdAt: -1 })
-              .populate("user", "name lastName imgUrl vitalmoveCategory")
-              .populate("student", "name lastName imgUrl vitalmoveCategory");
+              .populate("user", "name lastName imgUrl vitalmoveCategory age")
+              .populate("student", "name lastName imgUrl vitalmoveCategory age");
         
             // 3. Obtener las mediciones SOLO del día de hoy, ordenadas por createdAt DESC
             //    (para construir el arreglo todayMeasurements)
@@ -641,8 +651,8 @@ const hrvController = {
               createdAt: { $gte: startOfDay, $lte: endOfDay },
             })
               .sort({ createdAt: -1 })
-              .populate("user", "name lastName imgUrl vitalmoveCategory")
-              .populate("student", "name lastName imgUrl vitalmoveCategory");
+              .populate("user", "name lastName imgUrl vitalmoveCategory age")
+              .populate("student", "name lastName imgUrl vitalmoveCategory age");
         
             /*
               Estructura para agrupar las mediciones de hoy por combinación (userId)-(studentId).
