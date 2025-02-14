@@ -7,11 +7,8 @@ const hrvController = {
 
     //agregar registro de hrv
     addHRV : async (req, res) => {
-
         try {
-
             let newHRV = await new HRV(req.body).save()
-
             if (newHRV) {
                 res.status(200).json({
                     message: "Registro de HRV registrado con éxito",
