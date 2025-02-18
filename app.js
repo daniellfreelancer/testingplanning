@@ -47,6 +47,7 @@ const sportClub = require('./routes/clubes.routes');
 const sportCategory = require('./routes/sportCategories.routes');
 const membershipFutbol = require('./routes/membershipFutbol.routes')
 const trainingApp = require('./routes/trainingApp.routes')
+const institutionDecentralized = require('./routes/institutionDecentralized.routes')
 
 var app = express();
 
@@ -107,6 +108,7 @@ app.use('/sportclub', sportClub)
 app.use('/sportcategory', sportCategory)
 app.use('/paymemt-admin', membershipFutbol)
 app.use('/training', trainingApp)
+app.use('/decentralized', institutionDecentralized)
 
 
 // catch 404 and forward to error handler

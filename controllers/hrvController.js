@@ -1492,8 +1492,56 @@ const hrvController = {
         console.error("Error en getHRVtodayUserMaster:", error);
         return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
       }
-    }
-      
+    },
+
+    //Peticiones con nuevo modelo a migrar
+     getHRVtodayUserMasterVM : async (req, res) => {
+      try {
+          // 1️⃣ Extraer los parámetros: userType, id (del usuario/estudiante) y la fecha (date)
+          const { userType, id } = req.params;
+          let { date } = req.query;
+  
+          if (!date) {
+              return res.status(400).json({ success: false, message: "Fecha requerida" });
+          }
+  
+          const userDate = new Date(date);
+          if (isNaN(userDate.getTime())) {
+              return res.status(400).json({ success: false, message: "Fecha inválida" });
+          }
+  
+          // 2️⃣ Definir el rango de fecha en UTC usando el campo `time`
+          const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
+          const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+  
+          console.log("startOfDayUTC:", startOfDayUTC.toISOString());
+          console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+  
+          if (!id) {
+              return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
+          }
+  
+          // 3️⃣ Construir filtro según el tipo de usuario
+          const filter = {
+              [userType === "user" ? "user" : "student"]: id,
+              time: { $gte: startOfDayUTC, $lte: endOfDayUTC }  // 🔹 Se usa `time` en vez de `createdAt`
+          };
+  
+          // 4️⃣ Obtener mediciones con el filtro
+          const measurements = await HRV.find(filter)
+              .sort({ time: -1 })  // 🔹 Ordenar por `time` en lugar de `createdAt`
+              .populate("user", "name lastName imgUrl vitalmoveCategory age")
+              .populate("student", "name lastName imgUrl vitalmoveCategory age");
+  
+          return res.status(200).json({ success: true, data: measurements });
+  
+      } catch (error) {
+          console.error("Error en getHRVtodayUserMaster:", error);
+          return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+      }
+  },
+  
+  
 
 }
 
