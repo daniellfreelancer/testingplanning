@@ -18,6 +18,7 @@ const instiSchema = new mongoose.Schema({
     subscriptions: [{ type: String, required: false }],
     type: {type: String, required: true},
     vmType:{type: String},
+    institutionDecentralized: [{type: mongoose.Types.ObjectId, ref:'instiDecentralized'}]
 
 },
 {

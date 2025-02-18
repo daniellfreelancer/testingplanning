@@ -15,26 +15,7 @@ const hrvSchema = new mongoose.Schema({
     measurement : {type: String},
     survey: {type: Object},
     time: {type: String},
-    // hF_peak : {type: Number},
-    // hF_power: {type: Number},
-    // hF_power_nu: {type: Number},
-    // hF_power_prc: {type: Number},
-    // lF_HF_power: {type: Number},
-    // lF_peak: {type: Number},
-    // lF_power: {type: Number},
-    // lF_power_nu: {type: Number},
-    // lF_power_prc: {type: Number},
-    // vLF_peak: {type: Number},
-    // vLF_power: {type: Number},
-    // vLF_power_prc: {type: Number},
-    // tot_power: {type: Number},
-    // pns_index: {type: Number},
-    // sns_index: {type: Number},
-    // stress_index: {type: Number},
-    // readiness_index: {type: Number},
     hrv_analysis :{ type: Object}
-
-    
 },{
     timestamps: true,
 })
