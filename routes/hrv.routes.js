@@ -1,5 +1,5 @@
 var express = require('express');
-const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser, getHrvListUser, getHrvListComplete, getHrvStats, getHrvListByInstitution, getHrvListByUserFilter, getHRVInsti, getHRVtodayUser, getHRVLastSevenUser, getHRVtodayUserMaster } = require('../controllers/hrvController');
+const { addHRV, getHRVs, getHRVById, deleteHRV, getHRVsHistoryByStudentId, getHRVsHistoryByUser, getHRVsHistoryByDevice, getHRVNoDuplicates, getHRVUsersStudent, getTodayHRVResults, getLastSevenrRDataByUser, getHrvListUser, getHrvListComplete, getHrvStats, getHrvListByInstitution, getHrvListByUserFilter, getHRVInsti, getHRVtodayUser, getHRVLastSevenUser, getHRVtodayUserMaster, updateHRVData } = require('../controllers/hrvController');
 var router = express.Router();
 
 //rutas
@@ -24,6 +24,7 @@ router.get("/hrv-today-user/:userType/:id/:institucionId", getHRVtodayUser);
 router.get("/hrv-today-master/:userType/:id", getHRVtodayUserMaster);
 router.get("/hrv-last-seven-days-user/:userType/:id/:institucionId", getHRVLastSevenUser);
 router.get("/hrv-last-thirty-days-user/:userType/:id/:institucionId", getHRVLastSevenUser);
+router.put('/update/:id', updateHRVData)
 
 
 

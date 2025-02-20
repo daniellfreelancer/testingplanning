@@ -1540,6 +1540,22 @@ const hrvController = {
           return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
       }
   },
+  updateHRVData : async (req, res) =>{
+     const {id} = req.params
+     const {data} = req.body
+     try {
+       const hrv = await HRV.findByIdAndUpdate(id, req.body, {new: true})
+       hrv.save()
+       if (!hrv) {
+         return res.status(404).json({ success: false, message: "Medición HRV no encontrada." });
+       }
+       return res.status(200).json({ success: true, data: hrv });
+     } catch (error) {
+       console.error("Error en updateHRVData:", error);
+       return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+
+     }
+  }
   
   
 
