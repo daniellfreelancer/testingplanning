@@ -1616,17 +1616,24 @@ const hrvController = {
         return res.status(400).json({ success: false, message: "Fecha requerida" });
       }
 
-      const userDate = new Date(date);
-      if (isNaN(userDate.getTime())) {
+      const adminDate = new Date(date);
+      if (isNaN(adminDate.getTime())) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
 
-      // 2️⃣ Definir el rango de fecha en UTC usando el campo `time`
-      const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
-      const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      let zone = adminDate.getTimezoneOffset() / 60
 
-      console.log("startOfDayUTC:", startOfDayUTC.toISOString());
-      console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+      // Mantener la fecha en la zona horaria local
+      const year = adminDate.getFullYear();
+      const month = adminDate.getMonth();
+      const day = adminDate.getDate();
+  
+      // Definir el inicio y fin del día en **horario local**
+       const startOfDay = new Date(year, month, day, 0 - zone, 0, 0, 0).toISOString();
+       const endOfDay = new Date(year, month, day, 23 - zone, 59, 59, 999).toISOString();
+  
+      console.log("startOfDay (local):", startOfDay);
+      console.log("endOfDay (local):", endOfDay);
 
       if (!id) {
         return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
@@ -1635,7 +1642,7 @@ const hrvController = {
       // 3️⃣ Construir filtro según el tipo de usuario
       const filter = {
         [userType === "user" ? "user" : "student"]: id,
-        time: { $gte: startOfDayUTC, $lte: endOfDayUTC }  // 🔹 Se usa `time` en vez de `createdAt`
+        time: { $gte: startOfDay, $lte: endOfDay }  // 🔹 Se usa `time` en vez de `createdAt`
       };
 
       // 4️⃣ Obtener mediciones con el filtro
@@ -1666,6 +1673,109 @@ const hrvController = {
       return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
 
     }
+  },
+  getHRVlast7DaysUserMasterVM: async (req, res) => {
+    try {
+      // 1️⃣ Extraer los parámetros: userType, id (del usuario/estudiante) y la fecha (date)
+      const { userType, id } = req.params;
+      let { date } = req.query;
+  
+      if (!date) {
+        return res.status(400).json({ success: false, message: "Fecha requerida" });
+      }
+  
+      const todayDate = new Date(date);
+      if (isNaN(todayDate.getTime())) {
+        return res.status(400).json({ success: false, message: "Fecha inválida" });
+      }
+  
+      let zone = todayDate.getTimezoneOffset() / 60;
+  
+      // Obtener la fecha de hace 7 días a partir de la fecha recibida
+      const pastDate = new Date(todayDate);
+      pastDate.setDate(todayDate.getDate() - 7);
+  
+      // Definir los límites del período en horario local
+      const startOfPeriod = new Date(pastDate.getFullYear(), pastDate.getMonth(), pastDate.getDate(), 0 - zone, 0, 0, 0).toISOString();
+      const endOfPeriod = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23 - zone, 59, 59, 999).toISOString();
+  
+      console.log("startOfPeriod (local 7 days):", startOfPeriod);
+      console.log("endOfPeriod (local 7 days):", endOfPeriod);
+  
+      if (!id) {
+        return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
+      }
+  
+      // 3️⃣ Construir filtro según el tipo de usuario
+      const filter = {
+        [userType === "user" ? "user" : "student"]: id,
+        time: { $gte: startOfPeriod, $lte: endOfPeriod } // 🔹 Buscar en los últimos 7 días
+      };
+  
+      // 4️⃣ Obtener mediciones con el filtro
+      const measurements = await HRV.find(filter)
+        .sort({ time: -1 }) // Ordenar por `time` en orden descendente
+        .populate("user", "name lastName imgUrl vitalmoveCategory age")
+        .populate("student", "name lastName imgUrl vitalmoveCategory age");
+  
+      return res.status(200).json({ success: true, data: measurements });
+  
+    } catch (error) {
+      console.error("Error en getHRVlast7DaysUserMasterVM:", error);
+      return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+    }
+  },
+  getHRVLast30daysUserMasterVM: async (req, res) =>{
+    try {
+      // 1️⃣ Extraer los parámetros: userType, id (del usuario/estudiante) y la fecha (date)
+      const { userType, id } = req.params;
+      let { date } = req.query;
+  
+      if (!date) {
+        return res.status(400).json({ success: false, message: "Fecha requerida" });
+      }
+  
+      const todayDate = new Date(date);
+      if (isNaN(todayDate.getTime())) {
+        return res.status(400).json({ success: false, message: "Fecha inválida" });
+      }
+  
+      let zone = todayDate.getTimezoneOffset() / 60;
+  
+      // Obtener la fecha de hace 7 días a partir de la fecha recibida
+      const pastDate = new Date(todayDate);
+      pastDate.setDate(todayDate.getDate() - 30);
+  
+      // Definir los límites del período en horario local
+      const startOfPeriod = new Date(pastDate.getFullYear(), pastDate.getMonth(), pastDate.getDate(), 0 - zone, 0, 0, 0).toISOString();
+      const endOfPeriod = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23 - zone, 59, 59, 999).toISOString();
+  
+      console.log("startOfPeriod (local 30 days):", startOfPeriod);
+      console.log("endOfPeriod (local 30 days):", endOfPeriod);
+  
+      if (!id) {
+        return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
+      }
+  
+      // 3️⃣ Construir filtro según el tipo de usuario
+      const filter = {
+        [userType === "user" ? "user" : "student"]: id,
+        time: { $gte: startOfPeriod, $lte: endOfPeriod } // 🔹 Buscar en los últimos 7 días
+      };
+  
+      // 4️⃣ Obtener mediciones con el filtro
+      const measurements = await HRV.find(filter)
+        .sort({ time: -1 }) // Ordenar por `time` en orden descendente
+        .populate("user", "name lastName imgUrl vitalmoveCategory age")
+        .populate("student", "name lastName imgUrl vitalmoveCategory age");
+  
+      return res.status(200).json({ success: true, data: measurements });
+  
+    } catch (error) {
+      console.error("Error en getHRVlast7DaysUserMasterVM:", error);
+      return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
+    }
+
   }
 
 
