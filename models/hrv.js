@@ -16,7 +16,8 @@ const hrvSchema = new mongoose.Schema({
     survey: {type: Object},
     time: {type: String},
     hrv_analysis :{ type: Object},
-    readiness: {type: Number}
+    readiness: {type: Number},
+    quality:{type: String},
 },{
     timestamps: true,
 })
