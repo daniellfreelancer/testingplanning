@@ -327,6 +327,94 @@ const ClubController = {
             });
             
         }
+    },
+    //Add teacher to club
+    addTeacherToClub: async (req, res) => {
+        try {
+            const {clubId, teacherId } = req.params;
+
+            const club = await Clubs.findById(clubId)
+
+            if (!club) {
+                return res.status(404).json({
+                    message: 'Club no encontrado',
+                    success: false
+                });
+            }
+
+            club.teachers.push(teacherId)
+            await club.save()
+
+            const teacher = await Trainers.findById(teacherId)
+            if (!teacher) {
+                return res.status(404).json({
+                    message: 'Entrenador no encontrado',
+                    success: false
+                });
+            }
+            teacher.clubs.push(clubId)
+            await teacher.save()
+
+            res.status(201).json({
+                message: 'Entrenador agregado al club con éxito',
+                success: true,
+                response:{
+                    club: club,
+                    teacher: teacher
+                }
+            })
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: 'Error al agregar entrenador al club',
+                error: error.message,
+                success: false
+            });
+            
+        }
+    },
+    // delete teacher from club
+    removeTeacherFromClub: async (req, res) => {
+        try {
+            const { clubId, teacherId } = req.params;
+
+            const club = await Clubs.findByIdAndUpdate(clubId, { $pull: { teachers: teacherId } }, { new: true });
+
+            if (!club) {
+                return res.status(404).json({
+                    message: 'Club no encontrado',
+                    success: false
+                });
+            }
+
+            const teacher = await Trainers.findByIdAndUpdate(teacherId, { $pull: { clubs: clubId } }, { new: true });
+
+            if (!teacher) {
+                return res.status(404).json({
+                    message: 'Entrenador no encontrado',
+                    success: false
+                });
+            }            
+
+            res.status(200).json({
+                message: 'Entrenador eliminado del club con éxito',
+                success: true,
+                response:{
+                    club: club,
+                    teacher: teacher
+                }
+            });
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: 'Error al eliminar entrenador del club',
+                error: error.message,
+                success: false
+            });
+            
+        }
     }
 
 }
