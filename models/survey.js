@@ -48,7 +48,17 @@ const surveySchema = new mongoose.Schema({
     },
     status:{
         type: Boolean
-    }
+    },
+    sportCategory:{
+        type: mongoose.Types.ObjectId,
+        ref: 'sportCategory',
+        required: false,
+    },
+    sportResume:{
+        type: mongoose.Types.ObjectId,
+        ref: 'resumeVMTraining',
+        required: false,
+    },
 },
 {
     timestamps: true,
