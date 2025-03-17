@@ -50,6 +50,8 @@ const trainingApp = require('./routes/trainingApp.routes')
 const institutionDecentralized = require('./routes/institutionDecentralized.routes')
 const sportPlanner = require('./routes/sportPlanification.routes')
 const vmTrainingResume = require('./routes/resumeVMTraining.routes')
+const fcm = require('./routes/fcm.routes')
+const car = require('./routes/appoiment.routes')
 
 
 var app = express();
@@ -114,6 +116,8 @@ app.use('/training', trainingApp)
 app.use('/decentralized', institutionDecentralized)
 app.use('/sportplan', sportPlanner)
 app.use('/trainingResume', vmTrainingResume)
+app.use('/fcm', fcm)
+app.use('/appointments', car)
 
 
 // catch 404 and forward to error handler
