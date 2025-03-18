@@ -97,7 +97,8 @@ const appointmentController = {
     try {
       const appointments = await Appointment.find({
         sportCategory: workshopId,
-      }).sort({ date: 1 });
+      }).sort({ date: 1 }).populate('athlete', 'name lastName email phone'); 
+
       res.status(200).json(appointments);
     } catch (error) {
       res.status(400).json({ message: error.message });
