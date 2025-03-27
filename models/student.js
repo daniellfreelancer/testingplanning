@@ -37,7 +37,8 @@ const studentSchema = new mongoose.Schema({
     skills:[{ type: Object }],
     quality:[{ type: Object }],
     membership:[{ type: Object }],
-    vitalmoveCategory: {type: String}
+    vitalmoveCategory: {type: String},
+    institution: { type: mongoose.Types.ObjectId, ref: 'insti', required: false },
 },
 {
     timestamps: true,
