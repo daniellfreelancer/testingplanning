@@ -485,7 +485,20 @@ const userController = {
               program: student.program,
               bio: student.bio,
               tasks: student.tasks,
-            controlParental: student.controlParental
+            controlParental: student.controlParental,
+              gradebook: student.gradebook,
+              notifications: student.notifications,
+              challenges: student.challenges,
+              skills: student.skills,
+              quality: student.quality,
+              membership: student.membership,
+              vitalmoveCategory: student.vitalmoveCategory,
+              from: student.from,
+              verified: student.verified,
+              code: student.code,
+              institution: student.institution
+
+
             };
 
             student.logged = true;
@@ -542,7 +555,18 @@ const userController = {
             program: student.program,
             bio: student.bio,
             tasks: student.tasks,
-            controlParental: student.controlParental
+            controlParental: student.controlParental,
+            gradebook: student.gradebook,
+            notifications: student.notifications,
+            challenges: student.challenges,
+            skills: student.skills,
+            quality: student.quality,
+            membership: student.membership,
+            vitalmoveCategory: student.vitalmoveCategory,
+            from: student.from,
+            verified: student.verified,
+            code: student.code,
+            institution: student.institution
           };
 
           student.logged = true;
