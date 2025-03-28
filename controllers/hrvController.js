@@ -1776,7 +1776,68 @@ const hrvController = {
       return res.status(500).json({ success: false, message: "Error interno del servidor", error: error.message });
     }
 
-  }
+  },
+  getAllHrvMeasurements: async (req, res) => {
+    const { idUser, userType } = req.params;
+  
+    // Validación de parámetros de entrada
+    if (!idUser || !userType) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Se requieren los parámetros idUser y userType." 
+      });
+    }
+  
+    if (userType !== 'user' && userType !== 'student') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "El parámetro userType debe ser 'user' o 'student'." 
+      });
+    }
+  
+    try {
+      // Crear el objeto de consulta dinámicamente
+      const query = { [userType]: idUser };
+      const populationField = userType === 'student' ? 'student' : 'user';
+      const populationFields = 'name lastName imgUrl vitalmoveCategory age';
+  
+      // Realizar la consulta con proyección para optimización
+      const measurementHistorical = await HRV.find(query)
+        .sort({ createdAt: -1 })
+        .populate(populationField, populationFields)
+        .select('-__v -updatedAt') // Excluir campos innecesarios
+        .lean(); // Convertir a objetos JS simples para mejor performance
+  
+      if (!measurementHistorical || measurementHistorical.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "No se encontraron mediciones para el usuario especificado." 
+        });
+      }
+  
+      // Opcional: Transformar los datos si es necesario
+      const transformedData = measurementHistorical.map(measurement => ({
+        ...measurement,
+        userType: userType,
+        // Puedes agregar más transformaciones aquí si es necesario
+      }));
+  
+      return res.status(200).json({ 
+        success: true, 
+        data: transformedData,
+        count: transformedData.length,
+        userType: userType
+      });
+  
+    } catch (error) {
+      console.error("Error en getAllHrvMeasurements:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Error interno del servidor", 
+      });
+    }
+  },
+  
 
 
 
