@@ -2,17 +2,17 @@ const mongoose = require('mongoose')
 
 
 const studentSchema = new mongoose.Schema({
-    name:{type: String, required: true},
-    lastName:{type: String, required: true},
-    age:{type: Number, required: true},
+    name:{type: String, required: false},
+    lastName:{type: String, required: false},
+    age:{type: Number, required: false},
     birth:{type: String},
-    weight:{type: Number, required: true},
-    size:{type: Number, required: true},
+    weight:{type: Number, required: false},
+    size:{type: Number, required: false},
     classroom: [{type: mongoose.Types.ObjectId, ref:'classroom', required: false}],
     school: [{type: mongoose.Types.ObjectId, ref:'school', required: false}],
     email: {type: String,required: true},  
     phone: {type: String, required: true},
-    rut: {type: String, required: true}, 
+    rut: {type: String, required: false}, 
     gender: {type: String, required: true},
     school_representative: {type: String, },
     imgUrl: {type: String},
