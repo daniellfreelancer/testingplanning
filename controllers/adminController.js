@@ -485,7 +485,7 @@ const userController = {
               program: student.program,
               bio: student.bio,
               tasks: student.tasks,
-            controlParental: student.controlParental,
+              controlParental: student.controlParental,
               gradebook: student.gradebook,
               notifications: student.notifications,
               challenges: student.challenges,
