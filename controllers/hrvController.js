@@ -1338,13 +1338,29 @@ const hrvController = {
       if (isNaN(userDate.getTime())) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
+      console.log(date)
+
+      let zone = userDate.getTimezoneOffset() / 60
+      const year = userDate.getFullYear();
+      const month = userDate.getMonth();
+      const day = userDate.getDate();
+
+    //  const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
+    //  const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
 
       const startOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 0, 0, 0, 0));
-      const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
+      const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate() , 23, 59, 59, 999));
+   
+ 
+
+      // const startOfDayUTC = new Date(year, month, day, 0 - zone, 0, 0, 0);
+      // const endOfDayUTC = new Date(year, month, day, 23 - zone, 59, 59, 999);
+      console.log("startOfDayUTC (local):", startOfDayUTC);
+      console.log("endOfDayUTC:(local)", endOfDayUTC);
 
 
-      console.log("startOfDayUTC:", startOfDayUTC.toISOString());
-      console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+
+
 
 
       // 3. Buscar la institución y poblar programas con estudiantes
@@ -1367,10 +1383,21 @@ const hrvController = {
         return res.status(200).json({ success: true, data: [] });
       }
 
+      console.log("Fecha inicial del dia:" + `${date}T00:00:00`)
+      console.log("Fecha final del dia:" + `${date}T23:59:59.999`)
+
+      const dateOnly = date.split('T')[0];
+
+      console.log("Fecha formato desde el front:" + dateOnly)
+
       // 5. Construir el filtro base para obtener mediciones HRV de los estudiantes en la institución
       let filter = {
         student: { $in: studentIds },
-        createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+        // createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC },
+         time: {
+          $gte: `${dateOnly}T00:00:00`,
+          $lte: `${dateOnly}T23:59:59.999`
+        }
       };
 
       // 6. Dependiendo del tipo de usuario, ajustar el filtro
@@ -1385,9 +1412,11 @@ const hrvController = {
 
       // 7. Consultar las mediciones HRV con el filtro
       const measurements = await HRV.find(filter)
-        .sort({ createdAt: -1 })
+        //.sort({ createdAt: -1 })
+        .sort({ time: -1 })
         .populate("user", "name lastName imgUrl vitalmoveCategory age")
         .populate("student", "name lastName imgUrl vitalmoveCategory age");
+      //  console.log(measurements)
 
       return res.status(200).json({ success: true, data: measurements });
     } catch (error) {
@@ -1560,8 +1589,10 @@ const hrvController = {
       const endOfDayUTC = new Date(Date.UTC(userDate.getUTCFullYear(), userDate.getUTCMonth(), userDate.getUTCDate(), 23, 59, 59, 999));
 
 
-      console.log("startOfDayUTC:", startOfDayUTC.toISOString());
+      console.log("startOfDayUTC USER MASTER:", startOfDayUTC.toISOString());
       console.log("endOfDayUTC:", endOfDayUTC.toISOString());
+
+      const dateOnly = date.split('T')[0];
 
       if (userType === "user") {
         if (!id) {
@@ -1570,7 +1601,11 @@ const hrvController = {
 
         const filter = {
           user: id,
-          createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+          // createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC },
+          time: {
+            $gte: `${dateOnly}T00:00:00`,
+            $lte: `${dateOnly}T23:59:59.999`
+          }
         };
 
         const measurements = await HRV.find(filter)
@@ -1586,7 +1621,11 @@ const hrvController = {
 
         const filter = {
           student: id,
-          createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+          // createdAt: { $gte: startOfDayUTC, $lte: endOfDayUTC },
+          time: {
+            $gte: `${dateOnly}T00:00:00`,
+            $lte: `${dateOnly}T23:59:59.999`
+          }
         };
 
         const measurements = await HRV.find(filter)
