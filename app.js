@@ -53,6 +53,8 @@ const vmTrainingResume = require('./routes/resumeVMTraining.routes')
 const fcm = require('./routes/fcm.routes')
 const car = require('./routes/appoiment.routes')
 
+const userGym = require('./api/gym/routes/gymUser.routes')
+
 
 var app = express();
 
@@ -118,6 +120,8 @@ app.use('/sportplan', sportPlanner)
 app.use('/trainingResume', vmTrainingResume)
 app.use('/fcm', fcm)
 app.use('/appointments', car)
+app.use('/gym', userGym)
+
 
 
 // catch 404 and forward to error handler

@@ -1,7 +1,9 @@
 const Institution = require('../models/institution')
 const Schools = require('../models/school')
 const Programs = require('../models/program')
-const Admins = require('../models/admin')
+const Admins = require('../models/admin');
+const { default: mongoose } = require('mongoose');
+
 
 const institutionPopulateQuery = [
   {
@@ -92,51 +94,100 @@ const studentsPopulate = [
 
 const instiController = {
 
+  // createInstitution: async (req, res) => {
+
+  //   try {
+
+  //     const {
+  //       admins
+  //     } = req.body
+
+  //     const newInsti = await new Institution(req.body).save()
+
+  //     if (newInsti) {
+
+  //       let idInstitution = newInsti._id;
+  //       let idAdmin = admins;
+  //       let admin = await Admins.findById(idAdmin)
+  //       admin.institution = idInstitution
+  //       admin.save()
+
+  //       res.status(201).json({
+  //         response: newInsti,
+  //         success: true,
+  //         message: "La institución ha sido creada con exito"
+  //       })
+  //     }
+
+  //   } catch (error) {
+  //     console.log(error)
+  //     res.status(400).json({
+  //       message: error.message,
+  //       success: false
+  //     });
+  //   }
+
+  // },
   createInstitution: async (req, res) => {
-
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
     try {
+        const { name, address, email, phone, rut, type, admins = [] } = req.body;
 
-      const {
-        name,
-        rut,
-        address,
-        phone,
-        email,
-        admins
-      } = req.body
+        // Validación básica
+        if (!name || !address || !email || !phone || !rut || !type) {
+            return res.status(400).json({
+                success: false,
+                message: "Faltan campos requeridos: name, address, email, phone, rut, type"
+            });
+        }
 
-      const newInsti = await new Institution(req.body).save()
+        // Crear la institución
+        const newInsti = await new Institution({
+            ...req.body,
+            admins: Array.isArray(admins) ? admins : [admins].filter(Boolean)
+        }).save({ session });
 
-      if (newInsti) {
+        if (!newInsti) {
+            throw new Error("Error al crear la institución");
+        }
 
-        let idInstitution = newInsti._id;
-        let idAdmin = admins;
-        let admin = await Admins.findById(idAdmin)
-        admin.institution = idInstitution
-        admin.save()
+        // Actualizar los admins (si se proporcionaron)
+        if (admins && admins.length > 0) {
+            const adminIds = Array.isArray(admins) ? admins : [admins];
+            
+            await Promise.all(adminIds.map(async (adminId) => {
+                const admin = await Admins.findById(adminId).session(session);
+                if (!admin) {
+                    throw new Error(`Admin con ID ${adminId} no encontrado`);
+                }
+                admin.institution = newInsti._id;
+                await admin.save({ session });
+            }));
+        }
 
+        await session.commitTransaction();
+        
         res.status(201).json({
-          response: newInsti,
-          success: true,
-          message: "La institución ha sido creada con exito"
-        })
-
-      }
-
-
-
-
-
+            success: true,
+            data: newInsti,
+            message: "Institución creada exitosamente"
+        });
 
     } catch (error) {
-      console.log(error)
-      res.status(400).json({
-        message: error.message,
-        success: false
-      });
+        await session.abortTransaction();
+        console.error("Error en createInstitution:", error);
+        
+        const statusCode = error.message.includes("no encontrado") ? 404 : 400;
+        res.status(statusCode).json({
+            success: false,
+            message: error.message || "Error al crear la institución"
+        });
+    } finally {
+        session.endSession();
     }
-
-  },
+},
   readInstitutions: async (req, res) => {
     try {
       const allInstitutions = await Institution.find().populate(institutionPopulateQuery);
