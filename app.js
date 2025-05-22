@@ -52,8 +52,8 @@ const sportPlanner = require('./routes/sportPlanification.routes')
 const vmTrainingResume = require('./routes/resumeVMTraining.routes')
 const fcm = require('./routes/fcm.routes')
 const car = require('./routes/appoiment.routes')
-
 const userGym = require('./api/gym/routes/gymUser.routes')
+const gym = require('./api/gym/routes/gym.routes')
 
 
 var app = express();
@@ -121,6 +121,7 @@ app.use('/trainingResume', vmTrainingResume)
 app.use('/fcm', fcm)
 app.use('/appointments', car)
 app.use('/gym', userGym)
+app.use('/gym-admin', gym)
 
 
 

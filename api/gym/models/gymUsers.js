@@ -79,15 +79,11 @@ const userGym = new mongoose.Schema(
     imgUrl: { type: String },
     trainerSpecialty: {
       type: String,
-      required: function () {
-        return this.role === "TRAINER";
-      },
+
     },
     employeePosition: {
       type: String,
-      required: function () {
-        return this.role === "EMPLOYED";
-      },
+
     },
     documents: {
       idFront: String,
