@@ -1006,6 +1006,7 @@ const userController = {
 
           userForUpdate.imgUrl = fileName;
         }
+        
         await userForUpdate.save()
 
         res.status(200).json({

@@ -36,7 +36,7 @@ const instiSchema = new mongoose.Schema({
             'vmClassDeportivo',
             'medicionesFisicas',
             'reporteriaBasico',
-            'reportiraAvanzado',
+            'reporteriaAvanzado',
             'controlAsistencia',
             'adminComplejos',
             'facturacionCaja',
@@ -49,7 +49,8 @@ const instiSchema = new mongoose.Schema({
             'agendamientosAvanzado',
             'eventos',
             'cuestionarios',
-            'encuestas'
+            'encuestas',
+            'controlDeAcceso'
         ]
     }
 

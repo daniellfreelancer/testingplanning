@@ -9,7 +9,7 @@ const gymUserController = {
   signUpUserGym: async (req, res) => {
     const { name, lastName, email, rut, role } = req.body;
 
-    let temporalPassword = "vitalmoveGym";
+    let temporalPassword = "1234";
 
     try {
       let userGym = await UserGym.findOne({ email });
