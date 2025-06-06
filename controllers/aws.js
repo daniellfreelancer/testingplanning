@@ -398,10 +398,6 @@ const rekoController = {
             Body: fileContent,
           };
 
-          // Subir el archivo a S3
-          const uploadCommandProfile = new PutObjectCommand(uploadParams);
-          await clientAWSProfile.send(uploadCommandProfile);
-
           const uploadCommandRekognition = new PutObjectCommand(
             uploadParamsReko
           );
