@@ -7,6 +7,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors')
 const bodyParser = require('body-parser')
+const transbankRoutes = require('./routes/transbank.routes');
 
 const fileUpload = require('express-fileupload')
 // const { initializeApp } = require("firebase-admin/app");
@@ -126,6 +127,8 @@ app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
 
+// Transbank Routes
+app.use('/transbank', transbankRoutes);
 
 
 // catch 404 and forward to error handler
