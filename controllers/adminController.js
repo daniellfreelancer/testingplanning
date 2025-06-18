@@ -355,7 +355,8 @@ const userController = {
                 idBack: admin.idBack,
                 backgroundDoc: admin.backgroundDoc,
                 otherDocs: admin.otherDocs,
-                controlParental: admin.controlParental
+                controlParental: admin.controlParental,
+                birth: admin.birth
 
               };
 
@@ -418,7 +419,8 @@ const userController = {
               idBack: admin.idBack,
               backgroundDoc: admin.backgroundDoc,
               otherDocs: admin.otherDocs,
-              controlParental: admin.controlParental
+              controlParental: admin.controlParental,
+              birth: admin.birth
 
             };
 
@@ -496,7 +498,8 @@ const userController = {
               from: student.from,
               verified: student.verified,
               code: student.code,
-              institution: student.institution
+              institution: student.institution,
+              birth: student.birth
 
 
             };
@@ -566,7 +569,8 @@ const userController = {
             from: student.from,
             verified: student.verified,
             code: student.code,
-            institution: student.institution
+            institution: student.institution,
+            birth: student.birth
           };
 
           student.logged = true;
