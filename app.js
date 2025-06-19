@@ -56,6 +56,7 @@ const userGym = require('./api/gym/routes/gymUser.routes')
 const gym = require('./api/gym/routes/gym.routes')
 
 const rekoAWS = require('./routes/awsRekonitionRoutes')
+const accessControl = require('./api/access/accessRoutes')
 
 
 var app = express();
@@ -125,6 +126,7 @@ app.use('/appointments', car)
 app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
+app.use('/access', accessControl)
 
 
 
