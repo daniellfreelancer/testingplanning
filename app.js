@@ -59,6 +59,11 @@ const rekoAWS = require('./routes/awsRekonitionRoutes')
 const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
 
+//SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
+const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
+const institucionesDeportivas = require('./api/institucion/institucionRoutes')
+const centrosDeportivos = require('./api/centros-deportivos/centrosDeportivosRoutes')
+
 var app = express();
 
 // view engine setup
@@ -128,8 +133,9 @@ app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
 app.use('/access', accessControl)
 app.use('/users-car', usersUCAD)
-
-
+app.use('/vm-users-cd', usuariosComplejosDeportivos) // usuarios complejos deportivos
+app.use('/vm-instituciones-deportivas', institucionesDeportivas) // instituciones deportivas
+app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

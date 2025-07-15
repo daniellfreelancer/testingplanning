@@ -87,7 +87,7 @@ const userCarController = {
       }
 
       // 4. Comparar la contraseña proporcionada con la contraseña hasheada almacenada
-      const isMatch = await bcryptjs.compare(password, user.password);
+      const isMatch = bcryptjs.compare(password, user.password);
 
       // 5. Si las contraseñas no coinciden, retornar error
       if (!isMatch) {
@@ -100,7 +100,7 @@ const userCarController = {
           id: user._id, // Usar el ID del usuario
           role: user.role // Incluir el rol del usuario en el token (si aplica)
         },
-        KEY_JWT, // Clave secreta para firmar el token
+        process.env.KEY_JWT, // Clave secreta para firmar el token
         {
           expiresIn: '1d' // El token expira en 1 día (puedes ajustar esto: '1h', '7d', etc.)
         }
