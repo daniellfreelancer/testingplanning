@@ -10,7 +10,7 @@ const centrosDeportivosSchema = new mongoose.Schema({
   rut: { type: String },
   ciudad: { type: String },
   comuna: { type: String },
-  institucion: { type: mongoose.Types.ObjectId, ref: 'institucion' },
+  institucion: [{ type: mongoose.Types.ObjectId, ref: 'institucion' }],
   espaciosDeportivos: [{ type: mongoose.Types.ObjectId, ref: 'espacioDeportivo' }],
   admins: [{ type: mongoose.Types.ObjectId, ref: 'usuario' }],
   usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuario' }],
@@ -18,6 +18,7 @@ const centrosDeportivosSchema = new mongoose.Schema({
   director:[{type: mongoose.Types.ObjectId, ref:'usuario'}],
   adminsOficina:[{type: mongoose.Types.ObjectId, ref:'usuario'}],
   talleres: [{ type: mongoose.Types.ObjectId, ref: 'talleres' }],
+  horarios: { type: Array }, // horarios de apertura y cierre del centro deportivo para luego limitar la validacion de horarios de los espacios deportivos
   status: { type: Boolean, default: true },
 },{
     timestamps: true
