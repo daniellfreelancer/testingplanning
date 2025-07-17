@@ -51,6 +51,13 @@ const espaciosDeportivosController = {
             console.log(error);
             res.status(500).json({ message: "Error al actualizar el espacio deportivo", error });
          }
+    },
+    obtenerEspacioDeportivo: async (req, res) => {
+        try {
+            const {id} = req.params;
+            const espacioDeportivo = await EspaciosDeportivos.findById(id);
+            res.status(200).json({ message: "Espacio deportivo obtenido correctamente", espacioDeportivo });
+        } catch (error) {
     }
 }
 
