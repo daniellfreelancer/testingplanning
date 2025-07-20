@@ -3,7 +3,7 @@ const { WebpayPlus, Options, Environment } = require("transbank-sdk");
 
 const commerceCode = process.env.TBK_COMMERCE_CODE;
 const apiKey = process.env.TBK_API_KEY;
-const environment = process.env.TBK_ENVIRONMENT === "PRODUCTION"
+const environment = process.env.TBK_ENVIRONMENT === "Integration"
     ? Environment.Production
     : Environment.Integration;
 
