@@ -64,6 +64,7 @@ const usersUCAD = require('./api/car/users/userCarRoutes')
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
 const institucionesDeportivas = require('./api/institucion/institucionRoutes')
 const centrosDeportivos = require('./api/centros-deportivos/centrosDeportivosRoutes')
+const espaciosDeportivos = require('./api/espacios-deportivos/espaciosDeportivosRoutes')
 
 var app = express();
 
@@ -139,6 +140,7 @@ app.use('/users-car', usersUCAD)
 app.use('/vm-users-cd', usuariosComplejosDeportivos) // usuarios complejos deportivos
 app.use('/vm-instituciones-deportivas', institucionesDeportivas) // instituciones deportivas
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
+app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
