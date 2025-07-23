@@ -320,6 +320,7 @@ const usuariosComplejosController = {
             res.status(200).json({
                 message: "Usuario de piscina encontrado correctamente",
                 user: {
+                    _id: user._id,
                     nombre: user.nombre,
                     apellido: user.apellido,
                     rut: user.rut,
