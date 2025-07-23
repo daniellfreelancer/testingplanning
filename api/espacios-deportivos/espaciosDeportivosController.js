@@ -77,10 +77,6 @@ const espaciosDeportivosController = {
             const espacioDeportivo = await EspaciosDeportivos.findById(id)
                 .populate('institucion')
                 .populate('centroDeportivo')
-                .populate('admins')
-                .populate('usuarios')
-                .populate('profesores')
-                .populate('talleres');
             if (!espacioDeportivo) {
                 return res.status(404).json({ message: "Espacio deportivo no encontrado" });
             }
@@ -95,10 +91,6 @@ const espaciosDeportivosController = {
             const espaciosDeportivos = await EspaciosDeportivos.find()
                 .populate('institucion')
                 .populate('centroDeportivo')
-                .populate('admins')
-                .populate('usuarios')
-                .populate('profesores')
-                .populate('talleres');
             res.status(200).json({ message: "Espacios deportivos obtenidos correctamente", espaciosDeportivos });
         } catch (error) {
             console.log(error);

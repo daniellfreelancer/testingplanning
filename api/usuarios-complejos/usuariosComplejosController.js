@@ -3,7 +3,7 @@ const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
-
+const Institucion = require("../institucion/institucionModel");
 
 function generateRandomPassword(length = 8) {
     const characters =
@@ -213,8 +213,157 @@ const usuariosComplejosController = {
             res.status(500).json({ message: "Error al restablecer contraseña,", error: error });
         }
 
-    }
+    },
+    //crear usuario de piscina
+    crearUsuarioComplejosPiscina: async (req, res) => {
+        try {
+            const {
+                institucion,
+                nombre,
+                apellido,
+                email,
+                rut,
+                telefono,
+                comuna,
+                fechaNacimiento,
+                sexo,
+                direccion,
+                numeroDireccion,
+                padecePatologia,
+                descripcionPatologia,
+                neurodivergente,
+                objetivoIngreso,
+                contactoEmergencia,
+                tipoPlan,
+                bloqueHorario,
+                declaracionSalud,
+                aceptacionReglamento,
+                autorizacionDatos
+            } = req.body;
 
+            // Validar rut duplicado
+            const existingUserByRut = await UsuariosComplejos.findOne({ rut });
+            if (existingUserByRut) {
+                return res.status(400).json({ message: "El RUT ya se encuentra registrado" });
+            }
+
+            // Formatear fechaNacimiento de dd/mm/yyyy a Date
+            let fechaNacimientoDate = null;
+            if (fechaNacimiento) {
+                const [day, month, year] = fechaNacimiento.split("/");
+                fechaNacimientoDate = new Date(`${year}-${month}-${day}`);
+            }
+
+            // Crear usuario sin password ni login
+            const newUser = new UsuariosComplejos({
+                institucion,
+                nombre,
+                apellido,
+                email,
+                rol: 'usuario',
+                rut,
+                telefono,
+                comuna,
+                fechaNacimiento: fechaNacimientoDate,
+                sexo,
+                direccion,
+                numeroDireccion,
+                padecePatologia,
+                descripcionPatologia,
+                neurodivergente,
+                objetivoIngreso,
+                contactoEmergencia,
+                tipoPlan,
+                bloqueHorario,
+                declaracionSalud,
+                aceptacionReglamento,
+                autorizacionDatos,
+                status: true
+            });
+
+            await newUser.save();
+
+            // Agregar usuario al array usuarios de la institucion
+           
+            const institucionDoc = await Institucion.findById(institucion);
+            if (!institucionDoc) {
+                return res.status(404).json({ message: "Institución no encontrada" });
+            }
+            institucionDoc.usuarios.push(newUser._id);
+            await institucionDoc.save();
+
+            res.status(201).json({ message: "Usuario de piscina creado correctamente", user: newUser });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al crear usuario de piscina", error });
+        }
+    },
+    //obtener usuario de piscina por rut
+    obtenerUsuarioComplejoPiscina: async (req, res) => {
+        const { rut } = req.params;
+        try {
+            const user = await UsuariosComplejos.findOne({ rut });
+            res.status(200).json({ message: "Usuario de piscina encontrado correctamente", user });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuario de piscina", error });
+        }
+    },
+    //obtener todos los usuarios de piscina por institucion
+    obtenerTodosLosUsuariosComplejosPiscina: async (req, res) => {
+        const { institucion } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ institucion });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
+    //obtener todos los usuarios de piscina por centro deportivo
+    obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo: async (req, res) => {
+        const { centroDeportivo } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ centroDeportivo });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
+    //obtener todos los usuarios de piscina por espacio deportivo
+    obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo: async (req, res) => {
+        const { espacioDeportivo } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ espacioDeportivo });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
+    //actualizar usuario de piscina
+    actualizarUsuarioComplejoPiscina: async (req, res) => {
+        const { id } = req.params;
+        try {
+            const user = await UsuariosComplejos.findByIdAndUpdate(id, req.body, { new: true });
+            res.status(200).json({ message: "Usuario de piscina actualizado correctamente", user });
+        } catch (error) {   
+            console.log(error);
+            res.status(500).json({ message: "Error al actualizar usuario de piscina", error });
+        }
+    },
+    //eliminar usuario de piscina
+    eliminarUsuarioComplejoPiscina: async (req, res) => {   
+        const { id } = req.params;
+        try {
+            const user = await UsuariosComplejos.findByIdAndDelete(id);
+            res.status(200).json({ message: "Usuario de piscina eliminado correctamente", user });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al eliminar usuario de piscina", error });
+        }
+    }
 }
 
 

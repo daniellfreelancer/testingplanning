@@ -11,4 +11,13 @@ router.post("/login-usuario", usuariosComplejosController.loginUsuarioComplejo);
 router.post("/logout-usuario/:id", usuariosComplejosController.logoutUsuarioComplejo); //tested
 router.post("/forgot-password-usuario", usuariosComplejosController.forgotPasswordUsuarioComplejo); //tested
 
+// Usuarios de piscina
+router.post("/crear-usuario-piscina", usuariosComplejosController.crearUsuarioComplejosPiscina);
+router.get("/obtener-usuario-piscina/:rut", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
+router.get("/obtener-todos-usuarios-piscina/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscina);
+router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
+router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);
+router.put("/actualizar-usuario-piscina/:id", usuariosComplejosController.actualizarUsuarioComplejoPiscina);
+router.delete("/eliminar-usuario-piscina/:id", usuariosComplejosController.eliminarUsuarioComplejoPiscina);
+
 module.exports = router;

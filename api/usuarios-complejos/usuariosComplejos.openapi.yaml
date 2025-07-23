@@ -1,0 +1,323 @@
+openapi: 3.0.0
+info:
+  title: API Usuarios Complejos
+  version: 1.0.0
+  description: API para la gestión de usuarios complejos y usuarios de piscina
+servers:
+  - url: /api/usuarios-complejos
+paths:
+  /crear-usuario:
+    post:
+      summary: Crear usuario complejo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioComplejoInput'
+      responses:
+        '201':
+          description: Usuario creado correctamente
+        '400':
+          description: Error de validación
+  /actualizar-usuario/{id}:
+    put:
+      summary: Actualizar usuario complejo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioComplejoInput'
+      responses:
+        '200':
+          description: Usuario actualizado correctamente
+        '404':
+          description: Usuario no encontrado
+  /obtener-usuario/{id}:
+    get:
+      summary: Obtener usuario complejo por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario encontrado correctamente
+        '404':
+          description: Usuario no encontrado
+  /eliminar-usuario/{id}:
+    delete:
+      summary: Eliminar usuario complejo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario eliminado correctamente
+        '404':
+          description: Usuario no encontrado
+  /obtener-todos-los-usuarios:
+    get:
+      summary: Obtener todos los usuarios complejos
+      responses:
+        '200':
+          description: Usuarios encontrados correctamente
+  /login-usuario:
+    post:
+      summary: Login de usuario complejo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Inicio de sesión exitoso
+        '401':
+          description: Credenciales incorrectas
+  /logout-usuario/{id}:
+    post:
+      summary: Logout de usuario complejo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sesión cerrada correctamente
+        '404':
+          description: Usuario no encontrado
+  /forgot-password-usuario:
+    post:
+      summary: Recuperar contraseña de usuario complejo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Nueva contraseña enviada al correo
+        '404':
+          description: Usuario no encontrado
+
+  # Usuarios de piscina
+  /crear-usuario-piscina:
+    post:
+      summary: Crear usuario de piscina
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioPiscinaInput'
+      responses:
+        '201':
+          description: Usuario de piscina creado correctamente
+        '400':
+          description: Error de validación
+  /obtener-usuario-piscina/{rut}:
+    get:
+      summary: Obtener usuario de piscina por RUT
+      parameters:
+        - in: path
+          name: rut
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario de piscina encontrado correctamente
+        '404':
+          description: Usuario no encontrado
+  /obtener-todos-usuarios-piscina/{institucion}:
+    get:
+      summary: Obtener todos los usuarios de piscina por institución
+      parameters:
+        - in: path
+          name: institucion
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuarios de piscina encontrados correctamente
+  /obtener-todos-usuarios-piscina-centro/{centroDeportivo}:
+    get:
+      summary: Obtener todos los usuarios de piscina por centro deportivo
+      parameters:
+        - in: path
+          name: centroDeportivo
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuarios de piscina encontrados correctamente
+  /obtener-todos-usuarios-piscina-espacio/{espacioDeportivo}:
+    get:
+      summary: Obtener todos los usuarios de piscina por espacio deportivo
+      parameters:
+        - in: path
+          name: espacioDeportivo
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuarios de piscina encontrados correctamente
+  /actualizar-usuario-piscina/{id}:
+    put:
+      summary: Actualizar usuario de piscina
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioPiscinaInput'
+      responses:
+        '200':
+          description: Usuario de piscina actualizado correctamente
+        '404':
+          description: Usuario no encontrado
+  /eliminar-usuario-piscina/{id}:
+    delete:
+      summary: Eliminar usuario de piscina
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario de piscina eliminado correctamente
+        '404':
+          description: Usuario no encontrado
+
+components:
+  schemas:
+    UsuarioComplejoInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        rol:
+          type: string
+        status:
+          type: boolean
+        rut:
+          type: string
+        telefono:
+          type: string
+        institucion:
+          type: array
+          items:
+            type: string
+        centroDeportivo:
+          type: array
+          items:
+            type: string
+        espacioDeportivo:
+          type: array
+          items:
+            type: string
+        taller:
+          type: string
+        misreservas:
+          type: array
+          items:
+            type: string
+        logeado:
+          type: boolean
+    UsuarioPiscinaInput:
+      type: object
+      properties:
+        institucion:
+          type: string
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+        rut:
+          type: string
+        telefono:
+          type: string
+        comuna:
+          type: string
+        fechaNacimiento:
+          type: string
+          example: "dd/mm/yyyy"
+        sexo:
+          type: string
+        direccion:
+          type: string
+        numeroDireccion:
+          type: string
+        padecePatologia:
+          type: boolean
+        descripcionPatologia:
+          type: string
+        neurodivergente:
+          type: boolean
+        objetivoIngreso:
+          type: string
+        contactoEmergencia:
+          type: object
+          properties:
+            nombres:
+              type: string
+            apellidos:
+              type: string
+            parentesco:
+              type: string
+            telefono:
+              type: string
+        tipoPlan:
+          type: string
+        bloqueHorario:
+          type: string
+        declaracionSalud:
+          type: boolean
+        aceptacionReglamento:
+          type: boolean
+        autorizacionDatos:
+          type: boolean 

@@ -1,0 +1,157 @@
+openapi: 3.0.0
+info:
+  title: Espacios Deportivos API
+  version: 1.0.0
+  description: API para la gestión de espacios deportivos
+
+paths:
+  /espacios-deportivos/:
+    get:
+      summary: Obtener todos los espacios deportivos
+      responses:
+        '200':
+          description: Lista de espacios deportivos
+    post:
+      summary: Crear un espacio deportivo
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: string
+          required: false
+          description: ID opcional para crear o actualizar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Espacio deportivo creado
+
+  /espacios-deportivos/{id}:
+    get:
+      summary: Obtener espacio deportivo por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Espacio deportivo encontrado
+        '404':
+          description: No encontrado
+    put:
+      summary: Actualizar espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Espacio deportivo actualizado
+
+  /espacios-deportivos/{id}/admin:
+    post:
+      summary: Agregar admin a espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Admin agregado
+    delete:
+      summary: Eliminar admin de espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Admin eliminado
+
+  /espacios-deportivos/{id}/institucion:
+    post:
+      summary: Agregar institución a espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Institución agregada
+    delete:
+      summary: Eliminar institución de espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Institución eliminada
+
+  /espacios-deportivos/{id}/centro-deportivo:
+    post:
+      summary: Agregar centro deportivo a espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Centro deportivo agregado
+    delete:
+      summary: Eliminar centro deportivo de espacio deportivo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Centro deportivo eliminado
+
+components:
+  schemas:
+    # Puedes definir aquí los esquemas de tus modelos si lo deseas 
