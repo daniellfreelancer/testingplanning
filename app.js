@@ -65,6 +65,7 @@ const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosCo
 const institucionesDeportivas = require('./api/institucion/institucionRoutes')
 const centrosDeportivos = require('./api/centros-deportivos/centrosDeportivosRoutes')
 const espaciosDeportivos = require('./api/espacios-deportivos/espaciosDeportivosRoutes')
+const accesoUsuariosComplejos = require('./api/acceso-usuarios-complejos/accesoUsuarioComplejosRouter')
 
 var app = express();
 
@@ -141,6 +142,7 @@ app.use('/vm-users-cd', usuariosComplejosDeportivos) // usuarios complejos depor
 app.use('/vm-instituciones-deportivas', institucionesDeportivas) // instituciones deportivas
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
+app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

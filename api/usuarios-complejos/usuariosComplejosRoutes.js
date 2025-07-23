@@ -13,7 +13,7 @@ router.post("/forgot-password-usuario", usuariosComplejosController.forgotPasswo
 
 // Usuarios de piscina
 router.post("/crear-usuario-piscina", usuariosComplejosController.crearUsuarioComplejosPiscina);
-router.get("/obtener-usuario-piscina/:rut", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
+router.get("/obtener-usuario-piscina/:doc", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
 router.get("/obtener-todos-usuarios-piscina/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscina);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
 router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);

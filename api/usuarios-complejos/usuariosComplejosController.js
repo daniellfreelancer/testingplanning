@@ -300,12 +300,38 @@ const usuariosComplejosController = {
     },
     //obtener usuario de piscina por rut
     obtenerUsuarioComplejoPiscina: async (req, res) => {
-        const { rut } = req.params;
+        const { doc } = req.params;
         try {
-            const user = await UsuariosComplejos.findOne({ rut });
-            res.status(200).json({ message: "Usuario de piscina encontrado correctamente", user });
+            // Buscar un usuario cuyo rut comience con el doc recibido (sin dígito verificador)
+
+            //popular  el response, para que retorne el usuario con los datos : "nombre, apellido, rut, email, telefono, rol, tipoPlan"
+
+
+            const user = await UsuariosComplejos.findOne({
+                rut: { $regex: `^${doc}\\d$` } // doc seguido de 1 dígito numérico
+            });
+
+
+    
+            if (!user) {
+                return res.status(404).json({ message: "Usuario de piscina no encontrado" });
+            }
+    
+            res.status(200).json({
+                message: "Usuario de piscina encontrado correctamente",
+                user: {
+                    nombre: user.nombre,
+                    apellido: user.apellido,
+                    rut: user.rut,
+                    email: user.email,
+                    telefono: user.telefono,
+                    rol: user.rol,
+                    tipoPlan: user.tipoPlan
+                }
+            });
+    
         } catch (error) {
-            console.log(error);
+            console.error(error);
             res.status(500).json({ message: "Error al obtener usuario de piscina", error });
         }
     },
@@ -313,7 +339,11 @@ const usuariosComplejosController = {
     obtenerTodosLosUsuariosComplejosPiscina: async (req, res) => {
         const { institucion } = req.params;
         try {
-            const users = await UsuariosComplejos.find({ institucion });
+            //unicamente traer los usuarios que tengan el rol = usuario
+            const users = await UsuariosComplejos.find({ institucion, rol: "usuario" });
+
+
+
             res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
         } catch (error) {
             console.log(error);
@@ -357,8 +387,31 @@ const usuariosComplejosController = {
     eliminarUsuarioComplejoPiscina: async (req, res) => {   
         const { id } = req.params;
         try {
-            const user = await UsuariosComplejos.findByIdAndDelete(id);
+
+            /**
+             * 1. eliminar el usuario de la institucion
+             * 2. eliminar el usuario de la base de datos
+             */
+
+            //primero buscamos el usuario en la base de datos
+            const user = await UsuariosComplejos.findById(id);
+            if (!user) {
+                return res.status(404).json({ message: "Usuario no encontrado" });
+            }
+
+            //luego eliminamos el usuario de la institucion
+            const institucion = await Institucion.findById(user.institucion);
+            if (!institucion) {
+                return res.status(404).json({ message: "Institución no encontrada" });
+            }
+            institucion.usuarios = institucion.usuarios.filter(usuario => usuario.toString() !== id);
+            await institucion.save();
+
+            //luego eliminamos el usuario de la base de datos
+            await UsuariosComplejos.findByIdAndDelete(id);
+
             res.status(200).json({ message: "Usuario de piscina eliminado correctamente", user });
+
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al eliminar usuario de piscina", error });
