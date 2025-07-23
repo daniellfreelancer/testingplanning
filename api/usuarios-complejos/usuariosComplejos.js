@@ -35,7 +35,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
     parentesco: { type: String },
     telefono: { type: String }
   },
-  tipoPlan: { type: mongoose.Types.ObjectId, ref: 'talleres' }, // Tipo de plan
+  tipoPlan: { type: String }, // Tipo de plan
   bloqueHorario: { type: String }, // Bloque horario
   fotoCedulaFrontal: { type: String }, // URL/path foto cédula frontal
   fotoCedulaReverso: { type: String }, // URL/path foto cédula reverso
