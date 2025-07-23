@@ -12,16 +12,17 @@ const espaciosDeportivosSchema = new mongoose.Schema({
   comuna: { type: String },
   institucion: [{ type: mongoose.Types.ObjectId, ref: 'institucion' }],
   centroDeportivo: [{ type: mongoose.Types.ObjectId, ref: 'centroDeportivo' }],
-  admins: [{ type: mongoose.Types.ObjectId, ref: 'usuario' }],
-  usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuario' }],
-  profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuario' }],
+  admins: [{ type: mongoose.Types.ObjectId, ref: 'usuarios' }],
+  usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuarios' }],
+  profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuarios' }],
   talleres: [{ type: mongoose.Types.ObjectId, ref: 'talleres' }],
-  status: { type: Boolean },
+  status: { type: Boolean, default: true },
   deporte: { type: String },
-  horarios: [{ type: String }],
+  horarios: [{ type: Object }],
   pago: {type: Boolean},
   valor: {type: Number},
   capacidad: {type: Number},
+  reservas: [{type: mongoose.Types.ObjectId, ref: 'reservas'}],
 
 },{
     timestamps: true

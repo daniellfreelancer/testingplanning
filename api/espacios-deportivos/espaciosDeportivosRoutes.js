@@ -3,7 +3,7 @@ const router = express.Router();
 const espaciosDeportivosController = require('./espaciosDeportivosController');
 
 // Crear espacio deportivo
-router.post('/:id?', espaciosDeportivosController.crearEspacioDeportivo);
+router.post('/crear-espacio-deportivo/:id?', espaciosDeportivosController.crearEspacioDeportivo);
 // Actualizar espacio deportivo
 router.put('/:id', espaciosDeportivosController.actualizarEspacioDeportivo);
 // Obtener espacio deportivo por id
