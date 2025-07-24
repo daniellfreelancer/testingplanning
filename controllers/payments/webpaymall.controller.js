@@ -74,19 +74,19 @@ const webpayMallController = {
             res.status(200).json(response);
         } catch (error) {
             console.error("Commit error:", error.response?.data || error.message);
-            res.status(500).json({ error: "Error al confirmar la transacción mall" });
+            res.status(500).json({ error: "Error al confirmar la transacción" });
         }
     },
 
     getStatus: async (req, res) => {
         try {
-            const { token } = req.params;
+            const { token_ws } = req.body;
 
-            const response = await transaction.status(token);
+            const response = await transaction.status(token_ws);
             res.status(200).json(response);
         } catch (error) {
             console.error("Status error:", error.response?.data || error.message);
-            res.status(500).json({ error: "Error al obtener estado mall" });
+            res.status(500).json({ error: "Error al obtener estado" });
         }
     },
 
