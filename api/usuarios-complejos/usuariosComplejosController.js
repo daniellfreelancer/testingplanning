@@ -153,6 +153,12 @@ const usuariosComplejosController = {
                             taller: user.taller,
                             misreservas: user.misreservas,
                             logeado: user.logeado,
+                            fechaNacimiento: user.fechaNacimiento,
+                            sexo: user.sexo,
+                            direccion: user.direccion,
+                            numeroDireccion: user.numeroDireccion,
+                            imgUrl: user.imgUrl,
+                           
                         }
                     });
                 } else {

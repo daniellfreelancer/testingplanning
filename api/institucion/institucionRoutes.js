@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const institucionController = require('./institucionController');
+const upload = require('../../libs/docsStorage');
 
-router.post('/crear-institucion/:id', institucionController.crearInstitucion); //tested
-router.put('/actualizar-institucion/:id', institucionController.actualizarInstitucion); //tested
+router.post('/crear-institucion/:id', upload.single('imgUrl'), institucionController.crearInstitucion); //tested
+router.put('/actualizar-institucion/:id', upload.single('imgUrl'), institucionController.actualizarInstitucion); //tested
 router.get('/obtener-institucion/:id', institucionController.obtenerInstitucion); //tested
 router.get('/obtener-todas-las-instituciones', institucionController.obtenerTodasLasInstituciones); //tested
 router.post('/agregar-admin-a-institucion/:id', institucionController.agregarAdminAInstitucion);
