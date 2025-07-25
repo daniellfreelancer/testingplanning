@@ -55,7 +55,7 @@ const fcm = require('./routes/fcm.routes')
 const car = require('./routes/appoiment.routes')
 const userGym = require('./api/gym/routes/gymUser.routes')
 const gym = require('./api/gym/routes/gym.routes')
-
+const webpayMallRoutes = require('./routes/webpaymall.routes');
 const rekoAWS = require('./routes/awsRekonitionRoutes')
 const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
@@ -134,8 +134,12 @@ app.use('/appointments', car)
 app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
+
 // Transbank Routes
-app.use('/transbank', transbankRoutes);
+app.use('/transbank', transbankRoutes); // Rutas webpay plus
+app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall
+
+
 app.use('/access', accessControl)
 app.use('/users-car', usersUCAD)
 app.use('/vm-users-cd', usuariosComplejosDeportivos) // usuarios complejos deportivos
