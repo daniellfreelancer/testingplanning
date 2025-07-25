@@ -1,5 +1,21 @@
 const Institucion = require('./institucionModel');
 const User = require('../usuarios-complejos/usuariosComplejos');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const crypto = require('crypto');
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
+
+const clientAWS = new S3Client({
+  region: bucketRegion,
+  credentials: {
+    accessKeyId: publicKey,
+    secretAccessKey: privateKey,
+  },
+})
+
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 
 const institucionController = {
@@ -19,7 +35,26 @@ const institucionController = {
                 ...req.body,
                 admins: [id],
             });
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+      
+                const uploadParams = {
+                  Bucket: bucketName,
+                  Key: fileName,
+                  Body: fileContent,
+                };
+      
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                nuevaInstitucion.imgUrl = fileName;
+            }
             await nuevaInstitucion.save();
+
 
             //asignar el id de la institucion a la propiedad admins del usuario
             const user = await User.findByIdAndUpdate(id, { $push: { institucion: nuevaInstitucion._id } }, { new: true });
@@ -35,6 +70,24 @@ const institucionController = {
     try {
         const {id} = req.params;
         const institucion = await Institucion.findByIdAndUpdate(id, req.body, { new: true });
+
+        if (req.file) {
+            const fileContent = req.file.buffer;
+            const extension = req.file.originalname.split('.').pop();
+            const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+            const uploadParams = {
+                Bucket: bucketName,
+                Key: fileName,
+                Body: fileContent,
+            };
+
+            const uploadCommand = new PutObjectCommand(uploadParams);
+            await clientAWS.send(uploadCommand);
+
+            institucion.imgUrl = fileName;
+            await institucion.save();
+        }
         res.status(200).json({ message: "Institución actualizada correctamente", institucion });
     } catch (error) {
         console.log(error);
