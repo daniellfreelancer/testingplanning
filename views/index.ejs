@@ -6,6 +6,84 @@
     <link rel='stylesheet' href='/stylesheets/style.css' />
   </head>
   <body>
-    <h1><%= title %></h1>
+    <div class="container">
+      <header>
+        <h1 style="font-size:2.5em; margin-bottom:0.2em;">API VitalMove Backend</h1>
+        <p style="font-size:1.2em; color:#555;">Gestión educativa, deportiva y de complejos deportivos</p>
+        <p><strong>Versión:</strong> 1.0.8 &nbsp;|&nbsp; <strong>Fecha de lanzamiento:</strong> 05/08/2025</p>
+      </header>
+      <section style="margin-top:2em;">
+        <h2 style="color:#1976d2;"><span style="font-size:1.2em;">🏗️</span> Estructura General</h2>
+        <ul style="line-height:1.7;">
+          <li><strong>Framework:</strong> Express.js</li>
+          <li><strong>Base de Datos:</strong> MongoDB + Mongoose</li>
+          <li><strong>Autenticación:</strong> JWT</li>
+          <li><strong>Almacenamiento:</strong> AWS S3</li>
+          <li><strong>Notificaciones:</strong> Firebase Cloud Messaging (FCM)</li>
+          <li><strong>Pagos:</strong> Transbank</li>
+        </ul>
+      </section>
+      <section style="margin-top:2em;">
+        <h2 style="color:#1976d2;"><span style="font-size:1.2em;">📋</span> Módulos y Endpoints Principales</h2>
+        <div style="max-height:400px; overflow:auto; border:1px solid #eee; border-radius:8px; background:#fafafa;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
+            <thead style="background:#e3f2fd;">
+              <tr>
+                <th style="padding:8px; border-bottom:1px solid #ddd;">Módulo</th>
+                <th style="padding:8px; border-bottom:1px solid #ddd;">Endpoint</th>
+                <th style="padding:8px; border-bottom:1px solid #ddd;">Método</th>
+                <th style="padding:8px; border-bottom:1px solid #ddd;">Descripción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Admin</td><td>/admin/register</td><td>POST</td><td>Registrar nuevo administrador</td></tr>
+              <tr><td>Instituciones</td><td>/insti/create</td><td>POST</td><td>Crear nueva institución</td></tr>
+              <tr><td>Escuelas</td><td>/school/create</td><td>POST</td><td>Crear nueva escuela</td></tr>
+              <tr><td>Aulas</td><td>/classroom/create</td><td>POST</td><td>Crear nueva aula</td></tr>
+              <tr><td>Estudiantes</td><td>/student/create</td><td>POST</td><td>Crear nuevo estudiante</td></tr>
+              <tr><td>Planificación</td><td>/planing/create</td><td>POST</td><td>Crear nueva planificación</td></tr>
+              <tr><td>Programas</td><td>/program/create</td><td>POST</td><td>Crear nuevo programa</td></tr>
+              <tr><td>Talleres</td><td>/workshop/create</td><td>POST</td><td>Crear nuevo taller</td></tr>
+              <tr><td>Notificaciones</td><td>/notification/create-to-all-students</td><td>POST</td><td>Crear notificación para todos los estudiantes</td></tr>
+              <tr><td>Fitness</td><td>/googlefit/register</td><td>POST</td><td>Registrar datos de fitness</td></tr>
+              <tr><td>Dispositivos</td><td>/devices/create-device</td><td>POST</td><td>Crear dispositivo</td></tr>
+              <tr><td>Registros Médicos</td><td>/medical/register</td><td>POST</td><td>Crear registro médico</td></tr>
+              <tr><td>HRV</td><td>/hrv/add-register</td><td>POST</td><td>Agregar registro HRV</td></tr>
+              <tr><td>Clubes Deportivos</td><td>/sportclub/create-club/:institutionId</td><td>POST</td><td>Crear club deportivo</td></tr>
+              <tr><td>Pagos</td><td>/transbank/init</td><td>POST</td><td>Inicializar transacción</td></tr>
+              <tr><td>Usuarios CAR</td><td>/users-car/signup</td><td>POST</td><td>Registrar usuario CAR</td></tr>
+              <tr><td>Planificador</td><td>/planner/create</td><td>POST</td><td>Crear plan</td></tr>
+              <tr><td>Centros Deportivos</td><td>/vm-centros-deportivos/crear-centro-deportivo/:id</td><td>POST</td><td>Crear centro deportivo</td></tr>
+              <tr><td>Espacios Deportivos</td><td>/vm-espacios-deportivos/:id</td><td>POST</td><td>Crear espacio deportivo</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:1em; color:#888; font-size:0.95em;">Más de 200 endpoints disponibles. Consulta la documentación completa para detalles de cada módulo.</p>
+      </section>
+      <section style="margin-top:2em;">
+        <h2 style="color:#1976d2;"><span style="font-size:1.2em;">🎯</span> Casos de Uso Principales</h2>
+        <ul style="line-height:1.7;">
+          <li>Gestión Educativa: Instituciones, escuelas, aulas, estudiantes y profesores</li>
+          <li>Gestión Deportiva: Clubes, categorías deportivas, entrenamientos y membresías</li>
+          <li>Complejos Deportivos: Centros deportivos, espacios deportivos y usuarios</li>
+          <li>Médicos: Registros médicos y control de acceso</li>
+          <li>Fitness: Registro de datos de fitness y HRV</li>
+          <li>Gimnasio: Usuarios y administración de gimnasio</li>
+          <li>AWS Rekognition: Verificación de personas</li>
+          <li>Transbank: Integración de pagos</li>
+        </ul>
+      </section>
+      <footer style="margin-top:3em; text-align:center; color:#aaa; font-size:0.9em;">
+        <p>VitalMove Backend &copy; 2025</p>
+      </footer>
+    </div>
+    <style>
+      body { font-family: 'Segoe UI', Arial, sans-serif; background:#f5f7fa; margin:0; }
+      .container { max-width:900px; margin:2em auto; background:#fff; padding:2em 2.5em; border-radius:12px; box-shadow:0 2px 16px #0001; }
+      h1, h2 { font-weight:600; }
+      table th, table td { text-align:left; }
+      table tr:nth-child(even) { background:#f0f4f8; }
+      ul { margin:0; padding-left:1.2em; }
+    </style>
   </body>
 </html>

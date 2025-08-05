@@ -8,6 +8,7 @@ const trainingAppSchema = new mongoose.Schema({
     heartRate: { type: Array },
     endTime: { type: String },
     sport: { type: String},
+    trainingType: { type: String},
 },
 {
     timestamps: true,
