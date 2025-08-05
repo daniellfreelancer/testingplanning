@@ -145,7 +145,7 @@ const trainingAppController = {
             } else {
                 res.status(400).json({
                     success: false,
-                    message: "Entrenamiento no encontrado"
+                    message: "No se encontró el entrenamiento"
                 })
             }
 
