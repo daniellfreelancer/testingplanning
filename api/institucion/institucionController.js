@@ -68,9 +68,49 @@ const institucionController = {
   },
   actualizarInstitucion: async (req, res) => {
     try {
-        const {id} = req.params;
-        const institucion = await Institucion.findByIdAndUpdate(id, req.body, { new: true });
+        const { id } = req.params;
+        let institucion = await Institucion.findById(id);
+        if (!institucion) {
+            return res.status(404).json({ message: "Institución no encontrada" });
+        }
 
+        // Guardar los admins actuales antes de actualizar
+        const prevAdmins = institucion.admins.map(a => a.toString());
+        let newAdmins = req.body.admins ? req.body.admins.map(a => a.toString()) : null;
+
+        // Actualizar campos generales (sin admins ni imgUrl)
+        const updateData = { ...req.body };
+        delete updateData.admins;
+        delete updateData.imgUrl;
+
+        institucion = await Institucion.findByIdAndUpdate(id, updateData, { new: true });
+
+        // Si se recibe admins, actualizar el array y sincronizar usuarios
+        if (newAdmins) {
+            institucion.admins = newAdmins;
+            await institucion.save();
+
+            // Determinar usuarios agregados y eliminados
+            const agregados = newAdmins.filter(a => !prevAdmins.includes(a));
+            const eliminados = prevAdmins.filter(a => !newAdmins.includes(a));
+
+            // Agregar institucion a los nuevos admins
+            if (agregados.length > 0) {
+                await User.updateMany(
+                  { _id: { $in: agregados } },
+                  { $addToSet: { institucion: institucion._id } }
+                );
+            }
+            // Quitar institucion de los admins eliminados
+            if (eliminados.length > 0) {
+                await User.updateMany(
+                  { _id: { $in: eliminados } },
+                  { $pull: { institucion: institucion._id } }
+                );
+            }
+        }
+
+        // Lógica de imagen (mantener igual)
         if (req.file) {
             const fileContent = req.file.buffer;
             const extension = req.file.originalname.split('.').pop();
@@ -97,7 +137,7 @@ const institucionController = {
   obtenerInstitucion: async (req, res) => {
     try {
         const {id} = req.params;
-        const institucion = await Institucion.findById(id);
+        const institucion = await Institucion.findById(id).populate('admins',{nombre: 1, apellido: 1, email: 1, rol: 1,telefono: 1});
         res.status(200).json({ message: "Institución obtenida correctamente", institucion });
     } catch (error) {
         console.log(error);
