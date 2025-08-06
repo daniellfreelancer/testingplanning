@@ -326,7 +326,7 @@ const userController = {
                 }
               );
 
-              await admin.populate('classroom school workshop program')
+              await admin.populate('classroom school workshop program institution')
 
               const loginAdmin = {
                 id: admin._id,
@@ -350,13 +350,14 @@ const userController = {
                 verified: admin.verified,
                 code: admin.code,
                 from: admin.from,
-                institution: admin.institution,
+                institution: admin.institution._id,
                 idFront: admin.idFront,
                 idBack: admin.idBack,
                 backgroundDoc: admin.backgroundDoc,
                 otherDocs: admin.otherDocs,
                 controlParental: admin.controlParental,
-                birth: admin.birth
+                birth: admin.birth,
+                institucion: admin.institution
 
               };
 
