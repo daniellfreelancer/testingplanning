@@ -12,6 +12,7 @@ const encuestaSchema = new mongoose.Schema({
   creadaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'UsuarioComplejo' },
   respondidaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'UsuarioComplejo' },
   respondida: { type: Boolean, default: false },
+  habilitada: { type: Boolean, default: true },
   pregunta1: { type: preguntaSchema, required: false },
   pregunta2: { type: preguntaSchema, required: false },
   pregunta3: { type: preguntaSchema, required: false },
