@@ -13,8 +13,11 @@ router.post('/obtenerEncuestaPorCreador', controller.obtenerEncuestaPorCreador);
 router.post('/obtenerEncuestaPorUsuario', controller.obtenerEncuestaPorUsuario);
 router.post('/obtenerEncuestaPorIdInterno', controller.obtenerEncuestaPorIdInterno);
 
+// Editar encuesta
+router.post('/editarEncuesta', controller.editarEncuesta);
+
 // Eliminar encuesta
-router.post('/eliminarEncuesta', controller.eliminarEncuesta); // cambiado de DELETE a POST
+router.post('/eliminarEncuesta', controller.eliminarEncuesta);
 
 // Responder encuesta
 router.post('/responderEncuesta', controller.responderEncuesta);
