@@ -350,7 +350,7 @@ const userController = {
                 verified: admin.verified,
                 code: admin.code,
                 from: admin.from,
-                institution: admin.institution._id,
+                institution: admin.institution?._id ? admin.institution?._id : admin.institution,
                 idFront: admin.idFront,
                 idBack: admin.idBack,
                 backgroundDoc: admin.backgroundDoc,
