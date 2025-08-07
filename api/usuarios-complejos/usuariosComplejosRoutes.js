@@ -20,5 +20,7 @@ router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosCo
 router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);
 router.put("/actualizar-usuario-piscina/:id", usuariosComplejosController.actualizarUsuarioComplejoPiscina);
 router.delete("/eliminar-usuario-piscina/:id", usuariosComplejosController.eliminarUsuarioComplejoPiscina);
+//usuarios por institucion
+router.get("/obtener-usuarios-institucion/:id", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion); //tested
 
 module.exports = router;

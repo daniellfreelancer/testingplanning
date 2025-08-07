@@ -409,9 +409,6 @@ const usuariosComplejosController = {
         try {
             //unicamente traer los usuarios que tengan el rol = usuario
             const users = await UsuariosComplejos.find({ institucion, rol: "usuario" });
-
-
-
             res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
         } catch (error) {
             console.log(error);
@@ -483,6 +480,17 @@ const usuariosComplejosController = {
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al eliminar usuario de piscina", error });
+        }
+    },
+    //traer todos los usuarios por Id de institucion
+    obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion: async (req, res) => {
+        const { institucion } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ institucion });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
         }
     }
 }
