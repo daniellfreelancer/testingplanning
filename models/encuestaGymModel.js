@@ -7,10 +7,10 @@ const preguntaSchema = {
 
 const encuestaSchema = new mongoose.Schema({
   idInterno: String,
-  institucion: { type: mongoose.Schema.Types.ObjectId, ref: 'Institucion' },
-  complejos: { type: mongoose.Schema.Types.ObjectId, ref: 'Complejo' },
-  creadaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'UsuarioComplejo' },
-  respondidaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'UsuarioComplejo' },
+  institucion: { type: mongoose.Schema.Types.ObjectId, ref: 'institucion' },
+  complejo: { type: mongoose.Schema.Types.ObjectId, ref: 'centroDeportivo' },
+  creadaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'usuariosComplejos' },
+  respondidaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'usuariosComplejos' },
   respondida: { type: Boolean, default: false },
   habilitada: { type: Boolean, default: true },
   pregunta1: { type: preguntaSchema, required: false },
