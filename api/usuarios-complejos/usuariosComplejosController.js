@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
 const Institucion = require("../institucion/institucionModel");
+const CentroDeportivo = require("../centros-deportivos/centrosDeportivosModel");
 
 function generateRandomPassword(length = 8) {
     const characters =
@@ -18,7 +19,7 @@ function generateRandomPassword(length = 8) {
 
 const usuariosComplejosController = {
     crearUsuarioComplejo: async (req, res) => {
-        const { nombre, apellido, email, rol, status, rut, from, institucionId } = req.body;
+        const { nombre, apellido, email, rol, status, rut, from, institucionId, centroDeportivoId, espacioDeportivoId, tallerId } = req.body;
         const password = generateRandomPassword(8);
         try {
 
@@ -60,13 +61,22 @@ const usuariosComplejosController = {
                 newUser.institucion = institucion._id;
             }
 
+            if (centroDeportivoId) {
+                const centroDeportivo = await CentroDeportivo.findById(centroDeportivoId);
+                if (!centroDeportivo) {
+                    return res.status(404).json({ message: "Centro deportivo no encontrado" });
+                }
+                centroDeportivo.usuarios.push(newUser._id);
+                await centroDeportivo.save();
+                newUser.centroDeportivo = centroDeportivo._id;
+            }
+
             await newUser.save();
 
 
             let userName = `${nombre} ${apellido}`;
             // Enviar correo de bienvenida
             await sendWelcomeEmail(email, password, userName);
-
 
             res.status(201).json({ message: "Usuario creado correctamente", user: newUser });
 
