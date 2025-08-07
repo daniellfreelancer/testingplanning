@@ -14,10 +14,10 @@ const complejosSchema = new mongoose.Schema({
   espaciosDeportivos: [{ type: mongoose.Types.ObjectId, ref:'espacioDeportivo' }],
   centrosDeportivos: [{ type: mongoose.Types.ObjectId, ref:'centroDeportivo' }],
   admins: [{ type: mongoose.Types.ObjectId, ref:'usuariosComplejos' }],
-  director:[{type: mongoose.Types.ObjectId, ref:'usuario'}],
-  adminsOficina:[{type: mongoose.Types.ObjectId, ref:'usuario'}],
+  director:[{type: mongoose.Types.ObjectId, ref:'usuariosComplejos'}],
+  adminsOficina:[{type: mongoose.Types.ObjectId, ref:'usuariosComplejos'}],
   usuarios: [{ type: mongoose.Types.ObjectId, ref:'usuariosComplejos' }],
-  profesores: [{ type: mongoose.Types.ObjectId, ref:'usuario' }],
+  profesores: [{ type: mongoose.Types.ObjectId, ref:'usuariosComplejos' }],
 
 }, {
     timestamps: true

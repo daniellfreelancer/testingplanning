@@ -43,6 +43,10 @@ const usuariosComplejosSchema = new mongoose.Schema({
   declaracionSalud: { type: Boolean }, // Declaración de salud compatible
   aceptacionReglamento: { type: Boolean }, // Aceptación de reglamento
   autorizacionDatos: { type: Boolean }, // Autorización tratamiento de datos
+  entrenador: { type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' },
+  alumnos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
+
+
 
 },{
     timestamps: true

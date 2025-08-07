@@ -10,6 +10,7 @@ router.get("/obtener-todos-los-usuarios", usuariosComplejosController.obtenerTod
 router.post("/login-usuario", usuariosComplejosController.loginUsuarioComplejo); //tested
 router.post("/logout-usuario/:id", usuariosComplejosController.logoutUsuarioComplejo); //tested
 router.post("/forgot-password-usuario", usuariosComplejosController.forgotPasswordUsuarioComplejo); //tested
+router.post("/asignar-alumnos-a-entrenador", usuariosComplejosController.asignarAlumnosAEntrenador); //tested
 
 // Usuarios de piscina
 router.post("/crear-usuario-piscina", usuariosComplejosController.crearUsuarioComplejosPiscina);
