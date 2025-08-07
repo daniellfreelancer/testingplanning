@@ -17,6 +17,21 @@ const clientAWS = new S3Client({
 
 const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
+const populateUsersInstitucion = [
+  {
+    path: 'admins',
+    select: 'nombre apellido rol telefono email',
+  },
+  {
+    path: 'usuarios',
+     select: 'nombre apellido rol telefono email',
+  },
+  {
+    path: 'profesores',
+      select: 'nombre apellido rol telefono email',
+  }
+]
+
 
 const institucionController = {
   crearInstitucion: async (req, res) => {
@@ -137,7 +152,8 @@ const institucionController = {
   obtenerInstitucion: async (req, res) => {
     try {
         const {id} = req.params;
-        const institucion = await Institucion.findById(id).populate('admins',{nombre: 1, apellido: 1, email: 1, rol: 1,telefono: 1});
+        //const institucion = await Institucion.findById(id).populate('admins ',{nombre: 1, apellido: 1, email: 1, rol: 1,telefono: 1},);
+        const institucion = await Institucion.findById(id).populate(populateUsersInstitucion);
         res.status(200).json({ message: "Institución obtenida correctamente", institucion });
     } catch (error) {
         console.log(error);
