@@ -18,7 +18,7 @@ function generateRandomPassword(length = 8) {
 
 const usuariosComplejosController = {
     crearUsuarioComplejo: async (req, res) => {
-        const { nombre, apellido, email, rol, status, rut, from } = req.body;
+        const { nombre, apellido, email, rol, status, rut, from, institucionId } = req.body;
         const password = generateRandomPassword(8);
         try {
 
@@ -39,6 +39,27 @@ const usuariosComplejosController = {
             }
 
             const newUser = new UsuariosComplejos({ nombre, apellido, email, password: bcryptjs.hashSync(password, 10), rol, status, rut });
+
+            if (institucionId) {
+                const institucion = await Institucion.findById(institucionId);
+                if (!institucion) {
+                    return res.status(404).json({ message: "Institución no encontrada" });
+                }
+                if (newUser.rol === "TRAINER") {
+                    institucion.profesores.push(newUser._id);
+                } else if (newUser.rol === "USER") {
+                    institucion.usuarios.push(newUser._id);
+                } else if (newUser.rol === "ADMIN") {
+                    institucion.admins.push(newUser._id);
+                } else if (newUser.rol === "DIRECTOR") {
+                    institucion.director.push(newUser._id);
+                } else if (newUser.rol === "ADMIN_OFICINA") {
+                    institucion.adminsOficina.push(newUser._id);
+                }
+                await institucion.save();
+                newUser.institucion = institucion._id;
+            }
+
             await newUser.save();
 
 
@@ -56,6 +77,36 @@ const usuariosComplejosController = {
 
         }
        
+    },
+    asignarAlumnosAEntrenador: async (req, res) => {
+        const { entrenadorId, alumnosIds } = req.body;
+        try {
+            const entrenador = await UsuariosComplejos.findById(entrenadorId);
+            if (!entrenador) {
+                return res.status(404).json({ message: "Entrenador no encontrado" });
+            }
+            const alumnos = await UsuariosComplejos.find({ _id: { $in: alumnosIds } });
+            if (alumnos.length !== alumnosIds.length) {
+                return res.status(404).json({ message: "Algunos alumnos no encontrados" });
+            }
+
+            //agregar los alumnos al array alumnos del entrenador
+            entrenador.alumnos = [...entrenador.alumnos, ...alumnosIds];
+            await entrenador.save();
+
+            //agregar el entrenador al campo entrenador de los alumnos
+            alumnos.forEach(async (alumno) => {
+                alumno.entrenador = entrenadorId;
+                await alumno.save();
+            });
+
+
+            res.status(200).json({ message: "Alumnos asignados correctamente", alumnos });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al asignar alumnos a entrenador", error: error });
+        }
     },
     actualizarUsuarioComplejo: async (req, res) => {
         const { id } = req.params;

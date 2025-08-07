@@ -8,6 +8,7 @@ var logger = require('morgan');
 var cors = require('cors')
 const bodyParser = require('body-parser')
 const transbankRoutes = require('./routes/transbank.routes');
+const livenessRoutes = require("./routes/LivenessRoutes");
 
 const fileUpload = require('express-fileupload')
 // const { initializeApp } = require("firebase-admin/app");
@@ -59,6 +60,7 @@ const webpayMallRoutes = require('./routes/webpaymall.routes');
 const rekoAWS = require('./routes/awsRekonitionRoutes')
 const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
+const encuestaGymRoutes = require('./routes/encuestaGymRoutes');
 
 //SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
@@ -134,11 +136,14 @@ app.use('/appointments', car)
 app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
+app.use('/api/encuestas', encuestaGymRoutes);
 
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
 app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall
 
+// Liveness Routes
+app.use("/liveness", livenessRoutes);
 
 app.use('/access', accessControl)
 app.use('/users-car', usersUCAD)
