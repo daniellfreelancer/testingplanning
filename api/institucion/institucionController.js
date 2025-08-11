@@ -33,7 +33,11 @@ const populateUsersInstitucion = [
         path: 'alumnos',
         select: 'nombre apellido rut email status createdAt',
       }
-  }
+  },
+  {
+    path: 'centrosDeportivos',
+    select: 'nombre descripcion direccion telefono email rut ciudad comuna horarios',
+  },
 ]
 
 
