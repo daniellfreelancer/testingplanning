@@ -19,8 +19,10 @@ const userQueryPopulate = [
     {
         path: 'notifications',
         populate: [
-            { path: 'classroom workshop' },
+            // { path: 'classroom' },
+            // { path: 'workshop' },
             { path: 'createByStudent', model: 'student', select: 'name lastName imgUrl' },
+            { path: 'createByTeacher', model: 'user', select: 'name lastName imgUrl' },
         ]
     }
 ];
@@ -66,7 +68,7 @@ const notificationController = {
                     classroom.students.forEach(async (studentId) => {
                         const student = await Students.findById(studentId);
                         if (student) {
-                            student.notifications.push(notification);
+                            student.notifications.push(notification._id);
                             await student.save();
                         }
                     });
@@ -258,7 +260,7 @@ const notificationController = {
                 // const student = await Students.findById(studentId)
 
                 const student = await Students.findById(studentId)
-                    .populate(studentQueryPopulate)
+                    .populate(userQueryPopulate)
                     .exec();
 
                 if (student) {
@@ -307,7 +309,7 @@ const notificationController = {
           }
     
           // Agregar la notificación al array de notificaciones del estudiante
-          student.notifications.push(notification);
+          student.notifications.push(notification._id);
           await student.save();
     
           res.status(201).json({ message: 'Notificación creada y asignada al estudiante' });
