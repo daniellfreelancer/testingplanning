@@ -26,7 +26,7 @@ const adminSchema = new mongoose.Schema({
     clubs: [{ type: mongoose.Types.ObjectId, ref: 'club' }],
     sports: [{ type: mongoose.Types.ObjectId, ref: 'sportCategory' }],
     posts: [{ type: mongoose.Types.ObjectId, ref: 'post' }],
-    notifications: [{ type: Object }],
+    notifications: [{ type: mongoose.Types.ObjectId, ref: 'notification' }],
     from: [{ type: String }],  // from google o formularios
     verified: { type: Boolean },    // si es verificado por codigos
     code: { type: String },
