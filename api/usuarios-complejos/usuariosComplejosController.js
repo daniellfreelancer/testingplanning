@@ -118,6 +118,31 @@ const usuariosComplejosController = {
             res.status(500).json({ message: "Error al asignar alumnos a entrenador", error: error });
         }
     },
+    desasignarAlumnoDeEntrenador: async (req, res) => {
+        const { entrenadorId, alumnoId } = req.body;
+        try {
+            const entrenador = await UsuariosComplejos.findById(entrenadorId);
+            if (!entrenador) {
+                return res.status(404).json({ message: "Entrenador no encontrado" });
+            }
+            const alumno = await UsuariosComplejos.findById(alumnoId);
+            if (!alumno) {
+                return res.status(404).json({ message: "Alumno no encontrado" });
+            }
+            //eliminar el alumno del array alumnos del entrenador
+            entrenador.alumnos = entrenador.alumnos.filter(id => id.toString() !== alumnoId);
+            await entrenador.save();
+
+            //eliminar el entrenador del campo entrenador del alumno
+            alumno.entrenador = null;
+            await alumno.save();
+
+            res.status(200).json({ message: "Alumno desasignado correctamente", alumno });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al desasignar alumno de entrenador", error: error });
+        }
+    },
     actualizarUsuarioComplejo: async (req, res) => {
         const { id } = req.params;
 
