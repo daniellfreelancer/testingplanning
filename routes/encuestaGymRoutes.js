@@ -4,7 +4,7 @@ const controller = require('../controllers/encuestaGymController');
 
 // Crear encuesta
 router.post('/crearEncuesta', controller.crearEncuesta);
-router.post('/encuestas/masivo', controller.crearEncuestasMasivas);
+router.post('/masivo', controller.crearEncuestasMasivas);
 
 // Obtener encuestas
 router.post('/obtenerEncuesta', controller.obtenerEncuesta);

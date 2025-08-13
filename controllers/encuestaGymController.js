@@ -4,61 +4,56 @@ const EncuestaGym = require('../models/encuestaGymModel');
 const crearEncuestasMasivas = async (req, res) => {
     try {
         const {
-            idInternoBase,
-            institucion,
-            complejo,
-            creadaPor,
-            preguntas = {},
-            respondidaPorIds = [],
-        } = req.body;
+            respondidaPor,
+            idInterno: idInternoPrefijo = "ENC",
+            ...resto
+        } = req.body || {};
 
-        if (!Array.isArray(respondidaPorIds) || respondidaPorIds.length === 0) {
-            return res.status(400).json({ mensaje: 'Debe enviar respondidaPorIds (array con al menos 1 id).' });
+        if (!Array.isArray(respondidaPor) || respondidaPor.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                message: "El campo 'respondidaPor' debe ser un array con al menos un ID.",
+            });
         }
 
-        // Arma las preguntas si las mandan como objeto {1:{},2:{},...}
-        const buildPreguntas = () => {
-            const obj = {};
-            for (let i = 1; i <= 10; i++) {
-                const p = preguntas[i];
-                if (p && (p.titulo || p.valoracion != null)) {
-                    obj[`pregunta${i}`] = { titulo: p.titulo || '', valoracion: p.valoracion ?? undefined };
-                }
-            }
-            return obj;
-        };
+        const requeridos = ["institucion", "complejos", "creadaPor", "evaluado"];
+        const faltantes = requeridos.filter((k) => !resto[k]);
+        if (faltantes.length) {
+            return res.status(400).json({
+                ok: false,
+                message: `Faltan campos requeridos: ${faltantes.join(", ")}`,
+            });
+        }
 
-        const nowSuffix = Date.now(); // por si no te mandan idInternoBase
-        const docs = respondidaPorIds.map((respId, idx) => ({
-            idInterno: idInternoBase ? `${idInternoBase}-${idx + 1}` : `ENC-${nowSuffix}-${idx + 1}`,
-            institucion,
-            complejo,
-            creadaPor,
-            respondidaPor: respId,
-            respondida: false,
-            habilitada: true,
-            ...buildPreguntas(),
-        }));
+        const docs = respondidaPor.map((idResp) => {
+            const uniqueSuffix =
+                typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-        // Castea a ObjectId donde corresponda (por si te llegan strings)
-        docs.forEach(d => {
-            if (d.institucion) d.institucion = new mongoose.Types.ObjectId(d.institucion);
-            if (d.complejo) d.complejo = new mongoose.Types.ObjectId(d.complejo);
-            if (d.creadaPor) d.creadaPor = new mongoose.Types.ObjectId(d.creadaPor);
-            if (d.respondidaPor) d.respondidaPor = new mongoose.Types.ObjectId(d.respondidaPor);
+            return {
+                ...resto,
+                idInterno: `${idInternoPrefijo}-${uniqueSuffix}`,
+                respondidaPor: idResp,
+                respondida: false,
+            };
         });
 
-        const creadas = await EncuestaGym.insertMany(docs, { ordered: false });
+        // Inserción masiva
+        const creadas = await EncuestaGym.insertMany(docs, { ordered: true });
+
         return res.status(201).json({
-            mensaje: 'Encuestas creadas correctamente',
-            creadas,
-            total: creadas.length,
-            solicitadas: docs.length,
+            ok: true,
+            message: `Encuestas creadas: ${creadas.length}`,
+            data: creadas,
         });
-    } catch (error) {
-        // Si ordered:false, insertMany puede lanzar errores de duplicados pero igual crea algunas
-        console.error('Error al crear encuestas masivas:', error);
-        return res.status(500).json({ mensaje: 'Error al crear encuestas masivas', detalle: error?.message });
+    } catch (err) {
+        console.error("Error en crearEncuestasMasivas:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Error interno al crear encuestas masivas.",
+            error: process.env.NODE_ENV === "production" ? undefined : String(err),
+        });
     }
 };
 
