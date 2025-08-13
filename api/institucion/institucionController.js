@@ -20,18 +20,18 @@ const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 const populateUsersInstitucion = [
   {
     path: 'admins',
-    select: 'nombre apellido rol telefono email status createdAt',
+    select: 'nombre apellido rut rol telefono email status createdAt',
   },
   {
     path: 'usuarios',
-     select: 'nombre apellido rol telefono email status createdAt',
+    select: 'nombre apellido rut rol telefono email status createdAt entrenador',
   },
   {
     path: 'profesores',
-      select: 'nombre apellido rol telefono email status createdAt alumnos',
+      select: 'nombre apellido rut rol telefono email status createdAt alumnos',
       populate: {
         path: 'alumnos',
-        select: 'nombre apellido rut email status createdAt',
+        select: 'nombre apellido rut email status createdAt entrenador',
       }
   },
   {
