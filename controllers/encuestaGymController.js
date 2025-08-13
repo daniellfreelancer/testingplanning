@@ -1,5 +1,67 @@
 const EncuestaGym = require('../models/encuestaGymModel');
 
+// Crear encuestas masivsas
+const crearEncuestasMasivas = async (req, res) => {
+    try {
+        const {
+            idInternoBase,
+            institucion,
+            complejo,
+            creadaPor,
+            preguntas = {},
+            respondidaPorIds = [],
+        } = req.body;
+
+        if (!Array.isArray(respondidaPorIds) || respondidaPorIds.length === 0) {
+            return res.status(400).json({ mensaje: 'Debe enviar respondidaPorIds (array con al menos 1 id).' });
+        }
+
+        // Arma las preguntas si las mandan como objeto {1:{},2:{},...}
+        const buildPreguntas = () => {
+            const obj = {};
+            for (let i = 1; i <= 10; i++) {
+                const p = preguntas[i];
+                if (p && (p.titulo || p.valoracion != null)) {
+                    obj[`pregunta${i}`] = { titulo: p.titulo || '', valoracion: p.valoracion ?? undefined };
+                }
+            }
+            return obj;
+        };
+
+        const nowSuffix = Date.now(); // por si no te mandan idInternoBase
+        const docs = respondidaPorIds.map((respId, idx) => ({
+            idInterno: idInternoBase ? `${idInternoBase}-${idx + 1}` : `ENC-${nowSuffix}-${idx + 1}`,
+            institucion,
+            complejo,
+            creadaPor,
+            respondidaPor: respId,
+            respondida: false,
+            habilitada: true,
+            ...buildPreguntas(),
+        }));
+
+        // Castea a ObjectId donde corresponda (por si te llegan strings)
+        docs.forEach(d => {
+            if (d.institucion) d.institucion = new mongoose.Types.ObjectId(d.institucion);
+            if (d.complejo) d.complejo = new mongoose.Types.ObjectId(d.complejo);
+            if (d.creadaPor) d.creadaPor = new mongoose.Types.ObjectId(d.creadaPor);
+            if (d.respondidaPor) d.respondidaPor = new mongoose.Types.ObjectId(d.respondidaPor);
+        });
+
+        const creadas = await EncuestaGym.insertMany(docs, { ordered: false });
+        return res.status(201).json({
+            mensaje: 'Encuestas creadas correctamente',
+            creadas,
+            total: creadas.length,
+            solicitadas: docs.length,
+        });
+    } catch (error) {
+        // Si ordered:false, insertMany puede lanzar errores de duplicados pero igual crea algunas
+        console.error('Error al crear encuestas masivas:', error);
+        return res.status(500).json({ mensaje: 'Error al crear encuestas masivas', detalle: error?.message });
+    }
+};
+
 // Crear encuesta
 const crearEncuesta = async (req, res) => {
     try {
@@ -42,6 +104,17 @@ const obtenerEncuestaPorComplejo = async (req, res) => {
         res.json(encuestas);
     } catch (error) {
         res.status(500).json({ mensaje: 'Error al obtener por complejo' });
+    }
+};
+
+// Obtener por evaluado
+const obtenerEncuestaPorEvaluado = async (req, res) => {
+    try {
+        const { evaluado } = req.body;
+        const encuestas = await EncuestaGym.find({ evaluado });
+        res.json(encuestas);
+    } catch (error) {
+        res.status(500).json({ mensaje: 'Error al obtener por evaluado' });
     }
 };
 
@@ -153,4 +226,6 @@ module.exports = {
     eliminarEncuesta,
     responderEncuesta,
     editarEncuesta,
+    obtenerEncuestaPorEvaluado,
+    crearEncuestasMasivas,
 };

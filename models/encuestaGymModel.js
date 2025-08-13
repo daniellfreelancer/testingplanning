@@ -11,6 +11,7 @@ const encuestaSchema = new mongoose.Schema({
   complejo: { type: mongoose.Schema.Types.ObjectId, ref: 'centroDeportivo' },
   creadaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'usuariosComplejos' },
   respondidaPor: { type: mongoose.Schema.Types.ObjectId, ref: 'usuariosComplejos' },
+  evaluado: { type: mongoose.Schema.Types.ObjectId, ref: 'usuariosComplejos' },
   respondida: { type: Boolean, default: false },
   habilitada: { type: Boolean, default: true },
   pregunta1: { type: preguntaSchema, required: false },
