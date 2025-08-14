@@ -16,7 +16,7 @@ const crearEncuestasMasivas = async (req, res) => {
             });
         }
 
-        const requeridos = ["institucion", "complejos", "creadaPor", "evaluado"];
+        const requeridos = ["institucion", "creadaPor"];
         const faltantes = requeridos.filter((k) => !resto[k]);
         if (faltantes.length) {
             return res.status(400).json({
