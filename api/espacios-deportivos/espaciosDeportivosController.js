@@ -2,6 +2,23 @@ const EspaciosDeportivos = require('./espaciosDeportivosModel');
 const User = require('../usuarios-complejos/usuariosComplejos');
 const Institucion = require('../institucion/institucionModel');
 const CentrosDeportivos = require('../centros-deportivos/centrosDeportivosModel');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const crypto = require('crypto');
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
+
+const clientAWS = new S3Client({
+    region: bucketRegion,
+    credentials: {
+        accessKeyId: publicKey,
+        secretAccessKey: privateKey,
+    },
+})
+
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
 
 const espaciosDeportivosController = {
     crearEspacioDeportivo: async (req, res) => {
@@ -23,6 +40,27 @@ const espaciosDeportivosController = {
                 ...req.body,
                 admins: id ? [id] : [],
             });
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                nuevoEspacioDeportivo.imgUrl = fileName;
+            }
+
+
+
+
             await nuevoEspacioDeportivo.save();
 
             if (id) {
@@ -53,6 +91,24 @@ const espaciosDeportivosController = {
             const { id } = req.params;
             const { institucion, centroDeportivo } = req.body;
             const espacioDeportivo = await EspaciosDeportivos.findByIdAndUpdate(id, req.body, { new: true });
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                espacioDeportivo.imgUrl = fileName;
+                await espacioDeportivo.save();
+            }
 
             // Si se actualiza la institucion, agregar la relación si no existe
             if (institucion) {
