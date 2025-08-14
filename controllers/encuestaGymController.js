@@ -1,5 +1,62 @@
 const EncuestaGym = require('../models/encuestaGymModel');
 
+// Crear encuestas masivsas
+const crearEncuestasMasivas = async (req, res) => {
+    try {
+        const {
+            respondidaPor,
+            idInterno: idInternoPrefijo = "ENC",
+            ...resto
+        } = req.body || {};
+
+        if (!Array.isArray(respondidaPor) || respondidaPor.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                message: "El campo 'respondidaPor' debe ser un array con al menos un ID.",
+            });
+        }
+
+        const requeridos = ["institucion", "complejos", "creadaPor", "evaluado"];
+        const faltantes = requeridos.filter((k) => !resto[k]);
+        if (faltantes.length) {
+            return res.status(400).json({
+                ok: false,
+                message: `Faltan campos requeridos: ${faltantes.join(", ")}`,
+            });
+        }
+
+        const docs = respondidaPor.map((idResp) => {
+            const uniqueSuffix =
+                typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+            return {
+                ...resto,
+                idInterno: `${idInternoPrefijo}-${uniqueSuffix}`,
+                respondidaPor: idResp,
+                respondida: false,
+            };
+        });
+
+        // Inserción masiva
+        const creadas = await EncuestaGym.insertMany(docs, { ordered: true });
+
+        return res.status(201).json({
+            ok: true,
+            message: `Encuestas creadas: ${creadas.length}`,
+            data: creadas,
+        });
+    } catch (err) {
+        console.error("Error en crearEncuestasMasivas:", err);
+        return res.status(500).json({
+            ok: false,
+            message: "Error interno al crear encuestas masivas.",
+            error: process.env.NODE_ENV === "production" ? undefined : String(err),
+        });
+    }
+};
+
 // Crear encuesta
 const crearEncuesta = async (req, res) => {
     try {
@@ -42,6 +99,17 @@ const obtenerEncuestaPorComplejo = async (req, res) => {
         res.json(encuestas);
     } catch (error) {
         res.status(500).json({ mensaje: 'Error al obtener por complejo' });
+    }
+};
+
+// Obtener por evaluado
+const obtenerEncuestaPorEvaluado = async (req, res) => {
+    try {
+        const { evaluado } = req.body;
+        const encuestas = await EncuestaGym.find({ evaluado });
+        res.json(encuestas);
+    } catch (error) {
+        res.status(500).json({ mensaje: 'Error al obtener por evaluado' });
     }
 };
 
@@ -153,4 +221,6 @@ module.exports = {
     eliminarEncuesta,
     responderEncuesta,
     editarEncuesta,
+    obtenerEncuestaPorEvaluado,
+    crearEncuestasMasivas,
 };
