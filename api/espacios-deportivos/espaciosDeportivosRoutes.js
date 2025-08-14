@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const espaciosDeportivosController = require('./espaciosDeportivosController');
-const upload = require('../../middleware/upload');
+const upload = require('../../libs/docsStorage');
 // Crear espacio deportivo
 router.post('/crear-espacio-deportivo/:id?', upload.single('imgUrl'), espaciosDeportivosController.crearEspacioDeportivo);
 // Actualizar espacio deportivo
