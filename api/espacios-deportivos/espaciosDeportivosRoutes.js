@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const espaciosDeportivosController = require('./espaciosDeportivosController');
-
+const upload = require('../../middleware/upload');
 // Crear espacio deportivo
-router.post('/crear-espacio-deportivo/:id?', espaciosDeportivosController.crearEspacioDeportivo);
+router.post('/crear-espacio-deportivo/:id?', upload.single('imgUrl'), espaciosDeportivosController.crearEspacioDeportivo);
 // Actualizar espacio deportivo
-router.put('/:id', espaciosDeportivosController.actualizarEspacioDeportivo);
+router.put('/:id', upload.single('imgUrl'), espaciosDeportivosController.actualizarEspacioDeportivo);
 // Obtener espacio deportivo por id
 router.get('/:id', espaciosDeportivosController.obtenerEspacioDeportivo);
 // Obtener todos los espacios deportivos
