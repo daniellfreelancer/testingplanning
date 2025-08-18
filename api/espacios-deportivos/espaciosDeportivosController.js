@@ -54,12 +54,8 @@ const espaciosDeportivosController = {
 
                 const uploadCommand = new PutObjectCommand(uploadParams);
                 await clientAWS.send(uploadCommand);
-
                 nuevoEspacioDeportivo.imgUrl = fileName;
             }
-
-
-
 
             await nuevoEspacioDeportivo.save();
 
@@ -225,6 +221,7 @@ const espaciosDeportivosController = {
             res.status(500).json({ message: "Error al eliminar centro deportivo del espacio deportivo", error });
         }
     },
+
 }
 
 module.exports = espaciosDeportivosController;
