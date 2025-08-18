@@ -38,6 +38,10 @@ const populateUsersInstitucion = [
     path: 'centrosDeportivos',
     select: 'nombre descripcion direccion telefono email rut ciudad comuna horarios',
   },
+  {
+    path: 'espaciosDeportivos',
+    select: 'nombre descripcion direccion imgUrl email telefono rut ciudad comuna deporte horarios pago valor capacidad status createdAt',
+  }
 ]
 
 
