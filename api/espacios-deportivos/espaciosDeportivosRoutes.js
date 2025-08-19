@@ -5,19 +5,19 @@ const upload = require('../../libs/docsStorage');
 // Crear espacio deportivo
 router.post('/crear-espacio-deportivo/:id?', upload.single('imgUrl'), espaciosDeportivosController.crearEspacioDeportivo);
 // Actualizar espacio deportivo
-router.put('/:id', upload.single('imgUrl'), espaciosDeportivosController.actualizarEspacioDeportivo);
+router.put('/actualizar-espacio-deportivo/:id', upload.single('imgUrl'), espaciosDeportivosController.actualizarEspacioDeportivo);
 // Obtener espacio deportivo por id
-router.get('/:id', espaciosDeportivosController.obtenerEspacioDeportivo);
+router.get('/obtener-espacio-deportivo/:id', espaciosDeportivosController.obtenerEspacioDeportivo);
 // Obtener todos los espacios deportivos
 router.get('/', espaciosDeportivosController.obtenerTodosLosEspaciosDeportivos);
 // Agregar/eliminar admin
-router.post('/:id/admin', espaciosDeportivosController.agregarAdminAEspacioDeportivo);
-router.delete('/:id/admin', espaciosDeportivosController.eliminarAdminDeEspacioDeportivo);
+router.post('/agregar-admin/:id/admin', espaciosDeportivosController.agregarAdminAEspacioDeportivo);
+router.delete('/eliminar-admin/:id/admin', espaciosDeportivosController.eliminarAdminDeEspacioDeportivo);
 // Agregar/eliminar institucion
-router.post('/:id/institucion', espaciosDeportivosController.agregarInstitucionAEspacioDeportivo);
-router.delete('/:id/institucion', espaciosDeportivosController.eliminarInstitucionDeEspacioDeportivo);
+router.post('/agregar-institucion/:id/institucion', espaciosDeportivosController.agregarInstitucionAEspacioDeportivo);
+router.delete('/eliminar-institucion/:id/institucion', espaciosDeportivosController.eliminarInstitucionDeEspacioDeportivo);
 // Agregar/eliminar centro deportivo
-router.post('/:id/centro-deportivo', espaciosDeportivosController.agregarCentroDeportivoAEspacioDeportivo);
-router.delete('/:id/centro-deportivo', espaciosDeportivosController.eliminarCentroDeportivoDeEspacioDeportivo);
+router.post('/agregar-centro-deportivo/:id/centro-deportivo', espaciosDeportivosController.agregarCentroDeportivoAEspacioDeportivo);
+router.delete('/eliminar-centro-deportivo/:id/centro-deportivo', espaciosDeportivosController.eliminarCentroDeportivoDeEspacioDeportivo);
 
 module.exports = router; 
