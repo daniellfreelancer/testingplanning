@@ -67,13 +67,13 @@ const espaciosDeportivosController = {
             if (institucionID) {
                 // Asignar el id del espacio deportivo a la institucion y viceversa
                 await Institucion.findByIdAndUpdate(institucionID, { $push: { espaciosDeportivos: nuevoEspacioDeportivo._id } }, { new: true });
-                await EspaciosDeportivos.findByIdAndUpdate(nuevoEspacioDeportivo._id, { $addToSet: { institucion: institucionID } }, { new: true });
+                await EspaciosDeportivos.findByIdAndUpdate(nuevoEspacioDeportivo._id, { $set: { institucion: institucionID } }, { new: true });
             }
 
             if (centroDeportivoID) {
                 // Asignar el id del espacio deportivo al centro deportivo y viceversa
                 await CentrosDeportivos.findByIdAndUpdate(centroDeportivoID, { $push: { espaciosDeportivos: nuevoEspacioDeportivo._id } }, { new: true });
-                await EspaciosDeportivos.findByIdAndUpdate(nuevoEspacioDeportivo._id, { $addToSet: { centroDeportivo: centroDeportivoID } }, { new: true });
+                await EspaciosDeportivos.findByIdAndUpdate(nuevoEspacioDeportivo._id, { $set: { centroDeportivo: centroDeportivoID } }, { new: true });
             }
 
             res.status(201).json({ message: "Espacio deportivo creado correctamente", nuevoEspacioDeportivo });
@@ -106,15 +106,12 @@ const espaciosDeportivosController = {
                 await espacioDeportivo.save();
             }
 
-            // Si se actualiza la institucion, agregar la relación si no existe
-            if (institucion) {
-                await Institucion.findByIdAndUpdate(institucion, { $addToSet: { espaciosDeportivos: id } }, { new: true });
-                await EspaciosDeportivos.findByIdAndUpdate(id, { $addToSet: { institucion } }, { new: true });
-            }
+
             // Si se actualiza el centro deportivo, agregar la relación si no existe
             if (centroDeportivo) {
                 await CentrosDeportivos.findByIdAndUpdate(centroDeportivo, { $addToSet: { espaciosDeportivos: id } }, { new: true });
-                await EspaciosDeportivos.findByIdAndUpdate(id, { $addToSet: { centroDeportivo } }, { new: true });
+                    
+                await EspaciosDeportivos.findByIdAndUpdate(id, { $set: { centroDeportivo } }, { new: true });
             }
 
             res.status(200).json({ message: "Espacio deportivo actualizado correctamente", espacioDeportivo });
