@@ -14,7 +14,7 @@ router.post("/asignar-alumnos-a-entrenador", usuariosComplejosController.asignar
 router.post("/desasignar-alumno-de-entrenador", usuariosComplejosController.desasignarAlumnoDeEntrenador); //tested
 
 // Usuarios de piscina
-router.post("/crear-usuario-piscina", usuariosComplejosController.crearUsuarioComplejosPiscina);
+router.post("/crear-usuario-piscina/:institucion", usuariosComplejosController.crearUsuarioComplejosPiscina);
 router.get("/obtener-usuario-piscina/:doc", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
 router.get("/obtener-todos-usuarios-piscina/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscina);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
@@ -23,5 +23,9 @@ router.put("/actualizar-usuario-piscina/:id", usuariosComplejosController.actual
 router.delete("/eliminar-usuario-piscina/:id", usuariosComplejosController.eliminarUsuarioComplejoPiscina);
 //usuarios por institucion
 router.get("/obtener-usuarios-institucion/:id", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion); //tested
+router.post("/enviar-correo-contratacion/:rut", usuariosComplejosController.enviarCorreoContratacion); //tested
+router.get("/obtener-usuario-piscina-por-rut/:rut", usuariosComplejosController.obtenerUsuarioPiscinaPorRut); //tested
+
+
 
 module.exports = router;
