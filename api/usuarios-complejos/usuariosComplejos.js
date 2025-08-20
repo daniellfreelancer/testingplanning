@@ -7,6 +7,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   password: [{ type: String}],
   rol: { type: String},
   status: { type: Boolean, default: true },
+  tipoRut: { type: String},
   rut: { type: String},
   telefono: { type: String },
   institucion: [{ type: mongoose.Types.ObjectId, ref: 'institucion' }],
@@ -29,13 +30,33 @@ const usuariosComplejosSchema = new mongoose.Schema({
   neurodivergente: { type: Boolean }, // ¿Condición neurodivergente?
   descripcionNeurodivergente: { type: String }, // Indique cuál condición
   objetivoIngreso: { type: String }, // Objetivo por el cuál ingresa
-  contactoEmergencia: {
+  medicamentos: { type: Boolean }, // Indique si toma algún medicamento
+  descripcionMedicamentos: { type: String }, // Indique cuáles medicamentos
+  alergias: { type: Boolean }, // Indique si tiene alguna alergia
+  descripcionAlergias: { type: String }, // Indique cuáles alergias
+  cirugias: { type: Boolean }, // ¿Ha tenido alguna cirugía?
+  descripcionCirugias: { type: String }, // Indique cuál cirugía
+  prevision: { type: String }, // Indique cuál prevision
+  descripcionPrevision: { type: String }, // Indique cuál prevision
+  convenioEmergencia: { type: Boolean}, // Indique cuál convenio de emergencia
+  descripcionConvenioEmergencia: { type: String }, // Indique cuál convenio de emergencia
+ contactoEmergencia: {
     nombres: { type: String },
     apellidos: { type: String },
     parentesco: { type: String },
     telefono: { type: String }
   },
+  responsableMenorEdad:{type: Boolean},
+  responsableMenorEdadNombre: { type: String },
+  responsableMenorEdadApellido: { type: String },
+  responsableMenorEdadRut: { type: String },
+  responsableMenorEdadParentesco: { type: String },
+  responsableMenorEdadTelefono: { type: String },
+  responsableMenorEdadDireccion: { type: String },
+  responsableMenorEdadNumeroDireccion: { type: String },
+  responsableMenorEdadComuna: { type: String },
   tipoPlan: { type: String }, // Tipo de plan
+  tipoPlanGym: { type: String }, // Tipo de plan de gimnasio
   bloqueHorario: { type: String }, // Bloque horario
   fotoCedulaFrontal: { type: String }, // URL/path foto cédula frontal
   fotoCedulaReverso: { type: String }, // URL/path foto cédula reverso
@@ -44,9 +65,19 @@ const usuariosComplejosSchema = new mongoose.Schema({
   aceptacionReglamento: { type: Boolean }, // Aceptación de reglamento
   autorizacionDatos: { type: Boolean }, // Autorización tratamiento de datos
   // Pendiente cambiar entrenador a Array de objetos
-  entrenador: { type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }, 
+  entrenador: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }], 
   alumnos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
-
+  residenteStgo: { type: Boolean },
+  
+  //campos para formulario evaluacion -> formulario inicial
+  evaluacionInicial: {type: Boolean},
+  tipoCurso: {type: String},
+  fechaEvaluacion: {type: Date},
+  //campos para formulario contratacion -> actualizacion de datos
+  beneficioTrabajador: {type: Boolean},
+  nombreTrabajador: {type: String},
+  tipoContratacion: {type: String},
+  nivelCurso: {type: String},
 
 
 },{

@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
 const Institucion = require("../institucion/institucionModel");
 const CentroDeportivo = require("../centros-deportivos/centrosDeportivosModel");
+const sendMailUserContract = require("../mail/mailUserContract");
 
 function generateRandomPassword(length = 8) {
     const characters =
@@ -309,85 +310,43 @@ const usuariosComplejosController = {
     //crear usuario de piscina
     crearUsuarioComplejosPiscina: async (req, res) => {
         try {
-            const {
-                institucion,
-                nombre,
-                apellido,
-                email,
-                rut,
-                telefono,
-                comuna,
-                fechaNacimiento,
-                sexo,
-                direccion,
-                numeroDireccion,
-                padecePatologia,
-                descripcionPatologia,
-                neurodivergente,
-                objetivoIngreso,
-                contactoEmergencia,
-                tipoPlan,
-                bloqueHorario,
-                declaracionSalud,
-                aceptacionReglamento,
-                autorizacionDatos
-            } = req.body;
+            const { institucion } = req.params;
+            const userData = req.body;
 
-            // Validar rut duplicado
-            const existingUserByRut = await UsuariosComplejos.findOne({ rut });
-            if (existingUserByRut) {
-                return res.status(400).json({ message: "El RUT ya se encuentra registrado" });
+            // Validar que la institución existe
+            const institucionDoc = await Institucion.findById(institucion);
+            if (!institucionDoc) {
+                return res.status(404).json({ message: "Institución no encontrada" });
             }
 
-            // Formatear fechaNacimiento de dd/mm/yyyy a Date
-            let fechaNacimientoDate = null;
-            if (fechaNacimiento) {
-                const [day, month, year] = fechaNacimiento.split("/");
-                fechaNacimientoDate = new Date(`${year}-${month}-${day}`);
+            // Formatear fechaNacimiento si viene en formato dd/mm/yyyy
+            if (userData.fechaNacimiento && typeof userData.fechaNacimiento === 'string') {
+                const [day, month, year] = userData.fechaNacimiento.split("/");
+                userData.fechaNacimiento = new Date(`${year}-${month}-${day}`);
             }
 
-            // Crear usuario sin password ni login
+            // Crear usuario con los datos del body y valores por defecto
             const newUser = new UsuariosComplejos({
-                institucion,
-                nombre,
-                apellido,
-                email,
+                ...userData,
+                institucion: [institucion], // Convertir a array según el modelo
                 rol: 'usuario',
-                rut,
-                telefono,
-                comuna,
-                fechaNacimiento: fechaNacimientoDate,
-                sexo,
-                direccion,
-                numeroDireccion,
-                padecePatologia,
-                descripcionPatologia,
-                neurodivergente,
-                objetivoIngreso,
-                contactoEmergencia,
-                tipoPlan,
-                bloqueHorario,
-                declaracionSalud,
-                aceptacionReglamento,
-                autorizacionDatos,
                 status: true
             });
 
             await newUser.save();
 
             // Agregar usuario al array usuarios de la institucion
-           
-            const institucionDoc = await Institucion.findById(institucion);
-            if (!institucionDoc) {
-                return res.status(404).json({ message: "Institución no encontrada" });
-            }
             institucionDoc.usuarios.push(newUser._id);
             await institucionDoc.save();
 
-            res.status(201).json({ message: "Usuario de piscina creado correctamente", user: newUser });
+            res.status(201).json({ 
+                message: "Usuario de piscina creado correctamente", 
+                user: newUser,
+                institucion: institucionDoc._id
+            });
         } catch (error) {
             console.log(error);
-            res.status(500).json({ message: "Error al crear usuario de piscina", error });
+            res.status(500).json({ message: "Error al crear usuario de piscina", error: error.message });
         }
     },
     //obtener usuario de piscina por rut
@@ -516,6 +475,33 @@ const usuariosComplejosController = {
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
+    obtenerUsuarioPiscinaPorRut: async (req, res) => {
+        const { rut } = req.params;
+        try {
+            const user = await UsuariosComplejos.findOne({ rut });
+            res.status(200).json({ message: "Usuario de piscina encontrado correctamente", user });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuario de piscina", error });
+        }
+    },
+    enviarCorreoContratacion: async (req, res) => {
+        const { rut } = req.params;
+        try {
+            const user = await UsuariosComplejos.findOne({ rut });
+
+            if (!user) {
+                return res.status(404).json({ message: "Usuario no encontrado" });
+            }
+
+            await sendMailUserContract(user);
+
+            res.status(200).json({ message: "Usuario de piscina encontrado correctamente", user });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuario de piscina", error });
         }
     }
 }
