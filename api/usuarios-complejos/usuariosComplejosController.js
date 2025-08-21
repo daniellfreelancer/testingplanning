@@ -6,6 +6,11 @@ const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
 const Institucion = require("../institucion/institucionModel");
 const CentroDeportivo = require("../centros-deportivos/centrosDeportivosModel");
 const sendMailUserContract = require("../mail/mailUserContract");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
 
 function generateRandomPassword(length = 8) {
     const characters =
@@ -17,6 +22,16 @@ function generateRandomPassword(length = 8) {
     }
     return password;
 }
+
+const clientAWS = new S3Client({
+    region: bucketRegion,
+    credentials: {
+      accessKeyId: publicKey,
+      secretAccessKey: privateKey,
+    },
+  })
+  
+  const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const usuariosComplejosController = {
     crearUsuarioComplejo: async (req, res) => {
@@ -325,13 +340,64 @@ const usuariosComplejosController = {
                 userData.fechaNacimiento = new Date(`${year}-${month}-${day}`);
             }
 
+            if (req.files && req.files['fotoCedulaFrontal']) {
+                const fileContent = req.files['fotoCedulaFrontal'][0].buffer;
+                const fileName = `${req.files['fotoCedulaFrontal'][0].fieldname}-${quizIdentifier()}.png`;
+
+                const uploadFirst = {
+                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadFirst);
+                await clientAWS.send(uploadCommand);
+
+                userData.fotoCedulaFrontal = fileName;
+
+            }
+
+            if (req.files && req.files['fotoCedulaReverso']) {
+                const fileContent = req.files['fotoCedulaReverso'][0].buffer;
+                const fileName = `${req.files['fotoCedulaReverso'][0].fieldname}-${quizIdentifier()}.png`;
+                
+                const uploadSecond = {
+                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadSecond);
+                await clientAWS.send(uploadCommand);
+
+                userData.fotoCedulaReverso = fileName;
+
+            }
+
+            if (req.files && req.files['firma']) {
+                const fileContent = req.files['firma'][0].buffer;
+                const fileName = `${req.files['firma'][0].fieldname}-${quizIdentifier()}.png`;
+                
+                const uploadThird = {
+                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadThird);
+                await clientAWS.send(uploadCommand);
+
+                userData.firma = fileName;
+
+            }
+
             // Crear usuario con los datos del body y valores por defecto
             const newUser = new UsuariosComplejos({
                 ...userData,
                 institucion: [institucion], // Convertir a array según el modelo
-                rol: 'usuario',
                 status: true
             });
+
 
             await newUser.save();
 
@@ -495,9 +561,7 @@ const usuariosComplejosController = {
             if (!user) {
                 return res.status(404).json({ message: "Usuario no encontrado" });
             }
-
             await sendMailUserContract(user);
-
             res.status(200).json({ message: "Usuario de piscina encontrado correctamente", user });
         } catch (error) {
             console.log(error);

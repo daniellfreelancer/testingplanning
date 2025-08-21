@@ -84,6 +84,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
     timestamps: true
 });
 
+
 const UsuariosComplejos = mongoose.model("usuariosComplejos", usuariosComplejosSchema);
 
 module.exports = UsuariosComplejos;
