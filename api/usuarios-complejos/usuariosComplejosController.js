@@ -345,7 +345,7 @@ const usuariosComplejosController = {
                 const fileName = `${req.files['fotoCedulaFrontal'][0].fieldname}-${quizIdentifier()}.png`;
 
                 const uploadFirst = {
-                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Bucket: bucketName,
                     Key: fileName,
                     Body: fileContent,
                 };
@@ -362,7 +362,7 @@ const usuariosComplejosController = {
                 const fileName = `${req.files['fotoCedulaReverso'][0].fieldname}-${quizIdentifier()}.png`;
                 
                 const uploadSecond = {
-                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Bucket: bucketName,
                     Key: fileName,
                     Body: fileContent,
                 };
@@ -379,7 +379,7 @@ const usuariosComplejosController = {
                 const fileName = `${req.files['firma'][0].fieldname}-${quizIdentifier()}.png`;
                 
                 const uploadThird = {
-                    Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
+                    Bucket: bucketName,
                     Key: fileName,
                     Body: fileContent,
                 };
