@@ -4,6 +4,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   nombre: { type: String},
   apellido: { type: String},
   email: { type: String},
+  correo: { type: String},
   password: [{ type: String}],
   rol: { type: String},
   status: { type: Boolean, default: true },
@@ -20,6 +21,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   //campos para usuarios de piscinas - Campos adicionales del formulario de gimnasio
   comuna: { type: String },
   fechaNacimiento: { type: Date },
+  fecha_nacimiento: { type: Date },
   sexo: { type: String },
   fechaRegistro: { type: Date, default: Date.now }, // Fecha de registro
   direccion: { type: String }, // Dirección
@@ -28,25 +30,25 @@ const usuariosComplejosSchema = new mongoose.Schema({
   descripcionPatologia: { type: String }, // Indique cuál patología
   ultimaActividadFisica: { type: String }, // Última vez que realizó actividad física
   neurodivergente: { type: Boolean }, // ¿Condición neurodivergente?
-  descripcionNeurodivergente: { type: String }, // Indique cuál condición
+  descripcionNeurodivergencia: { type: String }, // Indique cuál condición
   objetivoIngreso: { type: String }, // Objetivo por el cuál ingresa
-  medicamentos: { type: Boolean }, // Indique si toma algún medicamento
-  descripcionMedicamentos: { type: String }, // Indique cuáles medicamentos
-  alergias: { type: Boolean }, // Indique si tiene alguna alergia
-  descripcionAlergias: { type: String }, // Indique cuáles alergias
-  cirugias: { type: Boolean }, // ¿Ha tenido alguna cirugía?
-  descripcionCirugias: { type: String }, // Indique cuál cirugía
-  prevision: { type: String }, // Indique cuál prevision
-  descripcionPrevision: { type: String }, // Indique cuál prevision
+  usaMedicamentos: { type: Boolean }, // Indique si toma algún medicamento
+  medicamentosDetalle: { type: String }, // Indique cuáles medicamentos
+  esAlergico: { type: Boolean }, // Indique si tiene alguna alergia
+  alergiasDetalle: { type: String }, // Indique cuáles alergias
+  cirugiasRecientes: { type: Boolean }, // ¿Ha tenido alguna cirugía?
+  cirugiasDetalle: { type: String }, // Indique cuál cirugía
+  prevencionSalud: { type: String }, // Indique cuál prevision
+  isapreNombre: { type: String }, // Indique cuál prevision
   convenioEmergencia: { type: Boolean}, // Indique cuál convenio de emergencia
-  descripcionConvenioEmergencia: { type: String }, // Indique cuál convenio de emergencia
+  convenioDetalle: { type: String }, // Indique cuál convenio de emergencia
  contactoEmergencia: {
     nombres: { type: String },
     apellidos: { type: String },
     parentesco: { type: String },
     telefono: { type: String }
   },
-  responsableMenorEdad:{type: Boolean},
+  esResponsable:{type: Boolean},
   responsableMenorEdadNombre: { type: String },
   responsableMenorEdadApellido: { type: String },
   responsableMenorEdadRut: { type: String },
@@ -67,17 +69,20 @@ const usuariosComplejosSchema = new mongoose.Schema({
   // Pendiente cambiar entrenador a Array de objetos
   entrenador: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }], 
   alumnos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
-  residenteStgo: { type: Boolean },
+  resideEnSantiago: { type: Boolean },
   
   //campos para formulario evaluacion -> formulario inicial
-  evaluacionInicial: {type: Boolean},
+  evaluado: {type: Boolean, default: false},
   tipoCurso: {type: String},
   fechaEvaluacion: {type: Date},
+  suscripcion_activa: {type: Boolean},
   //campos para formulario contratacion -> actualizacion de datos
-  beneficioTrabajador: {type: Boolean},
-  nombreTrabajador: {type: String},
+  beneficioPiscina: {type: Boolean},
+  trabajadorPiscina: {type: String},
   tipoContratacion: {type: String},
   nivelCurso: {type: String},
+  tipoPlan: {type: String},
+  tutores:[{type: Object}],
 
 
 },{
