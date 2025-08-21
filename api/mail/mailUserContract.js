@@ -19,6 +19,20 @@ const sendMailUserContract = async (user) => {
     });
 
     const accessToken = await oauth2Client.getAccessToken();
+    const smtpTransport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+          user: GOOGLE_USER,
+          type: 'OAuth2',
+          clientId: GOOGLE_ID,
+          clientSecret: GOOGLE_SECRET,
+          refreshToken: GOOGLE_REFRESH,
+          accessToken: GOOGLE_ACCESS
+      },
+      tls: {
+          rejectUnauthorized: false
+      }
+  })
 
     // Función para renderizar campos condicionales
     const renderField = (label, value, type = 'text') => {
@@ -205,7 +219,7 @@ const sendMailUserContract = async (user) => {
                     ` : ''}
                   </table>
 
-                  <h2 class="section-title">INFORMACIÓN PARA MENORES DE EDAD</h2>
+                  <h2 class="section-title">INFORMACIÓN PARA MENORES DE EDAD - APODERADO</h2>
                   <table class="contract-table">
                     ${renderField('Es Responsable de Menor', user.responsableMenorEdad, 'boolean')}
                     ${renderField('Nombre Responsable', user.responsableMenorEdadNombre)}
@@ -225,15 +239,15 @@ const sendMailUserContract = async (user) => {
                     ${renderField('Bloque Horario', user.bloqueHorario)}
                   </table>
 
-                  <h2 class="section-title">INFORMACIÓN ACADÉMICA Y EVALUACIÓN</h2>
+                  <h2 class="section-title">INFORMACIÓN EVALUACIÓN</h2>
                   <table class="contract-table">
-                    ${renderField('Evaluación Inicial', user.evaluacionInicial, 'boolean')}
+                    ${renderField('Evaluado', user.evaluacionInicial, 'boolean')}
                     ${renderField('Tipo de Curso', user.tipoCurso)}
                     ${renderField('Fecha de Evaluación', user.fechaEvaluacion, 'date')}
                     ${renderField('Nivel de Curso', user.nivelCurso)}
                   </table>
 
-                  <h2 class="section-title">INFORMACIÓN LABORAL</h2>
+                  <h2 class="section-title">BENEFICIO TRABAJADOR - FAMILIAR</h2>
                   <table class="contract-table">
                     ${renderField('Beneficio Trabajador', user.beneficioTrabajador, 'boolean')}
                     ${renderField('Nombre Trabajador', user.nombreTrabajador)}
@@ -250,21 +264,7 @@ const sendMailUserContract = async (user) => {
                     ${renderField('Autorización Tratamiento de Datos', user.autorizacionDatos, 'boolean')}
                   </table>
 
-                  <h2 class="section-title">RELACIONES Y CONEXIONES</h2>
-                  <table class="contract-table">
-                    ${renderField('Instituciones', user.institucion, 'array')}
-                    ${renderField('Centros Deportivos', user.centroDeportivo, 'array')}
-                    ${renderField('Espacios Deportivos', user.espacioDeportivo, 'array')}
-                    ${renderField('Taller', user.taller)}
-                    ${renderField('Mis Reservas', user.misreservas, 'array')}
-                    ${renderField('Entrenadores', user.entrenador, 'array')}
-                    ${renderField('Alumnos', user.alumnos, 'array')}
-                  </table>
 
-                  <h2 class="section-title">ESTADO DE SESIÓN</h2>
-                  <table class="contract-table">
-                    ${renderField('Usuario Logeado', user.logeado, 'boolean')}
-                  </table>
                 </td>
               </tr>
               <tr>

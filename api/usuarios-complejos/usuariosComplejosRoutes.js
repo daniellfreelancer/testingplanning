@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const usuariosComplejosController = require("./usuariosComplejosController");
+const upload = require('../../libs/docsStorage');
 
 router.post("/crear-usuario", usuariosComplejosController.crearUsuarioComplejo); //tested
 router.put("/actualizar-usuario/:id", usuariosComplejosController.actualizarUsuarioComplejo); //tested
@@ -14,7 +15,11 @@ router.post("/asignar-alumnos-a-entrenador", usuariosComplejosController.asignar
 router.post("/desasignar-alumno-de-entrenador", usuariosComplejosController.desasignarAlumnoDeEntrenador); //tested
 
 // Usuarios de piscina
-router.post("/crear-usuario-piscina/:institucion", usuariosComplejosController.crearUsuarioComplejosPiscina);
+router.post("/crear-usuario-piscina/:institucion", upload.fields([
+    { name: 'fotoCedulaFrontal', maxCount: 1 },
+    { name: 'fotoCedulaReverso', maxCount: 1 },
+    { name: 'firma', maxCount: 1 }
+  ]), usuariosComplejosController.crearUsuarioComplejosPiscina);
 router.get("/obtener-usuario-piscina/:doc", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
 router.get("/obtener-todos-usuarios-piscina/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscina);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
