@@ -444,7 +444,8 @@ const usuariosComplejosController = {
                     email: user.email,
                     telefono: user.telefono,
                     rol: user.rol,
-                    tipoPlan: user.tipoPlan
+                    tipoPlan: user.tipoPlan,
+                    status: user.status
                 }
             });
     
