@@ -395,7 +395,7 @@ const usuariosComplejosController = {
             const newUser = new UsuariosComplejos({
                 ...userData,
                 institucion: [institucion], // Convertir a array según el modelo
-                status: true
+                status: false
             });
 
 
