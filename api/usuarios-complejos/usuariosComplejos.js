@@ -83,6 +83,8 @@ const usuariosComplejosSchema = new mongoose.Schema({
   nivelCurso: {type: String},
   tipoPlan: {type: String},
   tutores:[{type: Object}],
+  tipoDomicilio:{type: String},
+  salvavidas:{type: Object},
 
 
 },{
