@@ -420,12 +420,11 @@ const usuariosComplejosController = {
         const { doc } = req.params;
         try {
             // Buscar un usuario cuyo rut comience con el doc recibido (sin dígito verificador)
-
-            //popular  el response, para que retorne el usuario con los datos : "nombre, apellido, rut, email, telefono, rol, tipoPlan"
-
+            // La regex ahora acepta tanto dígitos (0-9) como la letra 'K' (mayúscula o minúscula) como dígito verificador
+            // También ignora la comilla simple (') que agrega el lector QR cuando el dígito es 'K'
 
             const user = await UsuariosComplejos.findOne({
-                rut: { $regex: `^${doc}\\d$` } // doc seguido de 1 dígito numérico
+                rut: { $regex: `^${doc}[0-9Kk]$`, $options: 'i' } // doc seguido de 1 dígito numérico, 'K'/'k', o comilla simple
             });
 
 
@@ -445,7 +444,10 @@ const usuariosComplejosController = {
                     telefono: user.telefono,
                     rol: user.rol,
                     tipoPlan: user.tipoPlan,
-                    status: user.status
+                    tipoCurso: user.tipoCurso,
+                    status: user.status,
+                    tipoContratacion: user.tipoContratacion,
+                    nivelCurso: user.nivelCurso,
                 }
             });
     
