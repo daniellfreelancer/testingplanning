@@ -22,6 +22,8 @@ router.post("/crear-usuario-piscina/:institucion", upload.fields([
   ]), usuariosComplejosController.crearUsuarioComplejosPiscina);
 router.get("/obtener-usuario-piscina/:doc", usuariosComplejosController.obtenerUsuarioComplejoPiscina);
 router.get("/obtener-todos-usuarios-piscina/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscina);
+router.get("/obtener-todos-usuarios-piscina-tipo-plan-gym/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorTipoPlanGym);
+router.get("/obtener-todos-usuarios-piscina-arrendatario/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
 router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);
 router.put("/actualizar-usuario-piscina/:id", usuariosComplejosController.actualizarUsuarioComplejoPiscina);

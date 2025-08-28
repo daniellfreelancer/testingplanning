@@ -468,6 +468,28 @@ const usuariosComplejosController = {
             res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
         }
     },
+    //obtener todos los usuarios de piscina que tengan el rol = usuario y que tengan tipoPlanGym
+    obtenerTodosLosUsuariosComplejosPiscinaPorTipoPlanGym: async (req, res) => {
+        const { institucion } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ institucion, rol: "usuario", tipoPlanGym: { $in: ["Plan full", "Plan basico"] } });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
+    //obtener todos los usuarios de piscina que tengan el rol = usuario y que tengan arrendatario = true
+    obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario: async (req, res) => {
+        const { institucion } = req.params;
+        try {
+            const users = await UsuariosComplejos.find({ institucion, rol: "usuario", arrendatario: true });
+            res.status(200).json({ message: "Usuarios de piscina encontrados correctamente", users });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios de piscina", error });
+        }
+    },
     //obtener todos los usuarios de piscina por centro deportivo
     obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo: async (req, res) => {
         const { centroDeportivo } = req.params;
