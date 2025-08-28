@@ -85,6 +85,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   tutores:[{type: Object}],
   tipoDomicilio:{type: String},
   salvavidas:{type: Object},
+  arrendatario:{type: Boolean},
 
 
 },{
