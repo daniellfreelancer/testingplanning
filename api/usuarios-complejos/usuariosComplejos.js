@@ -86,7 +86,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   tipoDomicilio:{type: String},
   salvavidas:{type: Object},
   arrendatario:{type: Boolean},
-
+  nombreArrendatario:{type: String},
 
 },{
     timestamps: true
