@@ -42,7 +42,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   isapreNombre: { type: String }, // Indique cuál prevision
   convenioEmergencia: { type: Boolean}, // Indique cuál convenio de emergencia
   convenioDetalle: { type: String }, // Indique cuál convenio de emergencia
- contactoEmergencia: {
+  contactoEmergencia: {
     nombres: { type: String },
     apellidos: { type: String },
     parentesco: { type: String },

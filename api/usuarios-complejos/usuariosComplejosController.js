@@ -448,6 +448,11 @@ const usuariosComplejosController = {
                     status: user.status,
                     tipoContratacion: user.tipoContratacion,
                     nivelCurso: user.nivelCurso,
+                    tipoPlanGym: user.tipoPlanGym,
+                    arrendatario: user.arrendatario,
+                    nombreArrendatario: user.nombreArrendatario,
+
+
                 }
             });
     
