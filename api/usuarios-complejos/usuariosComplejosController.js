@@ -72,6 +72,8 @@ const usuariosComplejosController = {
                     institucion.director.push(newUser._id);
                 } else if (newUser.rol === "ADMIN_OFICINA") {
                     institucion.adminsOficina.push(newUser._id);
+                } else if (newUser.rol === "EMPLOYED") {
+                    institucion.empleados.push(newUser._id);
                 }
                 await institucion.save();
                 newUser.institucion = institucion._id;

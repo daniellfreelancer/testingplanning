@@ -19,7 +19,7 @@ const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const populateUsersInstitucion = [
   {
-    path: 'admins',
+    path: 'admins empleados',
     select: 'nombre apellido rut rol telefono email status createdAt',
   },
   {
