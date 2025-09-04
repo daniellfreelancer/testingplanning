@@ -32,6 +32,7 @@ router.delete("/eliminar-usuario-piscina/:id", usuariosComplejosController.elimi
 router.get("/obtener-usuarios-institucion/:id", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion); //tested
 router.post("/enviar-correo-contratacion/:rut", usuariosComplejosController.enviarCorreoContratacion); //tested
 router.get("/obtener-usuario-piscina-por-rut/:rut", usuariosComplejosController.obtenerUsuarioPiscinaPorRut); //tested
+router.get("/encontrar-usuario-piscina-con-mismo-rut/", usuariosComplejosController.encontrarUsuarioPiscinaConMismoRut); //tested
 
 
 
