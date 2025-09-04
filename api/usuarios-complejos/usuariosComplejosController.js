@@ -26,12 +26,12 @@ function generateRandomPassword(length = 8) {
 const clientAWS = new S3Client({
     region: bucketRegion,
     credentials: {
-      accessKeyId: publicKey,
-      secretAccessKey: privateKey,
+        accessKeyId: publicKey,
+        secretAccessKey: privateKey,
     },
-  })
-  
-  const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+})
+
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 const usuariosComplejosController = {
     crearUsuarioComplejo: async (req, res) => {
@@ -104,7 +104,7 @@ const usuariosComplejosController = {
             res.status(500).json({ message: "Error al crear usuario,", error: error });
 
         }
-       
+
     },
     asignarAlumnosAEntrenador: async (req, res) => {
         const { entrenadorId, alumnosIds } = req.body;
@@ -226,7 +226,7 @@ const usuariosComplejosController = {
             } else {
                 const isMatch = user.password.filter(userpassword => bcryptjs.compareSync(password, userpassword));
                 if (isMatch.length > 0) {
-                   
+
                     const token = jwt.sign(
                         {
                             id: user._id,
@@ -237,10 +237,10 @@ const usuariosComplejosController = {
                             expiresIn: 60 * 60 * 24
                         }
                     );
-        
+
                     user.logeado = true;
                     await user.save();
-        
+
                     res.status(200).json({
                         message: "Inicio de sesión exitoso.", token, user: {
                             id: user._id,
@@ -262,7 +262,7 @@ const usuariosComplejosController = {
                             direccion: user.direccion,
                             numeroDireccion: user.numeroDireccion,
                             imgUrl: user.imgUrl,
-                           
+
                         }
                     });
                 } else {
@@ -270,9 +270,9 @@ const usuariosComplejosController = {
                 }
             }
 
-        
 
-         
+
+
 
 
 
@@ -362,7 +362,7 @@ const usuariosComplejosController = {
             if (req.files && req.files['fotoCedulaReverso']) {
                 const fileContent = req.files['fotoCedulaReverso'][0].buffer;
                 const fileName = `${req.files['fotoCedulaReverso'][0].fieldname}-${quizIdentifier()}.png`;
-                
+
                 const uploadSecond = {
                     Bucket: bucketName,
                     Key: fileName,
@@ -379,7 +379,7 @@ const usuariosComplejosController = {
             if (req.files && req.files['firma']) {
                 const fileContent = req.files['firma'][0].buffer;
                 const fileName = `${req.files['firma'][0].fieldname}-${quizIdentifier()}.png`;
-                
+
                 const uploadThird = {
                     Bucket: bucketName,
                     Key: fileName,
@@ -407,8 +407,8 @@ const usuariosComplejosController = {
             institucionDoc.usuarios.push(newUser._id);
             await institucionDoc.save();
 
-            res.status(201).json({ 
-                message: "Usuario de piscina creado correctamente", 
+            res.status(201).json({
+                message: "Usuario de piscina creado correctamente",
                 user: newUser,
                 institucion: institucionDoc._id
             });
@@ -430,11 +430,11 @@ const usuariosComplejosController = {
             });
 
 
-    
+
             if (!user) {
                 return res.status(404).json({ message: "Usuario de piscina no encontrado" });
             }
-    
+
             res.status(200).json({
                 message: "Usuario de piscina encontrado correctamente",
                 user: {
@@ -457,7 +457,7 @@ const usuariosComplejosController = {
 
                 }
             });
-    
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: "Error al obtener usuario de piscina", error });
@@ -525,13 +525,13 @@ const usuariosComplejosController = {
         try {
             const user = await UsuariosComplejos.findByIdAndUpdate(id, req.body, { new: true });
             res.status(200).json({ message: "Usuario de piscina actualizado correctamente", user });
-        } catch (error) {   
+        } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al actualizar usuario de piscina", error });
         }
     },
     //eliminar usuario de piscina
-    eliminarUsuarioComplejoPiscina: async (req, res) => {   
+    eliminarUsuarioComplejoPiscina: async (req, res) => {
         const { id } = req.params;
         try {
 
@@ -599,7 +599,76 @@ const usuariosComplejosController = {
             console.log(error);
             res.status(500).json({ message: "Error al obtener usuario de piscina", error });
         }
+    },
+    encontrarUsuarioPiscinaConMismoRut: async (req, res) => {
+        try {
+            // Usar agregación para encontrar RUTs duplicados
+            const rutDuplicados = await UsuariosComplejos.aggregate([
+                {
+                    // Filtrar documentos que tengan RUT y no sean null/undefined
+                    $match: {
+                        rut: { $exists: true, $ne: null, $ne: "" }
+                    }
+                },
+                {
+                    // Agrupar por RUT y contar las ocurrencias
+                    $group: {
+                        _id: "$rut",
+                        count: { $sum: 1 },
+                        usuarios: {
+                            $push: {
+                                rut: "$rut",
+                                _id: "$_id",
+                                nombre: "$nombre",
+                                apellido: "$apellido",
+                                email: "$email",
+                                rol: "$rol",
+                                institucion: "$institucion",
+                                arrendatario: "$arrendatario",
+                                tipoPlanGym: "$tipoPlanGym",
+                                tipoPlan: "$tipoPlan",
+                                nivelCurso: "$nivelCurso",
+                                nombreArrendatario: "$nombreArrendatario",
+                                tipoContratacion: "$tipoContratacion",
+
+                            }
+                        }
+                    }
+                },
+                {
+                    // Filtrar solo los RUTs que aparecen más de una vez
+                    $match: {
+                        count: { $gt: 1 }
+                    }
+                },
+                {
+                    // Ordenar por cantidad de ocurrencias (mayor a menor)
+                    $sort: { count: -1 }
+                }
+            ]);
+
+            // Formatear la respuesta
+            const resultado = {
+                totalRutsDuplicados: rutDuplicados.length,
+                rutsDuplicados: rutDuplicados.map(item => ({
+                    rut: item._id,
+                    cantidad: item.count,
+                    usuarios: item.usuarios
+                }))
+            };
+
+            res.status(200).json({
+                message: "Análisis de RUTs duplicados completado",
+                ...resultado
+            });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al encontrar usuario de piscina con mismo rut", error });
+        }
+
     }
+
 }
 
 
