@@ -26,7 +26,10 @@ router.get("/obtener-todos-usuarios-piscina-tipo-plan-gym/:institucion", usuario
 router.get("/obtener-todos-usuarios-piscina-arrendatario/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
 router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);
-router.put("/actualizar-usuario-piscina/:id", usuariosComplejosController.actualizarUsuarioComplejoPiscina);
+router.put("/actualizar-usuario-piscina/:id", upload.fields([
+    { name: 'fotoCedulaFrontal', maxCount: 1 },
+    { name: 'fotoCedulaReverso', maxCount: 1 }
+]), usuariosComplejosController.actualizarUsuarioComplejoPiscina);
 router.delete("/eliminar-usuario-piscina/:id", usuariosComplejosController.eliminarUsuarioComplejoPiscina);
 //usuarios por institucion
 router.get("/obtener-usuarios-institucion/:id", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion); //tested
