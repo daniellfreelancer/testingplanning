@@ -523,7 +523,51 @@ const usuariosComplejosController = {
     actualizarUsuarioComplejoPiscina: async (req, res) => {
         const { id } = req.params;
         try {
-            const user = await UsuariosComplejos.findByIdAndUpdate(id, req.body, { new: true });
+            // Preparar datos de actualización
+            const updateData = { ...req.body };
+            
+            // Procesar campos JSON que vienen como strings
+            if (updateData.contactoEmergencia && typeof updateData.contactoEmergencia === 'string') {
+                updateData.contactoEmergencia = JSON.parse(updateData.contactoEmergencia);
+            }
+            if (updateData.tutores && typeof updateData.tutores === 'string') {
+                updateData.tutores = JSON.parse(updateData.tutores);
+            }
+            
+            // Procesar archivos de imágenes
+            if (req.files && req.files['fotoCedulaFrontal']) {
+                const fileContent = req.files['fotoCedulaFrontal'][0].buffer;
+                const fileName = `${req.files['fotoCedulaFrontal'][0].fieldname}-${quizIdentifier()}.png`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                updateData.fotoCedulaFrontal = fileName;
+            }
+
+            if (req.files && req.files['fotoCedulaReverso']) {
+                const fileContent = req.files['fotoCedulaReverso'][0].buffer;
+                const fileName = `${req.files['fotoCedulaReverso'][0].fieldname}-${quizIdentifier()}.png`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                updateData.fotoCedulaReverso = fileName;
+            }
+
+            const user = await UsuariosComplejos.findByIdAndUpdate(id, updateData, { new: true });
             res.status(200).json({ message: "Usuario de piscina actualizado correctamente", user });
         } catch (error) {
             console.log(error);
