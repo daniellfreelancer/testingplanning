@@ -4,6 +4,7 @@ const accesoUsuariosComplejosController = require('./accesoUsuariosComplejosCont
 
 router.post('/crear-acceso', accesoUsuariosComplejosController.crearAccesoUsuariosComplejos);
 router.get('/obtener-accesos-por-institucion/:institucion', accesoUsuariosComplejosController.obtenerAccesosPorInstitucion);
+router.get('/obtener-accesos-por-institucion/:institucion/:periodo', accesoUsuariosComplejosController.obtenerAccesosPorInstitucion);
 router.get('/obtener-todos-los-accesos', accesoUsuariosComplejosController.obtenerTodosLosAccesos);
 
 module.exports = router;
