@@ -72,6 +72,8 @@ const planesPiscinas = require('./api/gestion-planes/gestionPlanesRoutes')
 const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
 //Rutas para gestion de planes y membresias en piscinas
 
+const vmFutbolInstituciones =require('./futbol/institucion/institucionFutbol.routes')
+
 
 var app = express();
 
@@ -158,6 +160,9 @@ app.use('/vm-instituciones-deportivas', institucionesDeportivas) // institucione
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
+
+//ecosistema futbol
+app.use('/vm-futbol-instituciones', vmFutbolInstituciones) // rutas modulo futbol instituciones
 
 
 // catch 404 and forward to error handler

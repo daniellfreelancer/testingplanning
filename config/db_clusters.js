@@ -61,6 +61,7 @@ const getDefaultConnection = () => {
 const databaseMiddleware = (req, res, next) => {
     try {
         req.db = getConnection(req);
+        console.log('Conexión de base de datos asignada al request', req.db.name);
         next();
     } catch (error) {
         console.error('Error al obtener conexión de base de datos:', error);
