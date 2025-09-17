@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const dbConnection = require("../../config/database");
 
 const usuariosComplejosSchema = new mongoose.Schema({
   nombre: { type: String},
@@ -57,7 +58,6 @@ const usuariosComplejosSchema = new mongoose.Schema({
   responsableMenorEdadDireccion: { type: String },
   responsableMenorEdadNumeroDireccion: { type: String },
   responsableMenorEdadComuna: { type: String },
-  tipoPlan: { type: String }, // Tipo de plan
   tipoPlanGym: { type: String }, // Tipo de plan de gimnasio
   bloqueHorario: { type: String }, // Bloque horario
   fotoCedulaFrontal: { type: String }, // URL/path foto cédula frontal
@@ -67,10 +67,10 @@ const usuariosComplejosSchema = new mongoose.Schema({
   aceptacionReglamento: { type: Boolean }, // Aceptación de reglamento
   autorizacionDatos: { type: Boolean }, // Autorización tratamiento de datos
   // Pendiente cambiar entrenador a Array de objetos
-  entrenador: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }], 
+  entrenador: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
   alumnos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
   resideEnSantiago: { type: Boolean },
-  
+
   //campos para formulario evaluacion -> formulario inicial
   evaluado: {type: Boolean, default: false},
   tipoCurso: {type: String},
@@ -87,12 +87,28 @@ const usuariosComplejosSchema = new mongoose.Schema({
   salvavidas:{type: Object},
   arrendatario:{type: Boolean},
   nombreArrendatario:{type: String},
+  planCurso: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
+  planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
+  planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
+  pagos: [{ type: mongoose.Types.ObjectId, ref: 'gestionPagos' }],
 
 },{
     timestamps: true
 });
 
-
 const UsuariosComplejos = mongoose.model("usuariosComplejos", usuariosComplejosSchema);
-
 module.exports = UsuariosComplejos;
+
+// async function usuariosComplejosModel(clientId = null) {
+//   const connection = await dbConnection.getConnection(clientId);
+  
+//   // Verificar si el modelo ya existe para esta conexión
+//   if (connection.models.usuariosComplejos) {
+//     return connection.models.usuariosComplejos;
+//   }
+  
+//   // Si no existe, crear el modelo
+//   return connection.model('usuariosComplejos', usuariosComplejosSchema);
+// }
+
+// module.exports = usuariosComplejosModel;
