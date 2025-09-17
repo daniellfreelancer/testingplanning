@@ -1,0 +1,309 @@
+openapi: 3.0.0
+info:
+  title: API de Gestión de Planes
+  description: API para gestionar planes deportivos incluyendo creación, edición, eliminación y asignación a usuarios
+  version: 1.0.0
+  
+servers:
+  - url: /api
+    description: API base URL
+
+components:
+  schemas:
+    Plan:
+      type: objectz
+      required:
+        - tipo
+        - tipoPlan
+        - plan
+        - dias
+        - horarios
+        - valor
+        - institucion
+      properties:
+        _id:
+          type: string
+          description: ID único del plan
+        tipoPlan:
+          type: string
+          description: Tipo del plan deportivo
+        plan:
+          type: string
+          description: Nombre o descripción del plan
+        dias:
+          type: array
+          description: Días disponibles para el plan
+          items:
+            type: string
+        horarios:
+          type: array
+          description: Horarios disponibles para el plan
+          items:
+            type: string
+        valor:
+          type: number
+          description: Valor monetario del plan
+        institucion:
+          type: string
+          description: ID de la institución a la que pertenece el plan
+        usuarios:
+          type: array
+          description: Lista de IDs de usuarios asignados al plan
+          items:
+            type: string
+        status:
+          type: boolean
+          description: Estado activo/inactivo del plan
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje de error
+        error:
+          type: string
+          description: Detalles técnicos del error
+
+    Success:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje de éxito
+        success:
+          type: boolean
+          default: true
+
+paths:
+  /crear:
+    post:
+      summary: Crear un nuevo plan
+      tags:
+        - Planes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+      responses:
+        '201':
+          description: Plan creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  plan:
+                    $ref: '#/components/schemas/Plan'
+                  success:
+                    type: boolean
+        '500':
+          description: Error al crear el plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /editar/{id}:
+    put:
+      summary: Editar un plan existente
+      tags:
+        - Planes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del plan a editar
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+      responses:
+        '200':
+          description: Plan actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  plan:
+                    $ref: '#/components/schemas/Plan'
+                  success:
+                    type: boolean
+        '404':
+          description: Plan no encontrado
+        '500':
+          description: Error al actualizar el plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Eliminar un plan
+      tags:
+        - Planes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del plan a eliminar
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plan eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: No se puede eliminar el plan (tiene usuarios asignados)
+        '404':
+          description: Plan no encontrado
+        '500':
+          description: Error al eliminar el plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /planes-institucion/{institucion}:
+    get:
+      summary: Obtener planes por institución
+      tags:
+        - Planes
+      parameters:
+        - name: institucion
+          in: path
+          required: true
+          description: ID de la institución
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de planes encontrados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  planes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Plan'
+        '500':
+          description: Error al obtener los planes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /planes/asignar/{usuarioId}/{planId}:
+    post:
+      summary: Asignar un plan a un usuario
+      tags:
+        - Asignación de Planes
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          description: ID del usuario
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          description: ID del plan
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plan asignado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  usuario:
+                    type: object
+                  plan:
+                    $ref: '#/components/schemas/Plan'
+                  success:
+                    type: boolean
+        '404':
+          description: Usuario o plan no encontrado
+        '400':
+          description: Tipo de plan no válido
+        '500':
+          description: Error al asignar el plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /planes/eliminar/{usuarioId}/{planId}:
+    post:
+      summary: Quitar un plan de un usuario
+      tags:
+        - Asignación de Planes
+      parameters:
+        - name: usuarioId
+          in: path
+          required: true
+          description: ID del usuario
+          schema:
+            type: string
+        - name: planId
+          in: path
+          required: true
+          description: ID del plan
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plan quitado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  usuario:
+                    type: object
+                  plan:
+                    $ref: '#/components/schemas/Plan'
+                  success:
+                    type: boolean
+        '404':
+          description: Usuario o plan no encontrado
+        '400':
+          description: Tipo de plan no válido
+        '500':
+          description: Error al quitar el plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

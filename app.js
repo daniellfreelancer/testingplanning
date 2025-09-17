@@ -68,6 +68,10 @@ const institucionesDeportivas = require('./api/institucion/institucionRoutes')
 const centrosDeportivos = require('./api/centros-deportivos/centrosDeportivosRoutes')
 const espaciosDeportivos = require('./api/espacios-deportivos/espaciosDeportivosRoutes')
 const accesoUsuariosComplejos = require('./api/acceso-usuarios-complejos/accesoUsuarioComplejosRouter')
+const planesPiscinas = require('./api/gestion-planes/gestionPlanesRoutes')
+const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
+//Rutas para gestion de planes y membresias en piscinas
+
 
 var app = express();
 
@@ -137,6 +141,8 @@ app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
 app.use('/api/encuestas', encuestaGymRoutes);
+app.use('/planes-piscinas', planesPiscinas)
+app.use('/pagos-piscinas', pagosPiscinas)
 
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
@@ -152,6 +158,7 @@ app.use('/vm-instituciones-deportivas', institucionesDeportivas) // institucione
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
