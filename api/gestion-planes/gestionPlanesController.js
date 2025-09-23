@@ -1,6 +1,14 @@
 const Usuarios = require("../usuarios-complejos/usuariosComplejos");
 const Planes = require("./gestionPlanes");
 
+
+const queryPopulateUsuarios =[
+  {
+    path: 'usuarios',
+    select: 'nombre apellido email rut varianteCurso'
+  }
+]
+
 const gestionPlanesController = {
   crearPlan: async (req, res) => {
     try {
@@ -66,7 +74,7 @@ const gestionPlanesController = {
   planesPorInstitucion: async (req, res) => {
     try {
       const { institucion } = req.params;
-      const planes = await Planes.find({ institucion });
+      const planes = await Planes.find({ institucion }).populate(queryPopulateUsuarios);
       res
         .status(200)
         .json({ message: "Planes encontrados exitosamente", planes });

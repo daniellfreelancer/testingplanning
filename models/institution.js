@@ -52,7 +52,9 @@ const instiSchema = new mongoose.Schema({
             'encuestas',
             'controlDeAcceso'
         ]
-    }
+    },
+    justificacionPagos:[{type: mongoose.Types.ObjectId, ref:'justificacionPago'}],
+    scoutings:[{type: mongoose.Types.ObjectId, ref:'scouting'}],
 
 },
 {

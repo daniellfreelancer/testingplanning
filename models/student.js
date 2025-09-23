@@ -1,6 +1,5 @@
 const mongoose = require('mongoose')
 
-
 const studentSchema = new mongoose.Schema({
     name:{type: String, required: false},
     lastName:{type: String, required: false},
@@ -40,6 +39,33 @@ const studentSchema = new mongoose.Schema({
     membership:[{ type: Object }],
     vitalmoveCategory: {type: String},
     institution: { type: mongoose.Types.ObjectId, ref: 'insti', required: false },
+    scouting:[{ type: mongoose.Types.ObjectId, ref: 'scouting' }],
+
+    // Datos físicos adicionales
+    height: { type: Number, required: false }, // Altura en cm
+    wingspan: { type: Number, required: false }, // Envergadura en cm
+    dominantFoot: { type: String, enum: ['derecho', 'izquierdo', 'ambos'], required: false },
+
+    // Historial deportivo
+    sportHistory: [{
+        club: { type: String },
+        category: { type: String },
+        from: { type: Date },
+        to: { type: Date },
+        achievements: [{ type: String }]
+    }],
+    
+    // Datos de rendimiento
+    performance: {
+        matches: { type: Number, default: 0 }, // Partidos jugados
+        goals: { type: Number, default: 0 },
+        assists: { type: Number, default: 0 },
+        yellowCards: { type: Number, default: 0 },
+        redCards: { type: Number, default: 0 },
+        minutesPlayed: { type: Number, default: 0 }
+    },
+    // Datos de representación
+    representation: {type: Object}
 },
 {
     timestamps: true,
