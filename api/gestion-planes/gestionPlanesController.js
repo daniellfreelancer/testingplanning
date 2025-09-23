@@ -79,6 +79,7 @@ const gestionPlanesController = {
   asignarPlanAUsuario: async (req, res) => {
     try {
       const { usuarioId, planId } = req.params;
+      const { variante } = req.body; //opcional, solo para planes de tipo curso
       //verificar que el usuario y el plan existan
       const usuario = await Usuarios.findById(usuarioId);
       if (!usuario) {
@@ -109,6 +110,7 @@ const gestionPlanesController = {
       //asignar el plan al usuario
       if (plan.tipo === "curso") {
         usuario.planCurso = plan._id;
+        usuario.varianteCurso = variante;
       } else if (plan.tipo === "nadoLibre") {
         usuario.planNL = plan._id;
       } else if (plan.tipo === "gimnasio") {

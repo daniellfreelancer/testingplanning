@@ -7,7 +7,7 @@ const gestionPlanesSchema = new mongoose.Schema({
     tipoPlan: { type: String, required: true },
     plan: { type: String, required: true },
     tieneVariante: { type: Boolean, required: true },
-    variante:{ type: Object },
+    variante:[{ type: Object }],
     dias: { type: Array, },
     horarios: { type: Array,},
     valor: { type: Number, required: true },

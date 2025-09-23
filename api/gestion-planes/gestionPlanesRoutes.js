@@ -4,7 +4,7 @@ const gestionPlanesController = require('./gestionPlanesController');
 
 router.post('/crear', gestionPlanesController.crearPlan);
 router.put('/editar/:id', gestionPlanesController.editarPlan);
-router.delete('/eliminar/:id', gestionPlanesController.eliminarPlan);
+router.delete('/eliminar-plan/:id', gestionPlanesController.eliminarPlan);
 //obtener planes por institucion
 router.get('/planes-institucion/:institucion', gestionPlanesController.planesPorInstitucion);
 //asignarPlanAUsuario
