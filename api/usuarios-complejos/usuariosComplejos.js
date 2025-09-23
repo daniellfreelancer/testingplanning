@@ -88,6 +88,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   arrendatario:{type: Boolean},
   nombreArrendatario:{type: String},
   planCurso: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
+  varianteCurso: { type: Object },
   planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   pagos: [{ type: mongoose.Types.ObjectId, ref: 'gestionPagos' }],
