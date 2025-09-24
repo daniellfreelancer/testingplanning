@@ -77,6 +77,27 @@ const controller = {
             res.status(500).json({ error: "Error al obtener por evaluador", message: error.message });
         }
     },
+    editar: async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: "Debes enviar un ID" });
+            }
+            const Scouting = req.db.models?.EvaluacionScouting
+                || req.db.model("EvaluacionScouting", require("../models/evaluacionScouting"));
+            const actualizado = await Scouting.findByIdAndUpdate(
+                id,
+                req.body,
+                { new: true, runValidators: true }
+            );
+            if (!actualizado) {
+                return res.status(404).json({ error: "No se encontró la evaluación" });
+            }
+            res.status(200).json({ message: "Evaluación actualizada", scouting: actualizado });
+        } catch (error) {
+            res.status(500).json({ error: "Error al editar la evaluación", message: error.message });
+        }
+    },
 };
 
 module.exports = controller;

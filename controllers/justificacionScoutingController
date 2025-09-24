@@ -1,0 +1,76 @@
+const mongoose = require("mongoose");
+const justificacionSchema = require("../models/justificacionScouting");
+
+// Registra el modelo una sola vez (evita OverwriteModelError)
+const Justificacion = mongoose.models.JustificacionScouting
+  || mongoose.model("JustificacionScouting", justificacionSchema);
+
+const controller = {
+  crear: async (req, res) => {
+    try {
+      const nuevo = new Justificacion({
+        transporte: req.body.transporte ?? "",
+        comida: req.body.comida ?? "",
+        hospedaje: req.body.hospedaje ?? "",
+        evaluador: req.body.evaluador,
+        validado: Array.isArray(req.body.validado) ? req.body.validado : []
+      });
+      await nuevo.save();
+      res.status(201).json({ message: "Justificación creada", justificacion: nuevo });
+    } catch (error) {
+      res.status(500).json({ error: "Error al crear justificación", message: error.message });
+    }
+  },
+
+  obtenerTodos: async (_req, res) => {
+  try {
+    const docs = await Justificacion.find()
+      .sort({ createdAt: -1 });  // Mss reciente primero
+    res.status(200).json(docs);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener todas", message: error.message });
+  }
+},
+
+
+  obtenerPorId: async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: "ID inválido" });
+      const doc = await Justificacion.findById(id);
+      if (!doc) return res.status(404).json({ error: "No se encontró la justificación" });
+      res.status(200).json(doc);
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener por id", message: error.message });
+    }
+  },
+
+  editar: async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: "ID inválido" });
+      const actualizado = await Justificacion.findByIdAndUpdate(
+        id,
+        req.body,
+        { new: true, runValidators: true }
+      );
+      if (!actualizado) return res.status(404).json({ error: "No se encontró la justificación" });
+      res.status(200).json({ message: "Justificación actualizada", justificacion: actualizado });
+    } catch (error) {
+      res.status(500).json({ error: "Error al editar", message: error.message });
+    }
+  },
+
+  obtenerPorEvaluador: async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: "ID de evaluador inválido" });
+      const docs = await Justificacion.find({ evaluador: id });
+      res.status(200).json(docs);
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener por evaluador", message: error.message });
+    }
+  },
+};
+
+module.exports = controller;

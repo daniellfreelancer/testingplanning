@@ -15,12 +15,12 @@ const evaScoutingSchema = new mongoose.Schema(
         evaluado: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: "Jugador",
+            ref: "Usuario", // jugador
         },
         evaluador: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
-            ref: "Evaluador",
+            ref: "Usuario", // evaluador
         },
     },
     {

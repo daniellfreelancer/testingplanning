@@ -62,6 +62,7 @@ const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
 const encuestaGymRoutes = require('./routes/encuestaGymRoutes');
 const scoutingRoutes = require("./routes/evaScoutingRoutes");
+const justificacionRoutes = require("./routes/justificacionScoutingRoutes");
 
 //SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
@@ -145,6 +146,7 @@ app.use('/api/encuestas', encuestaGymRoutes);
 app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
 app.use("/evaScouting", scoutingRoutes);
+app.use("/justificaciones-scouting", justificacionRoutes);
 
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
