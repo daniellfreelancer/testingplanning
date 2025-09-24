@@ -43,8 +43,10 @@ const studentSchema = new mongoose.Schema({
 
     // Datos físicos adicionales
     height: { type: Number, required: false }, // Altura en cm
-    wingspan: { type: Number, required: false }, // Envergadura en cm
     dominantFoot: { type: String, enum: ['derecho', 'izquierdo', 'ambos'], required: false },
+    position: { type: String, required: false }, // Posición en el campo
+    comuna: { type: String, required: false },
+    region: { type: String, required: false },
 
     // Historial deportivo
     sportHistory: [{
