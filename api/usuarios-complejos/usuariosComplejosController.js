@@ -802,23 +802,24 @@ const usuariosComplejosController = {
       res.status(200).json({
         success: true,
         message: "Usuario encontrado correctamente",
-        user: {
-          _id: user._id,
-          nombre: user.nombre,
-          apellido: user.apellido,
-          rut: user.rut,
-          email: user.email,
-          telefono: user.telefono,
-          rol: user.rol,
-          status: user.status,
-          tipoPlan: user.tipoPlan,
-          tipoCurso: user.tipoCurso,
-          nivelCurso: user.nivelCurso,
-          tipoContratacion: user.tipoContratacion,
-          arrendatario: user.arrendatario,
-          institucion: user.institucion,
-          // Agrega más campos según necesites
-        },
+        user:user
+        // user: {
+        //   _id: user._id,
+        //   nombre: user.nombre,
+        //   apellido: user.apellido,
+        //   rut: user.rut,
+        //   email: user.email,
+        //   telefono: user.telefono,
+        //   rol: user.rol,
+        //   status: user.status,
+        //   tipoPlan: user.tipoPlan,
+        //   tipoCurso: user.tipoCurso,
+        //   nivelCurso: user.nivelCurso,
+        //   tipoContratacion: user.tipoContratacion,
+        //   arrendatario: user.arrendatario,
+        //   institucion: user.institucion,
+        //   // Agrega más campos según necesites
+        // },
       });
     } catch (error) {
       console.error("Error en obtenerUsuarioPiscinaPorRut:", error);
