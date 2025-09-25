@@ -51,10 +51,12 @@ const studentController = {
             workshop,
             program,
             school_representative,
-            bio, 
+            bio,
             from,
-            role
-         } = req.body
+            role,
+            birth,
+            institution
+        } = req.body
 
         try {
 
@@ -73,7 +75,7 @@ const studentController = {
                 newStudent = await Students.findOne({ email })
 
                 if (!newStudent) {
-                //    let role = "ESTU";
+                    //    let role = "ESTU";
                     let logged = false;
                     let imgUrl
                     let tasks = []
@@ -102,7 +104,9 @@ const studentController = {
                         imgUrl,
                         tasks,
                         verified,
-                        role
+                        role,
+                        birth,
+                        institution
                     }).save()
 
                     if (req.file) {
@@ -410,7 +414,7 @@ const studentController = {
             if (filterType === 'classroom') {
 
                 const classroom = await Classrooms.findById(filterValue)
-                .populate(options);
+                    .populate(options);
 
                 if (classroom) {
 
@@ -429,7 +433,7 @@ const studentController = {
             if (filterType === 'workshop') {
 
                 const workshop = await Workshops.findById(filterValue)
-                .populate(options);
+                    .populate(options);
 
 
                 if (workshop) {
@@ -450,22 +454,22 @@ const studentController = {
         }
 
     },
-    getStudents : async (req, res) => {
+    getStudents: async (req, res) => {
 
         try {
-            
+
             const students = await Students.find()
 
-            if ( students ) {
+            if (students) {
                 res.status(200).json({
                     success: true,
                     response: students
-                    })
+                })
             } else {
                 return res.status(404).json({
                     success: false,
                     message: "No se encontraron estudiantes"
-                    });
+                });
             }
 
 
@@ -473,9 +477,85 @@ const studentController = {
 
             console.log(error)
             return res.status(500).json({ message: 'Error al intentar traer los estudiantes' });
-            
+
         }
 
+
+    },
+    updateStudent: async (req, res) => {
+        try {
+            const { id } = req.params;
+            
+            // Fix: Remove curly braces from id in query
+            const updatedStudent = await Students.findByIdAndUpdate(
+                id,
+                req.body,
+                { new: true } // Return updated document
+            );
+
+            if (!updatedStudent) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Estudiante no encontrado"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Estudiante actualizado correctamente",
+                response: updatedStudent
+            });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: error.message // Send error message instead of error object
+            });
+        }
+    },
+    deleteStudent: async (req, res) => {
+
+        //eliminar el estudiante y todas sus referencias en los demas modelos como por ejemplo del workshop, classroom, program
+        try {
+            const { id } = req.params;
+            const deletedStudent = await Students.findByIdAndDelete(id);
+
+            if (!deletedStudent) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Estudiante no encontrado"
+                });
+            }
+
+            // Eliminar referencias en otros modelos si es necesario
+            // await Classrooms.updateMany(
+            //     { students: id },
+            //     { $pull: { students: id } }
+            // );
+            await Workshops.updateMany(
+                { students: id },
+                { $pull: { students: id } }
+            );
+            // await Programs.updateMany(
+            //     { students: id },
+            //     { $pull: { students: id } }
+            // );
+
+            return res.status(200).json({
+                success: true,
+                message: "Estudiante eliminado correctamente",
+                response: deletedStudent
+            });
+            
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: error.message // Send error message instead of error object
+            });
+            
+        }
 
     }
 

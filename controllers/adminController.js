@@ -1299,19 +1299,35 @@ const userController = {
         .select('name lastName email role age size gender weight imgUrl classroom program school workshop') // Selecciona solo los campos deseados
         .populate({
           path: 'classroom',
-          select: 'name grade level' // Selecciona solo los campos deseados de classroom
+          select: 'name grade level students', // Agregar students
+          populate: {
+            path: 'students',
+            select: 'name lastName email' // Campos específicos de estudiantes
+          }
         })
         .populate({
           path: 'program',
-          select: 'name grade level' // Selecciona solo los campos deseados de program
+          select: 'name grade level students', // Agregar students
+          populate: {
+            path: 'students',
+            select: 'name lastName email' // Campos específicos de estudiantes
+          }
         })
         .populate({
           path: 'school',
-          select: 'name grade level' // Selecciona solo los campos deseados de school
+          select: 'name grade level students', // Agregar students
+          populate: {
+            path: 'students',
+            select: 'name lastName email' // Campos específicos de estudiantes
+          }
         })
         .populate({
           path: 'workshop',
-          select: 'name grade level' // Selecciona solo los campos deseados de workshop
+          select: 'name grade level students', // Popular los estudiantes del workshop
+          populate: {
+            path: 'students',
+            select: 'name lastName email phone birth gender rut age' // Campos específicos de estudiantes
+          }
         });
   
       if (user) {
