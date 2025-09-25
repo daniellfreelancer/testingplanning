@@ -34,7 +34,10 @@ const queryPopulateOptions = [
       { path: "planNL", model: "gestionPlanes" },
       { path: "planGym", model: "gestionPlanes" }
     ]
-  }
+  },
+  { path:'planCurso', select: 'tipo tipoPlan plan tieneVariante variante valor dias horarios status' },
+  { path:'planNL', select: 'tipo tipoPlan plan tieneVariante variante valor dias horarios status' },
+  { path:'planGym', select: ' tipotipoPlan plan tieneVariante variante valor dias horarios status' },
 ]
 
 const clientAWS = new S3Client({

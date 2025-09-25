@@ -557,8 +557,28 @@ const studentController = {
             
         }
 
-    }
+    },
+    getStudentsAll : async (req, res) => {
 
+        try {
+            const students = await Students.find();
+            
+            return res.status(200).json({
+                success: true,
+                message: "Estudiantes encontrados correctamente",
+                response: students
+            });
+            
+        } catch (error) {
+
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: error.message // Send error message instead of error object
+            });
+        }
+
+    }
 
 }
 
