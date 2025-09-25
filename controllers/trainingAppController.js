@@ -157,6 +157,31 @@ const trainingAppController = {
             })
 
         }
+    },
+    getTrainingByListOnlyStudents : async (req, res) => {
+        try {
+            let trainings = await Training.find({ student: { $ne: null } }).populate(trainingPopulateQuery).sort({ createdAt: -1 })
+
+            if (trainings) {
+                res.status(200).json({
+                    success: true,
+                    data: trainings
+                })
+            } else {
+                res.status(400).json({
+                    success: false,
+                    message: "No hay entrenamientos registrados"
+                })
+            }
+
+        } catch (error) {
+            console.log(error)
+            res.status(400).json({
+                success: false,
+                message: error.message
+            })
+
+        }
     }
 
 }
