@@ -26,19 +26,32 @@ function generateRandomPassword(length = 8) {
 }
 
 const queryPopulateOptions = [
-  { 
-    path: "pagos", select: 'planCurso planNL planGym transaccion monto voucher fechaPago',
+  {
+    path: "pagos",
+    select: "planCurso planNL planGym transaccion monto voucher fechaPago",
     populate: [
       { path: "planCurso", select: "tipoPlan plan valor dias" },
       { path: "recepcion", select: "nombre apellido email rut" },
       { path: "planNL", model: "gestionPlanes" },
-      { path: "planGym", model: "gestionPlanes" }
-    ]
+      { path: "planGym", model: "gestionPlanes" },
+    ],
   },
-  { path:'planCurso', select: 'tipo tipoPlan plan tieneVariante variante valor dias horarios status' },
-  { path:'planNL', select: 'tipo tipoPlan plan tieneVariante variante valor dias horarios status' },
-  { path:'planGym', select: ' tipotipoPlan plan tieneVariante variante valor dias horarios status' },
-]
+  {
+    path: "planCurso",
+    select:
+      "tipo tipoPlan plan tieneVariante variante valor dias horarios status",
+  },
+  {
+    path: "planNL",
+    select:
+      "tipo tipoPlan plan tieneVariante variante valor dias horarios status",
+  },
+  {
+    path: "planGym",
+    select:
+      " tipotipoPlan plan tieneVariante variante valor dias horarios status",
+  },
+];
 
 const clientAWS = new S3Client({
   region: bucketRegion,
@@ -406,6 +419,34 @@ const usuariosComplejosController = {
         .json({ message: "Error al restablecer contraseña,", error: error });
     }
   },
+  changePasswordUsuarioComplejo: async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const newPassword = generateRandomPassword(8);
+
+      const user = await UsuariosComplejos.findById(id);
+
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado." });
+      }
+
+      user.password = bcryptjs.hashSync(newPassword, 10);
+      await user.save();
+
+
+      res
+        .status(200)
+        .json({ message: "Nueva contraseña generada correctamente.", password: newPassword });
+
+
+    } catch (error) {
+      console.log(error);
+      res
+        .status(500)
+        .json({ message: "Error al cambiar contraseña,", error: error });
+    }
+  },
   //crear usuario de piscina
   crearUsuarioComplejosPiscina: async (req, res) => {
     try {
@@ -653,8 +694,8 @@ const usuariosComplejosController = {
   //actualizar usuario de piscina
   actualizarUsuarioComplejoPiscina: async (req, res) => {
     const { id } = req.params;
- //   const clientId = req.headers["x-client-id"];
-  //  const UsuariosComplejos = await usuariosComplejosModel(clientId);
+    //   const clientId = req.headers["x-client-id"];
+    //  const UsuariosComplejos = await usuariosComplejosModel(clientId);
     try {
       // Preparar datos de actualización
       const updateData = { ...req.body };
@@ -708,8 +749,6 @@ const usuariosComplejosController = {
 
         updateData.fotoCedulaReverso = fileName;
       }
-
-
 
       const user = await UsuariosComplejos.findByIdAndUpdate(id, updateData, {
         new: true,
@@ -805,7 +844,7 @@ const usuariosComplejosController = {
       res.status(200).json({
         success: true,
         message: "Usuario encontrado correctamente",
-        user:user
+        user: user,
         // user: {
         //   _id: user._id,
         //   nombre: user.nombre,
@@ -854,7 +893,7 @@ const usuariosComplejosController = {
   },
   encontrarUsuarioPiscinaConMismoRut: async (req, res) => {
     const clientId = req.headers["x-client-id"]; // Puede ser null
-   // const UsuariosComplejos = await Usuarios(clientId);
+    // const UsuariosComplejos = await Usuarios(clientId);
 
     try {
       // Usar agregación para encontrar RUTs duplicados
