@@ -72,7 +72,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   resideEnSantiago: { type: Boolean },
 
   //campos para formulario evaluacion -> formulario inicial
-  evaluado: {type: Boolean, default: false},
+  
   tipoCurso: {type: String},
   fechaEvaluacion: {type: Date},
   suscripcion_activa: {type: Boolean},
@@ -87,11 +87,12 @@ const usuariosComplejosSchema = new mongoose.Schema({
   salvavidas:{type: Object},
   arrendatario:{type: Boolean},
   nombreArrendatario:{type: String},
+  evaluado: {type: Boolean, default: false},
   planCurso: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
-  varianteCurso: { type: Object },
   planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   pagos: [{ type: mongoose.Types.ObjectId, ref: 'gestionPagos' }],
+  suscripciones: [{ type: mongoose.Types.ObjectId, ref: 'suscripcionPlanes' }]
 
 },{
     timestamps: true

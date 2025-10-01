@@ -1,6 +1,8 @@
 const Usuarios = require("../usuarios-complejos/usuariosComplejos");
 const GestionPagos = require("./gestionPagos");
-
+const SuscripcionPlanes = require("../suscripcion-planes/suscripcionPlanes");
+const VariantesPlanes = require("../variantes-planes/variantesPlanes");
+const GestionPlanesN = require("../gestion-planes/gestionPlanesN");
 
 const populateOptions = [
     { path: 'usuario', select: 'nombre apellido email rut' },
@@ -48,6 +50,24 @@ const gestionPagosController = {
             res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
             
         }
+
+    },
+    crearSuscripcion: async (req, res) => {
+const {pago} = req.body;
+const {planId, varianteId, usuarioId} = req.params;
+
+
+try {
+
+    const registroPago =  new GestionPagos
+
+    
+} catch (error) {
+    
+}
+
+
+
 
     }
 

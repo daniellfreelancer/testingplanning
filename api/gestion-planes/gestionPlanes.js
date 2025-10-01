@@ -14,6 +14,7 @@ const gestionPlanesSchema = new mongoose.Schema({
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion', required: true },
     usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
     status: { type: Boolean, default: true },
+    
 },{
     timestamps: true
 })

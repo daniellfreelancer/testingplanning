@@ -1,12 +1,26 @@
 const Usuarios = require("../usuarios-complejos/usuariosComplejos");
 const Planes = require("./gestionPlanes");
+const PlanesN = require("./gestionPlanesN");
+const VariantesPlanes = require("../variantes-planes/variantesPlanes");
 
-
-const queryPopulateUsuarios =[
+const queryPopulateUsuarios = [
   {
     path: 'usuarios',
-    select: 'nombre apellido email rut varianteCurso'
-  }
+    select: 'nombre apellido email rut varianteCurso pagos suscripciones',
+    populate: {
+      path: 'variantesPlan',
+      select: 'dia horario'
+    }
+  },
+  {
+    path: 'variantesPlan',
+    select: 'dia horario',
+    populate: {
+      path: 'usuarios',
+      select: 'nombre apellido email rut'
+    }
+  },
+
 ]
 
 const gestionPlanesController = {
@@ -187,7 +201,7 @@ const gestionPlanesController = {
           plan,
           success: true,
         });
-      
+
     } catch (error) {
       console.log(error)
       res
@@ -198,11 +212,65 @@ const gestionPlanesController = {
         });
 
 
-      
+
     }
 
-    
+
   },
+  crearPlanN: async (req, res) => {
+    try {
+      const { variantes } = req.body; // array de variantes
+      const nuevoPlanN = new PlanesN(req.body);
+
+      let variantesGuardadas = [];
+
+      if (variantes && variantes.length > 0) {
+
+        for (const variante of variantes) {
+          const nuevaVariante = new VariantesPlanes({ planId: nuevoPlanN._id, ...variante });
+          await nuevaVariante.save();
+          variantesGuardadas.push(nuevaVariante._id);
+        }
+
+        //asignar las variantes al plan
+        nuevoPlanN.variantesPlan = variantesGuardadas;
+        await nuevoPlanN.save();
+
+        res.status(201).json({ message: "Plan N creado exitosamente", planN: nuevoPlanN, success: true, variantes: variantesGuardadas });
+      }
+
+    } catch (error) {
+      res.status(500).json({ message: "Error al crear el plan N", error: error.message });
+    }
+  },
+  editarPlanN: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const planActualizado = await PlanesN.findByIdAndUpdate(id, req.body, { new: true });
+      res.status(200).json({ message: "Plan N actualizado exitosamente", planN: planActualizado, success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al actualizar el plan N", error: error.message });
+    }
+  },
+  eliminarPlanN: async (req, res) => {
+    try {
+      const { id } = req.params;
+      await PlanesN.findByIdAndDelete(id);
+      res.status(200).json({ message: "Plan N eliminado exitosamente", success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar el plan N", error: error.message });
+    }
+  }
+  ,
+  planesNPorInstitucion: async (req, res) => {
+    try {
+      const { institucion } = req.params;
+      const planesN = await PlanesN.find({ institucion }).populate(queryPopulateUsuarios);
+      res.status(200).json({ message: "Planes N encontrados exitosamente", planesN });
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener los planes N", error: error.message });
+    }
+  }
 };
 
 module.exports = gestionPlanesController;
