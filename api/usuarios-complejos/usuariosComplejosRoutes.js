@@ -36,7 +36,7 @@ router.get("/obtener-usuarios-institucion/:id", usuariosComplejosController.obte
 router.post("/enviar-correo-contratacion/:rut", usuariosComplejosController.enviarCorreoContratacion); //tested
 router.get("/obtener-usuario-piscina-por-rut/:rut", usuariosComplejosController.obtenerUsuarioPiscinaPorRut); //tested
 router.get("/encontrar-usuario-piscina-con-mismo-rut/", usuariosComplejosController.encontrarUsuarioPiscinaConMismoRut); //tested
-
+router.post("/crear-nueva-contrasena/:id", usuariosComplejosController.changePasswordUsuarioComplejo); //tested
 
 
 module.exports = router;

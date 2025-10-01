@@ -25,7 +25,7 @@ const queryPopulateUsuarios = [
 
 
 const queryPopulateUsuariosPlan = [
-   {
+  {
     path: 'usuarios',
     select: 'nombre apellido email rut varianteCurso pagos suscripciones',
   }
@@ -264,6 +264,13 @@ const gestionPlanesController = {
     try {
       const { id } = req.params;
       await PlanesN.findByIdAndDelete(id);
+
+      //ELIMINAR LAS VARIANTES DEL PLAN
+      const variantes = await VariantesPlanes.find({ planId: id });
+      for (const variante of variantes) {
+        await VariantesPlanes.findByIdAndDelete(variante._id);
+      }
+
       res.status(200).json({ message: "Plan N eliminado exitosamente", success: true });
     } catch (error) {
       res.status(500).json({ message: "Error al eliminar el plan N", error: error.message });
@@ -277,6 +284,51 @@ const gestionPlanesController = {
       res.status(200).json({ message: "Planes N encontrados exitosamente", planesN });
     } catch (error) {
       res.status(500).json({ message: "Error al obtener los planes N", error: error.message });
+    }
+  },
+  crearVariantePlanN: async (req, res) => {
+
+    const { planId, variante } = req.body;
+
+    try {
+
+      const nuevaVariante = new VariantesPlanes({ planId, ...variante });
+      await nuevaVariante.save();
+      //buscar el plan y agregar la variante al plan
+      const plan = await PlanesN.findById(planId);
+      plan.variantesPlan.push(nuevaVariante._id);
+      await plan.save();
+
+      res.status(201).json({ message: "Variante creada exitosamente", variante: nuevaVariante, success: true });
+
+    } catch (error) {
+      res.status(500).json({ message: "Error al crear la variante", error: error.message });
+    }
+
+  },
+  eliminarVariantePlanN: async (req, res) => {
+    const { id } = req.params;
+    try {
+      const variante = await VariantesPlanes.findByIdAndDelete(id);
+
+      //buscar el plan y eliminar la variante del plan
+      const plan = await PlanesN.findById(variante.planId);
+      plan.variantesPlan = plan.variantesPlan.filter(v => v._id.toString() !== variante._id.toString());
+      await plan.save();
+
+      res.status(200).json({ message: "Variante eliminada exitosamente", success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar la variante", error: error.message });
+    }
+  },
+  editarVariantePlanN: async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const varianteActualizada = await VariantesPlanes.findByIdAndUpdate(id, req.body, { new: true });
+      res.status(200).json({ message: "Variante actualizada exitosamente", variante: varianteActualizada, success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Error al actualizar la variante", error: error.message });
     }
   }
 };
