@@ -6,11 +6,7 @@ const VariantesPlanes = require("../variantes-planes/variantesPlanes");
 const queryPopulateUsuarios = [
   {
     path: 'usuarios',
-    select: 'nombre apellido email rut varianteCurso pagos suscripciones',
-    populate: {
-      path: 'variantesPlan',
-      select: 'dia horario'
-    }
+    select: 'nombre apellido email rut pagos suscripciones',
   },
   {
     path: 'variantesPlan',
@@ -19,7 +15,7 @@ const queryPopulateUsuarios = [
       path: 'usuarios',
       select: 'nombre apellido email rut'
     }
-  },
+  }
 
 ]
 

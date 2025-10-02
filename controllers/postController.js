@@ -1,4 +1,6 @@
 const Post = require('../models/post')
+const Institution = require('../models/institution')
+const Program = require('../models/program')
 const Comment = require('../models/comments')
 const { S3Client, PutObjectCommand, PutObjectRetentionCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto')
@@ -179,26 +181,26 @@ const postController = {
 
             if (isVideo) {
                 fileName = `post-video-${quizIdentifier()}.${extension}`;
-              } else {
+            } else {
                 const exif = await sharp(fileContent).metadata();
                 console.log('Información EXIF:', exif); // Muestra la información EXIF por consola
-          
-                const orientation = exif  ? exif.orientation : 1;
-          
+
+                const orientation = exif ? exif.orientation : 1;
+
                 // Si la orientación de la imagen es horizontal, rotarla 90 grados
                 if (orientation === 6 || orientation === 8) {
-                  optimizedImageBuffer = await sharp(fileContent)
-                    .rotate(90)
-                    .resize(1350, 1720)
-                    .toBuffer();
+                    optimizedImageBuffer = await sharp(fileContent)
+                        .rotate(90)
+                        .resize(1350, 1720)
+                        .toBuffer();
                 } else {
-                  optimizedImageBuffer = await sharp(fileContent)
-                    .resize(1350, 1720)
-                    .toBuffer();
+                    optimizedImageBuffer = await sharp(fileContent)
+                        .resize(1350, 1720)
+                        .toBuffer();
                 }
-          
+
                 fileName = `post-image-${quizIdentifier()}.${extension}`;
-              }
+            }
 
             const uploadParams = {
                 Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
@@ -554,7 +556,107 @@ const postController = {
             return res.status(500).json({ message: 'Error fetching posts' });
         }
     },
-    
+    getPostsByInstitucion: async (req, res) => {
+
+        const { institucionId } = req.params;
+
+        try {
+
+            // buscar la institución por su id
+            const institution = await Institution.findById(institucionId);
+            if (!institution) {
+                return res.status(404).json({ message: 'Institution not found' });
+            }
+
+            let programs = [];
+
+            //cargar los programas de la institución
+            programs = institution.programs;
+
+
+            //buscar los programas de la institución
+            const programsFound = await Program.find({ _id: { $in: programs } });
+
+            //  return  console.log(programsFound?.workshops);
+
+            //buscar los workshops de los programas
+            let workshops = [];
+            programsFound.forEach(async program => {
+                workshops.push(...program.workshops);
+            });
+
+            console.log(workshops);
+
+            //    return res.status(200).json({ response: workshops, message: "Workshops", success: true });
+
+
+            //retorna todos los posts que en su campo workshop tenga el _id de los workshops
+            const postsFound = await Post.find({ workshop: { $in: workshops } }).sort({ createdAt: -1 })
+                .populate({
+                    path: 'user',
+                    select: 'name lastName role imgUrl',
+                })
+                .populate({
+                    path: 'comments',
+                    select: 'user replies text student',
+                    populate: [
+                        {
+                            path: 'user student',
+                            select: 'name lastName imgUrl role',
+                        },
+                        {
+                            path: 'replies',
+                            select: 'name lastName role imgUrl user text student',
+                            populate: {
+                                path: 'user student',
+                                select: 'name lastName imgUrl role',
+                            },
+                        },
+                    ],
+                })
+            return res.status(200).json({ response: postsFound, message: "Posts", success: true });
+
+            //buscar los posts de los workshops
+            const posts = await Post.find()
+                .sort({ createdAt: -1 })
+                .populate({
+                    path: 'user',
+                    select: 'name lastName role imgUrl',
+                })
+                .populate({
+                    path: 'comments',
+                    select: 'user replies text student',
+                    populate: [
+                        {
+                            path: 'user student',
+                            select: 'name lastName imgUrl role',
+                        },
+                        {
+                            path: 'replies',
+                            select: 'name lastName role imgUrl user text student',
+                            populate: {
+                                path: 'user student',
+                                select: 'name lastName imgUrl role',
+                            },
+                        },
+                    ],
+                })
+
+            //filtrar los posts por los  _id de los workshops
+            const postsFiltered = posts.filter(post => workshops.includes(post.workshop));
+
+            return res.status(200).json({ response: postsFiltered, message: "Posts", success: true });
+
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Error fetching posts' });
+        }
+
+
+
+    }
+
 };
 
 module.exports = postController;
