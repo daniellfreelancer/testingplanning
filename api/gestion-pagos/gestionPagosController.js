@@ -83,12 +83,6 @@ const gestionPagosController = {
 
             });
             const suscripcionGuardada = await suscripcion.save();
-            //agregar la suscripcion al usuario
-            await Usuarios.findByIdAndUpdate(usuarioId, { $push: { suscripciones: suscripcionGuardada._id } });
-            //agregar el pago al usuario
-            await Usuarios.findByIdAndUpdate(usuarioId, { $push: { pagos: pagoGuardado._id } });
-            //agregar el usuario al plan
-            await GestionPlanesN.findByIdAndUpdate(planId, { $push: { usuarios: usuarioId } });
             //agregar el usuario a la variante
             await VariantesPlanes.findByIdAndUpdate(varianteId, { $push: { usuarios: usuarioId } });
 
