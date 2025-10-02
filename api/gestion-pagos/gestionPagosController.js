@@ -4,6 +4,7 @@ const SuscripcionPlanes = require("../suscripcion-planes/suscripcionPlanes");
 const VariantesPlanes = require("../variantes-planes/variantesPlanes");
 const GestionPlanesN = require("../gestion-planes/gestionPlanesN");
 
+
 const populateOptions = [
     { path: 'usuario', select: 'nombre apellido email rut' },
     { path: 'institucion', select: 'nombre' },
@@ -17,7 +18,7 @@ const gestionPagosController = {
     registrarPago: async (req, res) => {
 
         try {
-            const {usuarioID} = req.params
+            const { usuarioID } = req.params
 
             const nuevoPago = new GestionPagos(req.body);
             const pagoGuardado = await nuevoPago.save();
@@ -30,11 +31,11 @@ const gestionPagosController = {
                 pago: pagoGuardado,
                 success: true,
             });
-            
+
         } catch (error) {
             console.log(error)
             res.status(500).json({ message: "Error al registrar el pago", error: error.message });
-            
+
         }
 
     },
@@ -44,32 +45,68 @@ const gestionPagosController = {
             const { institucion } = req.params;
             const pagos = await GestionPagos.find({ institucion }).populate(populateOptions);
             res.status(200).json({ pagos, success: true });
-            
+
         } catch (error) {
             console.log(error)
             res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
-            
+
         }
 
     },
     crearSuscripcion: async (req, res) => {
-const {pago} = req.body;
-const {planId, varianteId, usuarioId} = req.params;
+        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, tipoConsumo, horasDisponibles, } = req.body;
+        const { planId, varianteId, usuarioId, institucionId } = req.params;
 
+        try {
+            const pago = new GestionPagos({
+                usuario: usuarioId,
+                institucion: institucionId,
+                transaccion: transaccion,
+                voucher: voucher,
+                monto: monto,
+                fechaPago: fechaPago,
+                recepcion: recepcion,
+                planId: planId,
+                beneficio: beneficio,
+            });
+            const pagoGuardado = await pago.save();
+            //luego de crear el pago, crear la suscripcion
+            const suscripcion = new SuscripcionPlanes({
+                usuario: usuarioId,
+                planId: planId,
+                varianteId: varianteId,
+                fechaInicio: fechaPago,
+                fechaFin: fechaFin,
+                pago: pagoGuardado._id,
+                tipoConsumo: tipoConsumo,
+                horasDisponibles: horasDisponibles,
 
-try {
+            });
+            const suscripcionGuardada = await suscripcion.save();
+            //agregar la suscripcion al usuario
+            await Usuarios.findByIdAndUpdate(usuarioId, { $push: { suscripciones: suscripcionGuardada._id } });
+            //agregar el pago al usuario
+            await Usuarios.findByIdAndUpdate(usuarioId, { $push: { pagos: pagoGuardado._id } });
+            //agregar el usuario al plan
+            await GestionPlanesN.findByIdAndUpdate(planId, { $push: { usuarios: usuarioId } });
+            //agregar el usuario a la variante
+            await VariantesPlanes.findByIdAndUpdate(varianteId, { $push: { usuarios: usuarioId } });
 
-    const registroPago =  new GestionPagos
+            //response global
+            res.status(201).json({
+                message: "Suscripcion creada exitosamente",
+                suscripcion: suscripcionGuardada,
+                pago: pagoGuardado,
+                success: true,
+            });
 
-    
-} catch (error) {
-    
-}
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({ message: "Error al crear la suscripcion", error: error.message });
 
+        }
 
-
-
-    }
+    },
 
 }
 

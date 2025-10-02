@@ -23,4 +23,5 @@ router.put('/editar-variante-plan-n/:id', gestionPlanesController.editarVariante
 router.delete('/eliminar-variante-plan-n/:id', gestionPlanesController.eliminarVariantePlanN);
 
 
+
 module.exports = router;
