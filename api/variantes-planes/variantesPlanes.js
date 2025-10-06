@@ -5,6 +5,7 @@ const variantesPlanesSchema = new mongoose.Schema({
     usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuariosComplejos' }],
     dia: { type: String },
     horario: { type: String },
+    horasDisponibles: { type: Number },
 },{
     timestamps: true
 });
