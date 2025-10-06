@@ -12,7 +12,10 @@ const populateOptions = [
     { path: 'planCurso', select: 'tipoPlan plan valor dias ' },
     { path: 'planNL', select: 'tipoPlan plan valor dias' },
     { path: 'planGym', select: 'tipoPlan plan valor dias' },
+    {path: 'planId', select: 'tipo tipoPlan plan valor dias'}
 ]
+
+
 
 const gestionPagosController = {
     registrarPago: async (req, res) => {
@@ -102,6 +105,50 @@ const gestionPagosController = {
         }
 
     },
+    getPagosToday: async (req, res) => {
+
+
+        try {
+            // Obtener la fecha actual en el inicio y final del día
+            const today = new Date();
+            
+            // Crear fechas usando formato ISO sin zona horaria
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            
+            const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+            const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
+            
+            console.log("startOfDay", startOfDay);
+            console.log("endOfDay", endOfDay);
+            console.log("today", today);
+
+            // Filtrar pagos por fecha del día actual
+            const pagos = await GestionPagos.find({
+                fechaPago: {
+                    $gte: startOfDay,
+                    $lte: endOfDay
+                }
+            }).populate(populateOptions);
+
+            if (pagos.length > 0) {     
+                res.status(200).json({
+                    message: "Pagos del día obtenidos correctamente",
+                    pagos,
+                    success: true,
+                });
+            } else {
+                res.status(200).json({
+                    message: "No se encontraron pagos del día",
+                    pagos: [],
+                    success: true,
+                });
+            }
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener los pagos del día", error: error.message });
+        }
+    }
 
 }
 
