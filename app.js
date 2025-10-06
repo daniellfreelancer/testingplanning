@@ -70,7 +70,8 @@ const espaciosDeportivos = require('./api/espacios-deportivos/espaciosDeportivos
 const accesoUsuariosComplejos = require('./api/acceso-usuarios-complejos/accesoUsuarioComplejosRouter')
 const planesPiscinas = require('./api/gestion-planes/gestionPlanesRoutes')
 const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
-//Rutas para gestion de planes y membresias en piscinas
+//Rutas para gestion de planes y suscripciones en piscinas
+const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRoutes')
 
 
 var app = express();
@@ -143,6 +144,7 @@ app.use('/aws-vm', rekoAWS)
 app.use('/api/encuestas', encuestaGymRoutes);
 app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
+app.use('/suscripciones-piscinas', suscripcionesPiscinas)
 
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus

@@ -80,6 +80,7 @@ const gestionPagosController = {
                 pago: pagoGuardado._id,
                 tipoConsumo: tipoConsumo,
                 horasDisponibles: horasDisponibles,
+                institucion: institucionId,
 
             });
             const suscripcionGuardada = await suscripcion.save();
