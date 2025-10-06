@@ -8,5 +8,6 @@ router.get('/pagos-institucion/:institucion', gestionPagosController.pagosInstit
 //crear suscripcion plan N
 router.post('/crear-suscripcion-plan/usuario/:usuarioId/plan/:planId/variante/:varianteId/institucion/:institucionId', gestionPagosController.crearSuscripcion);
 router.get('/pagos-hoy', gestionPagosController.getPagosToday);
-
+router.get('/pagos-usuario/:usuarioId', gestionPagosController.getPagosByUsuario);
+router.get('/pagos-institucion/:institucionId', gestionPagosController.getPagosByInstitucion);
 module.exports = router;

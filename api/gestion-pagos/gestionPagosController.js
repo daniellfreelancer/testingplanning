@@ -12,7 +12,7 @@ const populateOptions = [
     { path: 'planCurso', select: 'tipoPlan plan valor dias ' },
     { path: 'planNL', select: 'tipoPlan plan valor dias' },
     { path: 'planGym', select: 'tipoPlan plan valor dias' },
-    {path: 'planId', select: 'tipo tipoPlan plan valor dias'}
+    {path: 'planId', select: 'tipo nombrePlan valor'}
 ]
 
 
@@ -147,6 +147,36 @@ const gestionPagosController = {
             }
         } catch (error) {
             res.status(500).json({ message: "Error al obtener los pagos del día", error: error.message });
+        }
+    },
+    getPagosByUsuario: async (req, res) => {
+        const { usuarioId } = req.params;
+
+        try {
+            const pagos = await GestionPagos.find({ usuario: usuarioId }).populate(populateOptions);
+            res.status(200).json({
+                message: "Pagos obtenidos correctamente",
+                pagos,
+                success: true,
+            });
+            
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener los pagos del usuario", error: error.message });
+        }
+    },
+    getPagosByInstitucion: async (req, res) => {
+        const { institucionId } = req.params;
+
+        try {
+            const pagos = await GestionPagos.find({ institucion: institucionId }).populate(populateOptions);
+            res.status(200).json({
+                message: "Pagos obtenidos correctamente",
+                pagos,
+                success: true,
+            });
+        }
+         catch (error) {
+            res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
         }
     }
 
