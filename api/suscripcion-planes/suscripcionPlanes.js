@@ -11,6 +11,10 @@ const suscripcionPlanesSchema = new mongoose.Schema({
     tipoConsumo: { type: String, required: true, enum: ['horas', 'mensual', 'bloques'] },
     horasDisponibles : {type: Number},
     bloquesDisponibles : {type: Number},
+    institucion: { type: mongoose.Types.ObjectId, ref: 'institucion', required: true },
+},
+{
+    timestamps: true
 });
 
 const SuscripcionPlanes = mongoose.model('suscripcionPlanes', suscripcionPlanesSchema);
