@@ -178,6 +178,21 @@ const gestionPagosController = {
          catch (error) {
             res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
         }
+    },
+    getUltimoPagoByUsuario: async (req, res) => {
+        const { usuarioId } = req.params;
+
+        try {
+            const pago = await GestionPagos.findOne({ usuario: usuarioId }).sort({ fechaPago: -1 }).populate(populateOptions);
+            res.status(200).json({
+                message: "Pago obtenido correctamente",
+                pago,
+                success: true,
+            });
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener el último pago del usuario", error: error.message });
+        }
+
     }
 
 }

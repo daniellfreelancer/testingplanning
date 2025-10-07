@@ -10,4 +10,5 @@ router.post('/crear-suscripcion-plan/usuario/:usuarioId/plan/:planId/variante/:v
 router.get('/pagos-hoy', gestionPagosController.getPagosToday);
 router.get('/pagos-usuario/:usuarioId', gestionPagosController.getPagosByUsuario);
 router.get('/pagos-institucion/:institucionId', gestionPagosController.getPagosByInstitucion);
+router.get('/ultimo-pago-usuario/:usuarioId', gestionPagosController.getUltimoPagoByUsuario);
 module.exports = router;

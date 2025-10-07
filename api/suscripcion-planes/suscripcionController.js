@@ -82,6 +82,21 @@ const suscripcionController = {
             res.status(500).json({ message: "Error al obtener las suscripciones de la institución", error: error.message });
         }
 
+    },
+    actualizarSuscripcion: async (req, res) => {
+        const { id } = req.params;
+        try {
+            const suscripcion = await SuscripcionPlanes.findByIdAndUpdate(id, req.body, { new: true });
+            res.status(200).json({
+                message: "Suscripcion actualizada correctamente",
+                suscripcion,
+                success: true,
+            });
+        } catch (error) {
+            res.status(500).json({ message: "Error al actualizar la suscripcion", error: error.message });
+        }
+
+
     }
 
 }
