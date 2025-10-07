@@ -8,5 +8,6 @@ router.get('/plan/:planId', suscripcionController.getSuscripcionByPlan);
 router.get('/variante/:varianteId', suscripcionController.getSuscripcionByVariante);
 router.get('/pago/:pagoId', suscripcionController.getSuscripcionByPago);
 router.get('/institucion/:institucionId', suscripcionController.getSuscripcionByInstitucion);
+router.put('/update-suscripcion/:id', suscripcionController.actualizarSuscripcion);
 
 module.exports = router;

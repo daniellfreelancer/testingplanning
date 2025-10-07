@@ -13,6 +13,7 @@ const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
 const publicKey = process.env.AWS_PUBLIC_KEY;
 const privateKey = process.env.AWS_SECRET_KEY;
+const SuscripcionPlanes = require('../suscripcion-planes/suscripcionPlanes')
 
 function generateRandomPassword(length = 8) {
   const characters =
@@ -560,6 +561,18 @@ const usuariosComplejosController = {
         rut: { $regex: `^${doc}[0-9Kk]$`, $options: "i" }, // doc seguido de 1 dígito numérico, 'K'/'k', o comilla simple
       });
 
+      //buscar suscripciones activas del usuario, que fechaFin se mayor o igual al dia de hoy en hora 00:00:00
+      const fechaFin = new Date();
+      fechaFin.setDate(fechaFin.getDate());
+      fechaFin.setHours(0, 0, 0, 0);
+      const suscripcionesActivas = await SuscripcionPlanes.find({
+        usuario: user._id,
+        fechaFin: { $gte: fechaFin },
+      })
+      .populate('planId',{'nombrePlan':1, 'tipo':1, 'tipoPlan':1, 'valor':1})
+      .populate('varianteId',{'horasDisponibles':1, 'dia':1, 'horario':1});
+
+
       if (!user) {
         return res
           .status(404)
@@ -584,6 +597,7 @@ const usuariosComplejosController = {
           tipoPlanGym: user.tipoPlanGym,
           arrendatario: user.arrendatario,
           nombreArrendatario: user.nombreArrendatario,
+          suscripcionesActivas: suscripcionesActivas,
         },
       });
     } catch (error) {
