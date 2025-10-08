@@ -633,12 +633,13 @@ const usuariosComplejosController = {
     try {
       const users = await UsuariosComplejos.find({
         institucion,
-        rol: "usuario",
+     //   rol: "usuario",
         tipoPlanGym: { $in: ["Plan full", "Plan basico"] },
       });
       res.status(200).json({
         message: "Usuarios de piscina encontrados correctamente",
         users,
+        cantidad: users.length,
       });
     } catch (error) {
       console.log(error);

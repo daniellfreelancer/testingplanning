@@ -39,4 +39,5 @@ router.get("/encontrar-usuario-piscina-con-mismo-rut/", usuariosComplejosControl
 router.post("/crear-nueva-contrasena/:id", usuariosComplejosController.changePasswordUsuarioComplejo); //tested
 
 
+
 module.exports = router;
