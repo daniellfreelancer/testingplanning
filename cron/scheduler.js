@@ -14,15 +14,16 @@ const cron = require('node-cron');
 const { runDailyProcess } = require('./dailyRunner');
 
 function registerCronJobs(deps) {
-  const dailyMidnight = cron.schedule(
-    '0 0 0 * * *',        // seg min hora => 00:00:00 todos los días
-    async () => {
-      await runDailyProcess(deps);
-    },
-    { timezone: 'America/Santiago' }
-  );
+    const dailyMidnight = cron.schedule(
+        '0 0 0 * * *',        // seg min hora => 00:00:00 todos los días
+        //'0 15 19 * * *',      // seg min hora => 10:00:00 todos los días (test)
+        async () => {
+            await runDailyProcess(deps);
+        },
+        { timezone: 'America/Santiago' }
+    );
 
-  return { dailyMidnight };
+    return { dailyMidnight };
 }
 
 module.exports = { registerCronJobs };

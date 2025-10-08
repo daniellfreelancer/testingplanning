@@ -24,6 +24,11 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
+
+// Iniciar cron jobs
+registerCronJobs();
+console.log('Cronjobs inicializados');
+
 /**
  * Listen on provided port, on all network interfaces.
  */

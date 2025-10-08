@@ -1,6 +1,6 @@
 const { logger } = require('../libs/logger');
 const steps = [
-  require('./procesos/arrendatarios'),
+  require('./procesos/arrendatarios.js'),
   //require('./procesos/02'),
   //require('./procesos/03'),
 ];
