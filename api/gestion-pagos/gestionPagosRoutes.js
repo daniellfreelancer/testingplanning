@@ -11,4 +11,5 @@ router.get('/pagos-hoy', gestionPagosController.getPagosToday);
 router.get('/pagos-usuario/:usuarioId', gestionPagosController.getPagosByUsuario);
 router.get('/pagos-institucion/:institucionId', gestionPagosController.getPagosByInstitucion);
 router.get('/ultimo-pago-usuario/:usuarioId', gestionPagosController.getUltimoPagoByUsuario);
+router.post('/crear-renovacion/:suscripcionId', gestionPagosController.crearRenovacion);
 module.exports = router;

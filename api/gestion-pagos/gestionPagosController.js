@@ -12,7 +12,7 @@ const populateOptions = [
     { path: 'planCurso', select: 'tipoPlan plan valor dias ' },
     { path: 'planNL', select: 'tipoPlan plan valor dias' },
     { path: 'planGym', select: 'tipoPlan plan valor dias' },
-    {path: 'planId', select: 'tipo nombrePlan valor'}
+    { path: 'planId', select: 'tipo nombrePlan valor' }
 ]
 
 
@@ -111,15 +111,15 @@ const gestionPagosController = {
         try {
             // Obtener la fecha actual en el inicio y final del día
             const today = new Date();
-            
+
             // Crear fechas usando formato ISO sin zona horaria
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
-            
+
             const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
             const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
-            
+
             console.log("startOfDay", startOfDay);
             console.log("endOfDay", endOfDay);
             console.log("today", today);
@@ -132,7 +132,7 @@ const gestionPagosController = {
                 }
             }).populate(populateOptions);
 
-            if (pagos.length > 0) {     
+            if (pagos.length > 0) {
                 res.status(200).json({
                     message: "Pagos del día obtenidos correctamente",
                     pagos,
@@ -159,7 +159,7 @@ const gestionPagosController = {
                 pagos,
                 success: true,
             });
-            
+
         } catch (error) {
             res.status(500).json({ message: "Error al obtener los pagos del usuario", error: error.message });
         }
@@ -175,7 +175,7 @@ const gestionPagosController = {
                 success: true,
             });
         }
-         catch (error) {
+        catch (error) {
             res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
         }
     },
@@ -193,6 +193,44 @@ const gestionPagosController = {
             res.status(500).json({ message: "Error al obtener el último pago del usuario", error: error.message });
         }
 
+    },
+    crearRenovacion: async (req, res) => {
+        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, } = req.body;
+        const { suscripcionId } = req.params;
+
+        try {
+            ///buscamos primero la suscripcion
+            const suscripcion = await SuscripcionPlanes.findById(suscripcionId);
+            if (!suscripcion) {
+                return res.status(404).json({ message: "Suscripcion no encontrada" });
+            }
+
+            const pago = new GestionPagos({
+                usuario: suscripcion.usuario,
+                institucion: suscripcion.institucion,
+                transaccion: transaccion,
+                voucher: voucher,
+                monto: monto,
+                fechaPago: fechaPago,
+                recepcion: recepcion,
+                planId: suscripcion.planId,
+                beneficio: beneficio,
+            });
+
+            const pagoGuardado = await pago.save();
+
+            ///actualizamos la suscripcion
+            await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin } });
+            ///agregar el pago al usuario
+            await Usuarios.findByIdAndUpdate(suscripcion.usuario, { $push: { pagos: pagoGuardado._id } });
+
+            res.status(201).json({ message: "Renovacion creada exitosamente", pago: pagoGuardado, success: true });
+
+
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({ message: "Error al crear la renovacion", error: error.message });
+        }
     }
 
 }
