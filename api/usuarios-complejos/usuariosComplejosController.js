@@ -557,6 +557,8 @@ const usuariosComplejosController = {
       // La regex ahora acepta tanto dígitos (0-9) como la letra 'K' (mayúscula o minúscula) como dígito verificador
       // También ignora la comilla simple (') que agrega el lector QR cuando el dígito es 'K'
 
+
+      // buscar la cantidad de
       const user = await UsuariosComplejos.findOne({
         rut: { $regex: `^${doc}[0-9Kk]$`, $options: "i" }, // doc seguido de 1 dígito numérico, 'K'/'k', o comilla simple
       });
@@ -565,13 +567,21 @@ const usuariosComplejosController = {
       const fechaFin = new Date();
       fechaFin.setDate(fechaFin.getDate());
       fechaFin.setHours(0, 0, 0, 0);
+
+      //si la suscripcion es de planId?.tipo = nadoLibre, y el campo horasDisponibles es 0, no se debe mostrar
       const suscripcionesActivas = await SuscripcionPlanes.find({
-        usuario: user._id,
+        usuario: user?._id,
         fechaFin: { $gte: fechaFin },
       })
       .populate('planId',{'nombrePlan':1, 'tipo':1, 'tipoPlan':1, 'valor':1})
       .populate('varianteId',{'horasDisponibles':1, 'dia':1, 'horario':1});
 
+      const suscripcionesActivasFiltradas = suscripcionesActivas.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0) {
+          return false;
+        }
+        return true;
+      });
 
       if (!user) {
         return res
@@ -597,7 +607,7 @@ const usuariosComplejosController = {
           tipoPlanGym: user.tipoPlanGym,
           arrendatario: user.arrendatario,
           nombreArrendatario: user.nombreArrendatario,
-          suscripcionesActivas: suscripcionesActivas,
+          suscripcionesActivas: suscripcionesActivasFiltradas,
         },
       });
     } catch (error) {
