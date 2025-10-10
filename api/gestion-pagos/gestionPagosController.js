@@ -90,6 +90,10 @@ const gestionPagosController = {
             //agregar el usuario a la variante
             await VariantesPlanes.findByIdAndUpdate(varianteId, { $push: { usuarios: usuarioId } });
 
+            //actualiza el status del usuario a true
+            await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true } });
+            
+
             //response global
             res.status(201).json({
                 message: "Suscripcion creada exitosamente",
