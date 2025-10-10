@@ -644,7 +644,7 @@ const usuariosComplejosController = {
       const users = await UsuariosComplejos.find({
         institucion,
      //   rol: "usuario",
-        tipoPlanGym: { $in: ["Plan full", "Plan basico"] },
+        tipoPlanGym: { $in: ["Plan full", "Plan basico", "Plan básico"] },
       });
       res.status(200).json({
         message: "Usuarios de piscina encontrados correctamente",
