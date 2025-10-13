@@ -42,20 +42,6 @@ const gestionPagosController = {
         }
 
     },
-    pagosInstitucion: async (req, res) => {
-
-        try {
-            const { institucion } = req.params;
-            const pagos = await GestionPagos.find({ institucion }).populate(populateOptions);
-            res.status(200).json({ pagos, success: true });
-
-        } catch (error) {
-            console.log(error)
-            res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
-
-        }
-
-    },
     crearSuscripcion: async (req, res) => {
         const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, tipoConsumo, horasDisponibles, } = req.body;
         const { planId, varianteId, usuarioId, institucionId } = req.params;
@@ -92,7 +78,7 @@ const gestionPagosController = {
 
             //actualiza el status del usuario a true
             await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true } });
-            
+
 
             //response global
             res.status(201).json({
@@ -110,7 +96,12 @@ const gestionPagosController = {
 
     },
     getPagosToday: async (req, res) => {
+        const { institucion } = req.params;
+        const { recepcion } = req.query;
 
+        console.log("=== getPagosToday ===");
+        console.log("Institucion:", institucion);
+        console.log("Recepcion query:", recepcion);
 
         try {
             // Obtener la fecha actual en el inicio y final del día
@@ -126,15 +117,27 @@ const gestionPagosController = {
 
             console.log("startOfDay", startOfDay);
             console.log("endOfDay", endOfDay);
-            console.log("today", today);
 
-            // Filtrar pagos por fecha del día actual
-            const pagos = await GestionPagos.find({
+            // Construir el filtro dinámicamente
+            const filtro = {
                 fechaPago: {
                     $gte: startOfDay,
                     $lte: endOfDay
-                }
-            }).populate(populateOptions);
+                },
+                institucion: institucion
+            };
+
+            // Solo agregar el filtro de recepcion si se proporciona
+            if (recepcion) {
+                filtro.recepcion = recepcion;
+            }
+
+            console.log("Filtro aplicado:", filtro);
+
+            // Filtrar pagos por fecha del día actual
+            const pagos = await GestionPagos.find(filtro).populate(populateOptions);
+
+            console.log("Pagos encontrados:", pagos.length);
 
             if (pagos.length > 0) {
                 res.status(200).json({
@@ -150,7 +153,11 @@ const gestionPagosController = {
                 });
             }
         } catch (error) {
-            res.status(500).json({ message: "Error al obtener los pagos del día", error: error.message });
+            console.error("Error en getPagosToday:", error);
+            res.status(500).json({ 
+                message: "Error al obtener los pagos del día", 
+                error: error.message 
+            });
         }
     },
     getPagosByUsuario: async (req, res) => {
@@ -170,9 +177,27 @@ const gestionPagosController = {
     },
     getPagosByInstitucion: async (req, res) => {
         const { institucionId } = req.params;
+        const { recepcion } = req.query;
+
+        console.log("=== getPagosByInstitucion ===");
+        console.log("Institucion ID:", institucionId);
+        console.log("Recepcion query:", recepcion);
 
         try {
-            const pagos = await GestionPagos.find({ institucion: institucionId }).populate(populateOptions);
+            // Construir el filtro dinámicamente
+            const filtro = { institucion: institucionId };
+            
+            // Solo agregar el filtro de recepcion si se proporciona
+            if (recepcion) {
+                filtro.recepcion = recepcion;
+            }
+
+            console.log("Filtro aplicado:", filtro);
+
+            const pagos = await GestionPagos.find(filtro).populate(populateOptions);
+
+            console.log("Pagos encontrados:", pagos.length);
+
             res.status(200).json({
                 message: "Pagos obtenidos correctamente",
                 pagos,
@@ -180,7 +205,11 @@ const gestionPagosController = {
             });
         }
         catch (error) {
-            res.status(500).json({ message: "Error al obtener los pagos de la institución", error: error.message });
+            console.error("Error en getPagosByInstitucion:", error);
+            res.status(500).json({ 
+                message: "Error al obtener los pagos de la institución", 
+                error: error.message 
+            });
         }
     },
     getUltimoPagoByUsuario: async (req, res) => {
@@ -234,6 +263,21 @@ const gestionPagosController = {
         } catch (error) {
             console.log(error)
             res.status(500).json({ message: "Error al crear la renovacion", error: error.message });
+        }
+    },
+    crearPago: async (req, res) => {
+        const { transaccion, voucher, monto, fechaPago, recepcion, descripcion } = req.body;
+        const { usuarioId, institucionId } = req.params;
+
+        try {
+            const pago = new GestionPagos({ usuario: usuarioId, institucion: institucionId, transaccion: transaccion, voucher: voucher, monto: monto, fechaPago: fechaPago, recepcion: recepcion, descripcion: descripcion });
+            const pagoGuardado = await pago.save();
+            //agregar el pago al usuario
+            await Usuarios.findByIdAndUpdate(usuarioId, { $push: { pagos: pagoGuardado._id } });
+            res.status(201).json({ message: "Pago creado exitosamente", pago: pagoGuardado, success: true });
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({ message: "Error al crear el pago", error: error.message });
         }
     }
 

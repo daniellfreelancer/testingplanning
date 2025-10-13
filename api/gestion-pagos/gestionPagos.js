@@ -9,10 +9,11 @@ const gestionPagosSchema = new mongoose.Schema({
     beneficio: { type: String },
     fechaPago: { type: Date, required: true },
     recepcion: { type: mongoose.Types.ObjectId, ref: 'usuariosComplejos', required: true },
-    planId: { type: mongoose.Types.ObjectId, ref: 'gestionPlanesN', required: true },
+    planId: { type: mongoose.Types.ObjectId, ref: 'gestionPlanesN',},
     planCurso: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes', },
     planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
     planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
+    descripcion: { type: String },
 },
 {
     timestamps: true
