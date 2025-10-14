@@ -81,6 +81,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
   trabajadorPiscina: {type: String},
   tipoContratacion: {type: String},
   nivelCurso: {type: String},
+  aptoNadolibre:{type: Boolean},
   tipoPlan: {type: String},
   tutores:[{type: Object}],
   tipoDomicilio:{type: String},
