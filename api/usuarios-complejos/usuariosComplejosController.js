@@ -1076,6 +1076,65 @@ const usuariosComplejosController = {
     }
 
   },
+  buscarUsuarioPorPasaporte: async (req, res) => {
+    const { pasaporte } = req.params;
+    try {
+      const user = await UsuariosComplejos.findOne({ rut: pasaporte });
+
+            //buscar suscripciones activas del usuario, que fechaFin se mayor o igual al dia de hoy en hora 00:00:00
+            const fechaFin = new Date();
+            fechaFin.setDate(fechaFin.getDate());
+            fechaFin.setHours(0, 0, 0, 0);
+      
+            //si la suscripcion es de planId?.tipo = nadoLibre, y el campo horasDisponibles es 0, no se debe mostrar
+            const suscripcionesActivas = await SuscripcionPlanes.find({
+              usuario: user?._id,
+              fechaFin: { $gte: fechaFin },
+            })
+              .populate('planId', { 'nombrePlan': 1, 'tipo': 1, 'tipoPlan': 1, 'valor': 1 })
+              .populate('varianteId', { 'horasDisponibles': 1, 'dia': 1, 'horario': 1 });
+      
+            const suscripcionesActivasFiltradas = suscripcionesActivas.filter((suscripcion) => {
+              if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0) {
+                return false;
+              }
+              return true;
+            });
+      
+            if (!user) {
+              return res
+                .status(404)
+                .json({ message: "Usuario de piscina no encontrado" });
+            }
+      
+            res.status(200).json({
+              message: "Usuario de piscina encontrado correctamente",
+              user: {
+                _id: user._id,
+                nombre: user.nombre,
+                apellido: user.apellido,
+                rut: user.rut,
+                email: user.email,
+                telefono: user.telefono,
+                rol: user.rol,
+                tipoPlan: user.tipoPlan,
+                tipoCurso: user.tipoCurso,
+                status: user.status,
+                tipoContratacion: user.tipoContratacion,
+                nivelCurso: user.nivelCurso,
+                tipoPlanGym: user.tipoPlanGym,
+                arrendatario: user.arrendatario,
+                nombreArrendatario: user.nombreArrendatario,
+                suscripcionesActivas: suscripcionesActivasFiltradas,
+              },
+            });
+
+     
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error al buscar usuario por pasaporte", error });
+    }
+  }
 };
 
 module.exports = usuariosComplejosController;

@@ -39,6 +39,7 @@ router.get("/encontrar-usuario-piscina-con-mismo-rut/", usuariosComplejosControl
 router.post("/crear-nueva-contrasena/:id", usuariosComplejosController.changePasswordUsuarioComplejo); //tested
 router.get("/obtener-todos-usuarios-piscina-paginado/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPaginado); //tested
 router.put("/actualizar-status-arrendatario/:id", usuariosComplejosController.actualizarStatusArrendatario); //tested
+router.get("/buscar-usuario-por-pasaporte/:pasaporte", usuariosComplejosController.buscarUsuarioPorPasaporte); //tested
 
 
 
