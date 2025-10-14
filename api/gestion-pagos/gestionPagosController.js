@@ -43,7 +43,7 @@ const gestionPagosController = {
 
     },
     crearSuscripcion: async (req, res) => {
-        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, tipoConsumo, horasDisponibles, } = req.body;
+        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, tipoConsumo, horasDisponibles, nivelCurso, aptoNadolibre } = req.body;
         const { planId, varianteId, usuarioId, institucionId } = req.params;
 
         try {
@@ -77,7 +77,7 @@ const gestionPagosController = {
             await VariantesPlanes.findByIdAndUpdate(varianteId, { $push: { usuarios: usuarioId } });
 
             //actualiza el status del usuario a true
-            await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true } });
+            await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true, nivelCurso: nivelCurso || "", aptoNadolibre: aptoNadolibre || null } });
 
 
             //response global
