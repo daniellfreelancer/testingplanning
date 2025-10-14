@@ -92,7 +92,9 @@ const usuariosComplejosSchema = new mongoose.Schema({
   planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
   pagos: [{ type: mongoose.Types.ObjectId, ref: 'gestionPagos' }],
-  suscripciones: [{ type: mongoose.Types.ObjectId, ref: 'suscripcionPlanes' }]
+  suscripciones: [{ type: mongoose.Types.ObjectId, ref: 'suscripcionPlanes' }],
+  statusArrendatario: {type: Boolean, default: false},
+  fechaInicioArrendatario: {type: Date},
 
 },{
     timestamps: true

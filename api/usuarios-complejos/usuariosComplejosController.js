@@ -471,9 +471,8 @@ const usuariosComplejosController = {
 
       if (req.files && req.files["fotoCedulaFrontal"]) {
         const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-        const fileName = `${
-          req.files["fotoCedulaFrontal"][0].fieldname
-        }-${quizIdentifier()}.png`;
+        const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
+          }-${quizIdentifier()}.png`;
 
         const uploadFirst = {
           Bucket: bucketName,
@@ -489,9 +488,8 @@ const usuariosComplejosController = {
 
       if (req.files && req.files["fotoCedulaReverso"]) {
         const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-        const fileName = `${
-          req.files["fotoCedulaReverso"][0].fieldname
-        }-${quizIdentifier()}.png`;
+        const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
+          }-${quizIdentifier()}.png`;
 
         const uploadSecond = {
           Bucket: bucketName,
@@ -507,9 +505,8 @@ const usuariosComplejosController = {
 
       if (req.files && req.files["firma"]) {
         const fileContent = req.files["firma"][0].buffer;
-        const fileName = `${
-          req.files["firma"][0].fieldname
-        }-${quizIdentifier()}.png`;
+        const fileName = `${req.files["firma"][0].fieldname
+          }-${quizIdentifier()}.png`;
 
         const uploadThird = {
           Bucket: bucketName,
@@ -573,8 +570,8 @@ const usuariosComplejosController = {
         usuario: user?._id,
         fechaFin: { $gte: fechaFin },
       })
-      .populate('planId',{'nombrePlan':1, 'tipo':1, 'tipoPlan':1, 'valor':1})
-      .populate('varianteId',{'horasDisponibles':1, 'dia':1, 'horario':1});
+        .populate('planId', { 'nombrePlan': 1, 'tipo': 1, 'tipoPlan': 1, 'valor': 1 })
+        .populate('varianteId', { 'horasDisponibles': 1, 'dia': 1, 'horario': 1 });
 
       const suscripcionesActivasFiltradas = suscripcionesActivas.filter((suscripcion) => {
         if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0) {
@@ -643,7 +640,7 @@ const usuariosComplejosController = {
     try {
       const users = await UsuariosComplejos.find({
         institucion,
-     //   rol: "usuario",
+        //   rol: "usuario",
         tipoPlanGym: { $in: ["Plan full", "Plan basico", "Plan básico"] },
       });
       res.status(200).json({
@@ -741,9 +738,8 @@ const usuariosComplejosController = {
       // Procesar archivos de imágenes
       if (req.files && req.files["fotoCedulaFrontal"]) {
         const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-        const fileName = `${
-          req.files["fotoCedulaFrontal"][0].fieldname
-        }-${quizIdentifier()}.png`;
+        const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
+          }-${quizIdentifier()}.png`;
 
         const uploadParams = {
           Bucket: bucketName,
@@ -759,9 +755,8 @@ const usuariosComplejosController = {
 
       if (req.files && req.files["fotoCedulaReverso"]) {
         const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-        const fileName = `${
-          req.files["fotoCedulaReverso"][0].fieldname
-        }-${quizIdentifier()}.png`;
+        const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
+          }-${quizIdentifier()}.png`;
 
         const uploadParams = {
           Bucket: bucketName,
@@ -988,83 +983,99 @@ const usuariosComplejosController = {
     }
   },
   //obtener todos los usuarios de piscina por institucion con paginación
-obtenerTodosLosUsuariosComplejosPiscinaPaginado: async (req, res) => {
-  const { institucion } = req.params;
-  const { limite = 50, pagina = 1, busqueda = '' } = req.query;
-  
-  try {
-    // Validar parámetros
-    const limiteNum = parseInt(limite);
-    const paginaNum = parseInt(pagina);
-    
-    // if (limiteNum <= 0 || limiteNum > 200) {
-    //   return res.status(400).json({
-    //     message: "El límite debe estar entre 1 y 200 usuarios"
-    //   });
-    // }
-    
-    if (paginaNum <= 0) {
-      return res.status(400).json({
-        message: "La página debe ser mayor a 0"
+  obtenerTodosLosUsuariosComplejosPiscinaPaginado: async (req, res) => {
+    const { institucion } = req.params;
+    const { limite = 50, pagina = 1, busqueda = '' } = req.query;
+
+    try {
+      // Validar parámetros
+      const limiteNum = parseInt(limite);
+      const paginaNum = parseInt(pagina);
+
+      // if (limiteNum <= 0 || limiteNum > 200) {
+      //   return res.status(400).json({
+      //     message: "El límite debe estar entre 1 y 200 usuarios"
+      //   });
+      // }
+
+      if (paginaNum <= 0) {
+        return res.status(400).json({
+          message: "La página debe ser mayor a 0"
+        });
+      }
+
+      // Calcular skip para paginación
+      const skip = (paginaNum - 1) * limiteNum;
+
+      // Construir filtro de búsqueda
+      let filtro = {
+        institucion,
+        rol: "usuario"
+      };
+
+      // Agregar filtro de búsqueda si se proporciona
+      if (busqueda && busqueda.trim() !== '') {
+        filtro.$or = [
+          { nombre: { $regex: busqueda, $options: 'i' } },
+          { apellido: { $regex: busqueda, $options: 'i' } },
+          { email: { $regex: busqueda, $options: 'i' } },
+          { rut: { $regex: busqueda, $options: 'i' } }
+        ];
+      }
+
+      // Obtener total de usuarios para calcular páginas totales
+      const totalUsuarios = await UsuariosComplejos.countDocuments(filtro);
+
+      // Obtener usuarios con paginación
+      const users = await UsuariosComplejos.find(filtro)
+        .populate(queryPopulateOptions)
+        .skip(skip)
+        .limit(limiteNum)
+        .sort({ createdAt: -1 }); // Ordenar por fecha de creación (más recientes primero)
+
+      // Calcular información de paginación
+      const paginasTotales = Math.ceil(totalUsuarios / limiteNum);
+      const tieneSiguientePagina = paginaNum < paginasTotales;
+      const tienePaginaAnterior = paginaNum > 1;
+
+      res.status(200).json({
+        message: "Usuarios de piscina encontrados correctamente",
+        users,
+        paginacion: {
+          paginaActual: paginaNum,
+          paginasTotales,
+          totalUsuarios,
+          limitePorPagina: limiteNum,
+          tieneSiguientePagina,
+          tienePaginaAnterior,
+          usuariosEnPaginaActual: users.length
+        },
+        busqueda: busqueda || null
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener usuarios de piscina",
+        error: error.message
       });
     }
+  },
+  //actualizar status arrendatario
+  actualizarStatusArrendatario: async (req, res) => {
+    const { id } = req.params;
+    const { statusArrendatario, fechaInicioArrendatario, } = req.body;
 
-    // Calcular skip para paginación
-    const skip = (paginaNum - 1) * limiteNum;
+    try {
+      const user = await UsuariosComplejos.findByIdAndUpdate(id, { statusArrendatario, fechaInicioArrendatario, status: true }, { new: true });
 
-    // Construir filtro de búsqueda
-    let filtro = {
-      institucion,
-      rol: "usuario"
-    };
+      res.status(200).json({ message: "Status arrendatario actualizado correctamente", user });
 
-    // Agregar filtro de búsqueda si se proporciona
-    if (busqueda && busqueda.trim() !== '') {
-      filtro.$or = [
-        { nombre: { $regex: busqueda, $options: 'i' } },
-        { apellido: { $regex: busqueda, $options: 'i' } },
-        { email: { $regex: busqueda, $options: 'i' } },
-        { rut: { $regex: busqueda, $options: 'i' } }
-      ];
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error al actualizar status arrendatario", error });
     }
 
-    // Obtener total de usuarios para calcular páginas totales
-    const totalUsuarios = await UsuariosComplejos.countDocuments(filtro);
-
-    // Obtener usuarios con paginación
-    const users = await UsuariosComplejos.find(filtro)
-      .populate(queryPopulateOptions)
-      .skip(skip)
-      .limit(limiteNum)
-      .sort({ createdAt: -1 }); // Ordenar por fecha de creación (más recientes primero)
-
-    // Calcular información de paginación
-    const paginasTotales = Math.ceil(totalUsuarios / limiteNum);
-    const tieneSiguientePagina = paginaNum < paginasTotales;
-    const tienePaginaAnterior = paginaNum > 1;
-
-    res.status(200).json({
-      message: "Usuarios de piscina encontrados correctamente",
-      users,
-      paginacion: {
-        paginaActual: paginaNum,
-        paginasTotales,
-        totalUsuarios,
-        limitePorPagina: limiteNum,
-        tieneSiguientePagina,
-        tienePaginaAnterior,
-        usuariosEnPaginaActual: users.length
-      },
-      busqueda: busqueda || null
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Error al obtener usuarios de piscina",
-      error: error.message
-    });
-  }
-},
+  },
 };
 
 module.exports = usuariosComplejosController;
