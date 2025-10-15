@@ -2,7 +2,8 @@ const Usuarios = require("./usuariosComplejos");
 const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
+//const sendWelcomeEmail = require("../../controllers/mailRegisterUserAdmin");
+const sendWelcomeEmail = require("../../controllers/mailRegisterPiscinaSantiago");
 const Institucion = require("../institucion/institucionModel");
 const CentroDeportivo = require("../centros-deportivos/centrosDeportivosModel");
 const sendMailUserContract = require("../mail/mailUserContract");
@@ -1134,7 +1135,19 @@ const usuariosComplejosController = {
       console.log(error);
       res.status(500).json({ message: "Error al buscar usuario por pasaporte", error });
     }
-  }
+  },
+  //enviar correo de bienvenida a usuario de piscina
+  enviarCorreoBienvenidaUsuarioPiscina: async (req, res) => {
+    const { email, password, name } = req.body;
+    try {
+      await sendWelcomeEmail(email, password, name);
+      res.status(200).json({ message: "Correo de bienvenida enviado correctamente" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error al enviar correo de bienvenida a usuario de piscina", error });
+    }
+  },
+  
 };
 
 module.exports = usuariosComplejosController;

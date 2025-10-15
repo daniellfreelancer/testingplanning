@@ -40,6 +40,7 @@ router.post("/crear-nueva-contrasena/:id", usuariosComplejosController.changePas
 router.get("/obtener-todos-usuarios-piscina-paginado/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPaginado); //tested
 router.put("/actualizar-status-arrendatario/:id", usuariosComplejosController.actualizarStatusArrendatario); //tested
 router.get("/buscar-usuario-por-pasaporte/:pasaporte", usuariosComplejosController.buscarUsuarioPorPasaporte); //tested
+router.post("/enviar-correo-bienvenida-usuario-piscina", usuariosComplejosController.enviarCorreoBienvenidaUsuarioPiscina); //tested
 
 
 
