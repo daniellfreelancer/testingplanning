@@ -8,7 +8,7 @@ const { default: mongoose } = require('mongoose');
 const institutionPopulateQuery = [
   {
     path: 'teachers',
-    select: 'name lastName email role rut logged',
+    select: 'name lastName email role rut logged imgUrl phone',
     options: {
       sort: { 'lastName': 1 }
     }
