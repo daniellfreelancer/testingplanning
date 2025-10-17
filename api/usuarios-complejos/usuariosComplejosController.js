@@ -606,6 +606,7 @@ const usuariosComplejosController = {
           arrendatario: user.arrendatario,
           nombreArrendatario: user.nombreArrendatario,
           suscripcionesActivas: suscripcionesActivasFiltradas,
+          aptoNadolibre: user.aptoNadolibre,
         },
       });
     } catch (error) {

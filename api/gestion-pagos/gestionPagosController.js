@@ -77,7 +77,7 @@ const gestionPagosController = {
             await VariantesPlanes.findByIdAndUpdate(varianteId, { $push: { usuarios: usuarioId } });
 
             //actualiza el status del usuario a true
-            await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true, nivelCurso: nivelCurso || "", aptoNadolibre: aptoNadolibre || null } });
+            await Usuarios.findByIdAndUpdate(usuarioId, { $set: { status: true, nivelCurso: nivelCurso || "", aptoNadolibre: aptoNadolibre ? aptoNadolibre : false } });
 
 
             //response global
