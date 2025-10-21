@@ -1148,6 +1148,19 @@ const usuariosComplejosController = {
       res.status(500).json({ message: "Error al enviar correo de bienvenida a usuario de piscina", error });
     }
   },
+  //aqui va la peticion para stats de usuarios piscina
+  statsUsuariosPiscina: async (req, res) => {
+
+    const { institucion } = req.params;
+
+    try {
+      
+    } catch (error) {
+      
+    }
+
+
+  }
   
 };
 
