@@ -26,8 +26,8 @@ var server = http.createServer(app);
 
 
 // Iniciar cron jobs
-registerCronJobs();
-console.log('Cronjobs inicializados');
+//registerCronJobs();
+console.log('Cronjobs no estan funcionales');
 
 /**
  * Listen on provided port, on all network interfaces.
