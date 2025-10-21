@@ -15,6 +15,7 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 const publicKey = process.env.AWS_PUBLIC_KEY;
 const privateKey = process.env.AWS_SECRET_KEY;
 const SuscripcionPlanes = require('../suscripcion-planes/suscripcionPlanes')
+const RegistroAccesos = require('../acceso-usuarios-complejos/accesoUsuariosComplejosModel')
 
 function generateRandomPassword(length = 8) {
   const characters =
@@ -1151,11 +1152,62 @@ const usuariosComplejosController = {
   //aqui va la peticion para stats de usuarios piscina
   statsUsuariosPiscina: async (req, res) => {
 
-    const { institucion } = req.params;
+    const { institucionId } = req.params;
 
     try {
+
+      const institucion = await Institucion.findById(institucionId);
+      if (!institucion) {
+        return res.status(404).json({ message: "Institución no encontrada" });
+      }
+
+      //contabilizar la cantidad de usuarios colaboradores tienen rol EMPLOYED
+      const cantidadUsuariosColaboradores = await UsuariosComplejos.countDocuments({ institucion: institucionId, rol: 'EMPLOYED' });
+
+      //Contabilizar la cantidad de usuarios colaboradores que tienen rol usuario
+      const cantidadUsuariosPiscina = await UsuariosComplejos.countDocuments({ institucion: institucionId, rol: 'usuario' });
+
+      //contabilizar la cantidad de usuarios con tipoPlanGym = Plan full, Plan basico, Plan básico
+      const cantidadUsuariosConPlanGym = await UsuariosComplejos.countDocuments({
+        institucion: institucionId,
+        tipoPlanGym: { $in: ['Plan full', 'Plan basico', 'Plan básico'] }
+      });
+
+      //contabilizar la cantidad de usuarios con statusArrendatario = true
+      const cantidadUsuariosConStatusArrendatario = await UsuariosComplejos.countDocuments({
+        institucion: institucionId,
+        statusArrendatario: true
+      });
+
+      //contabilizar la cantidad de accesos de usuarios piscina en el dia de hoy
+      const inicioDia = new Date();
+      inicioDia.setHours(0, 0, 0, 0);
+
+      const finDia = new Date();
+      finDia.setHours(23, 59, 59, 999);
+
+      const cantidadAccesosHoy = await RegistroAccesos.countDocuments({
+        institucion: institucionId,
+        createdAt: { $gte: inicioDia, $lte: finDia }
+      });
+
+
+      res.status(200).json({        message: "Stats de usuarios de piscina obtenidos correctamente",
+        stats: {
+          cantidadUsuariosColaboradores,
+          cantidadUsuariosPiscina,
+          cantidadUsuariosConPlanGym,
+          cantidadUsuariosConStatusArrendatario,
+          cantidadAccesosHoy,
+          cantidadUsuariosNatacion: cantidadUsuariosPiscina - cantidadUsuariosConPlanGym - cantidadUsuariosConStatusArrendatario
+        }
+      });
+
       
     } catch (error) {
+
+      console.log(error);
+      res.status(500).json({ message: "Error al obtener stats de usuarios de piscina", error });// Error al obtener stats de usuarios de piscina
       
     }
 
