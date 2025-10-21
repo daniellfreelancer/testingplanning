@@ -7,9 +7,9 @@ const steps = [
 
 async function runDailyProcess(deps) {
   const startedAt = new Date();
-  logger.info('[DAILY] Inicio proceso diario', { startedAt });
-  await runSteps(deps);
-  logger.info('[DAILY] Fin proceso diario', { durationMs: Date.now() - startedAt.getTime() });
+  logger.info('[DAILY] Proceso diario DESACTIVADO', { startedAt });
+  // await runSteps(deps); // DESACTIVADO - proceso con timeout issues
+  logger.info('[DAILY] Proceso diario desactivado - no se ejecutaron pasos', { durationMs: Date.now() - startedAt.getTime() });
 }
 
 async function runSteps(deps) {

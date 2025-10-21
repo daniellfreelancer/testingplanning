@@ -72,6 +72,7 @@ const planesPiscinas = require('./api/gestion-planes/gestionPlanesRoutes')
 const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
 //Rutas para gestion de planes y suscripciones en piscinas
 const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRoutes')
+const emailService = require('./api/email/emailServiceRoutes')
 
 
 var app = express();
@@ -160,6 +161,7 @@ app.use('/vm-instituciones-deportivas', institucionesDeportivas) // institucione
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
+app.use('/email-service', emailService)
 
 
 // catch 404 and forward to error handler
