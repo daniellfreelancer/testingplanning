@@ -1425,6 +1425,19 @@ const usuariosComplejosController = {
         });
       }
     },
+    obtenerUsuarioPorId: async (req, res) => {
+      const { id } = req.params;
+      try {
+        const user = await UsuariosComplejos.findById(id);
+        if (!user) {
+          return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+        res.status(200).json({ message: "Usuario encontrado correctamente", user });
+      } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error al obtener usuario por id", error });
+      }
+    }
   
 };
 

@@ -44,6 +44,7 @@ router.post("/enviar-correo-bienvenida-usuario-piscina", usuariosComplejosContro
 router.get("/obtener-stats-usuarios-piscina/:institucionId", usuariosComplejosController.statsUsuariosPiscina); //tested
 router.get("/obtener-usuarios-piscina-natacion/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacion); //tested
 router.get("/obtener-usuarios-piscina-natacion-paginado/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacionPaginado); //tested
+router.get("/obtener-usuario-por-id/:id", usuariosComplejosController.obtenerUsuarioPorId); //tested
 
 
 module.exports = router;
