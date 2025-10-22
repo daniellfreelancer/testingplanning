@@ -42,7 +42,8 @@ router.put("/actualizar-status-arrendatario/:id", usuariosComplejosController.ac
 router.get("/buscar-usuario-por-pasaporte/:pasaporte", usuariosComplejosController.buscarUsuarioPorPasaporte); //tested
 router.post("/enviar-correo-bienvenida-usuario-piscina", usuariosComplejosController.enviarCorreoBienvenidaUsuarioPiscina); //tested
 router.get("/obtener-stats-usuarios-piscina/:institucionId", usuariosComplejosController.statsUsuariosPiscina); //tested
-
+router.get("/obtener-usuarios-piscina-natacion/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacion); //tested
+router.get("/obtener-usuarios-piscina-natacion-paginado/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacionPaginado); //tested
 
 
 module.exports = router;
