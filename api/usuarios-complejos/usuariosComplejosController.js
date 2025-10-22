@@ -1212,7 +1212,219 @@ const usuariosComplejosController = {
     }
 
 
-  }
+  },
+    //obtener todos los usuarios de piscina por institucion
+    obtenerUsuariosPiscinaNatacion: async (req, res) => {
+      const { institucion } = req.params;
+      const startTime = Date.now();
+      
+      try {
+        // Validación de entrada
+        if (!institucion) {
+          return res.status(400).json({
+            message: "ID de institución es requerido",
+            success: false
+          });
+        }
+
+        // Optimización 1: Usar select() para traer solo los campos necesarios
+        // Optimización 2: Usar lean() para obtener objetos planos (más rápido)
+        // Optimización 3: Aplicar filtros directamente en la consulta MongoDB
+        const users = await UsuariosComplejos.find({
+          institucion,
+          rol: "usuario",
+          // Filtro optimizado: excluir arrendatarios sin planes directamente en la DB
+          $or: [
+            { arrendatario: { $ne: true } }, // No es arrendatario
+            { 
+              arrendatario: true,
+              $or: [
+                { tipoPlan: { $exists: true, $ne: null, $ne: "" } },
+                { tipoPlanGym: { $exists: true, $ne: null, $ne: "" } },
+                { tipoContratacion: { $exists: true, $ne: null, $ne: "" } },
+                { planCurso: { $exists: true, $ne: null } }
+              ]
+            }
+          ]
+        })
+        .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario')
+        .lean() // Objetos planos, más rápido
+        .exec();
+
+        // Optimización 4: Procesamiento más eficiente sin map innecesario
+        const usersFiltered = users.map((user) => ({
+          _id: user._id,
+          nombre: user.nombre,
+          apellido: user.apellido,
+          rut: user.rut,
+          tipoRut: user.tipoRut,
+          status: user.status,
+          evaluado: user.evaluado,
+          tipoPlan: user.tipoPlan,
+          tipoPlanGym: user.tipoPlanGym,
+          nivelCurso: user.nivelCurso,
+          nombreArrendatario: user.nombreArrendatario,
+          statusArrendatario: user.statusArrendatario,
+          tipoContratacion: user.tipoContratacion,
+        }));
+
+        const responseTime = Date.now() - startTime;
+        
+        // Log de performance para monitoreo
+        console.log(`[PERFORMANCE] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Usuarios: ${usersFiltered.length}, Tiempo: ${responseTime}ms`);
+
+        res.status(200).json({
+          message: "Usuarios de piscina encontrados correctamente",
+          users: users,
+          meta: {
+            total: usersFiltered.length,
+            responseTime: `${responseTime}ms`,
+            timestamp: new Date().toISOString()
+          },
+          success: true
+        });
+      } catch (error) {
+        const responseTime = Date.now() - startTime;
+        console.error(`[ERROR] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Tiempo: ${responseTime}ms`, error);
+        
+        res.status(500).json({ 
+          message: "Error al obtener usuarios de piscina", 
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
+          success: false,
+          responseTime: `${responseTime}ms`
+        });
+      }
+    },
+
+    obtenerUsuariosPiscinaNatacionPaginado: async (req, res) => {
+      const { institucion } = req.params;
+      const { page = 1, limit = 50, search = '' } = req.query;
+      const startTime = Date.now();
+      
+      try {
+        // Validación de entrada
+        if (!institucion) {
+          return res.status(400).json({
+            message: "ID de institución es requerido",
+            success: false
+          });
+        }
+
+        const pageNum = parseInt(page);
+        const limitNum = Math.min(parseInt(limit), 100); // Máximo 100 por página
+        const skip = (pageNum - 1) * limitNum;
+
+        // Construir el filtro base
+        let baseFilter = {
+          institucion,
+          rol: "usuario",
+          $or: [
+            { arrendatario: { $ne: true } },
+            { 
+              arrendatario: true,
+              $or: [
+                { tipoPlan: { $exists: true, $ne: null, $ne: "" } },
+                { tipoPlanGym: { $exists: true, $ne: null, $ne: "" } },
+                { tipoContratacion: { $exists: true, $ne: null, $ne: "" } },
+                { planCurso: { $exists: true, $ne: null } }
+              ]
+            }
+          ]
+        };
+
+        // Construir filtros de búsqueda
+        let searchFilter = {};
+        if (search && search.trim()) {
+          const searchTerms = search.trim().split(' ').filter(term => term.length > 0);
+          
+          if (searchTerms.length > 0) {
+            // Crear expresiones regulares para cada término de búsqueda
+            const searchQueries = searchTerms.map(term => ({
+              $or: [
+                { nombre: new RegExp(term, 'i') },
+                { apellido: new RegExp(term, 'i') },
+                { rut: new RegExp(term, 'i') },
+                // Búsqueda combinada de nombre y apellido
+                {
+                  $and: [
+                    { nombre: new RegExp(term, 'i') },
+                    { apellido: new RegExp(term, 'i') }
+                  ]
+                }
+              ]
+            }));
+
+            // Combinar todos los términos de búsqueda con AND
+            searchFilter = { $and: searchQueries };
+          }
+        }
+
+        // Combinar filtros
+        const finalFilter = {
+          ...baseFilter,
+          ...(Object.keys(searchFilter).length > 0 ? searchFilter : {})
+        };
+
+        // Consulta optimizada con paginación
+        const [users, totalCount] = await Promise.all([
+          UsuariosComplejos.find(finalFilter)
+            // .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario email')
+            .lean()
+            .sort({ nombre: 1, apellido: 1 })
+            .skip(search ? 0 : skip) // Si hay búsqueda, no aplicamos skip
+            .limit(search ? 0 : limitNum) // Si hay búsqueda, no aplicamos límite
+            .exec(),
+          
+          UsuariosComplejos.countDocuments(finalFilter)
+        ]);
+
+        // Si hay término de búsqueda, aplicamos la paginación en memoria
+        let paginatedUsers = users;
+        let effectiveTotalCount = totalCount;
+
+        if (search) {
+          effectiveTotalCount = users.length;
+          const startIndex = (pageNum - 1) * limitNum;
+          const endIndex = startIndex + limitNum;
+          paginatedUsers = users.slice(startIndex, endIndex);
+        }
+
+        const totalPages = Math.ceil(effectiveTotalCount / limitNum);
+        const responseTime = Date.now() - startTime;
+        
+        // Log de performance
+        console.log(`[PERFORMANCE] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Página: ${pageNum}, Usuarios: ${paginatedUsers.length}/${effectiveTotalCount}, Tiempo: ${responseTime}ms, Búsqueda: ${search || 'ninguna'}`);
+
+        res.status(200).json({
+          message: "Usuarios de piscina encontrados correctamente",
+          users: paginatedUsers,
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            totalCount: effectiveTotalCount,
+            limit: limitNum,
+            hasNext: pageNum < totalPages,
+            hasPrev: pageNum > 1
+          },
+          meta: {
+            responseTime: `${responseTime}ms`,
+            timestamp: new Date().toISOString(),
+            searchTerm: search || null
+          },
+          success: true
+        });
+      } catch (error) {
+        const responseTime = Date.now() - startTime;
+        console.error(`[ERROR] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Tiempo: ${responseTime}ms`, error);
+        
+        res.status(500).json({ 
+          message: "Error al obtener usuarios de piscina", 
+          error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
+          success: false,
+          responseTime: `${responseTime}ms`
+        });
+      }
+    },
   
 };
 
