@@ -10,7 +10,7 @@ const {
     GOOGLE_ACCESS,
 } = process.env;
 
-const sendPatentePiscinaSantiago = async (emailUser, nameUser, emailAdmin, vehicleData = {}) => {
+const sendPatentePiscinaSantiago = async (emailUser, nameUser, vehicleData = {}) => {
     try {
         const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
 
@@ -64,8 +64,6 @@ const sendPatentePiscinaSantiago = async (emailUser, nameUser, emailAdmin, vehic
         const mailOptionsTemplate = {
             from: GOOGLE_USER,
             to: emailUser,
-         //   cc: emailAdmin || undefined,
-            bcc: emailAdmin,
             subject: "Autorización de ingreso vehicular - Piscina Olímpica de Santiago",
             html: `
 <!DOCTYPE html>
