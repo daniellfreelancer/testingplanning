@@ -5,11 +5,11 @@ const emailServiceController = {
     enviarPatentePiscinaSantiago: async (req, res) => {
 
     const {
-        emailUser, nameUser, emailAdmin, vehicleData
+        emailUser, nameUser, vehicleData
     } = req.body
 
         try {
-            await sendPatentePiscinaSantiago(emailUser, nameUser, emailAdmin, vehicleData);
+            await sendPatentePiscinaSantiago(emailUser, nameUser, vehicleData);
 
             res.status(200).json({
                 response: "Email de patente enviado con éxito",
