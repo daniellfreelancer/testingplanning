@@ -45,6 +45,7 @@ router.get("/obtener-stats-usuarios-piscina/:institucionId", usuariosComplejosCo
 router.get("/obtener-usuarios-piscina-natacion/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacion); //tested
 router.get("/obtener-usuarios-piscina-natacion-paginado/:institucion", usuariosComplejosController.obtenerUsuariosPiscinaNatacionPaginado); //tested
 router.get("/obtener-usuario-por-id/:id", usuariosComplejosController.obtenerUsuarioPorId); //tested
+router.post("/crear-usuario-piscina-arrendatario/:institucion", usuariosComplejosController.crearUsuarioPiscinaArrendatario); //tested
 
 
 module.exports = router;

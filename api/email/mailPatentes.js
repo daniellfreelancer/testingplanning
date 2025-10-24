@@ -74,34 +74,205 @@ const sendPatentePiscinaSantiago = async (emailUser, nameUser, vehicleData = {})
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Autorización de ingreso vehicular</title>
   <style>
-    body { margin:0; padding:0; background:#f5f6f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; color:#1f2937; }
-    .wrapper { width:100%; background:#f5f6f7; padding:20px 0; }
-    .card { max-width:720px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
-    .header { text-align:center; border-bottom:2px solid #2563eb; padding:18px 16px; }
-    .title { font-size:20px; font-weight:700; color:#1f2937; margin:0 0 4px 0; }
-    .subtitle { font-size:14px; color:#6b7280; margin:0 0 2px 0; }
-    .date { font-size:11px; color:#9ca3af; margin:0; }
-    .content { padding:18px 20px; }
-    .intro { background:#f3f4f6; color:#374151; padding:12px; border-radius:6px; font-size:13px; line-height:1.5; margin:0 0 16px 0; }
-    .section-title { font-size:14px; font-weight:700; color:#1f2937; padding-bottom:6px; border-bottom:1px solid #e5e7eb; margin:16px 0 10px 0; }
-    .grid { display:block; width:100%; }
-    .row { display:flex; flex-wrap:wrap; gap:14px; }
-    .col { flex:1 1 200px; min-width:200px; }
-    .label { font-size:11px; font-weight:700; color:#374151; margin:0 0 4px 0; }
-    .value { font-size:12px; color:#111827; background:#f9fafb; border-radius:4px; padding:6px 8px; margin:0 0 10px 0; }
-    .vehicle { background:#fef3c7; border:1px solid #f59e0b; border-radius:6px; padding:12px; margin:14px 0; }
-    .vehicle-title { font-size:13px; font-weight:700; color:#92400e; text-align:center; margin:0 0 10px 0; }
-    .warn { background:#fef2f2; border:1px solid #f87171; border-radius:6px; padding:10px; margin:16px 0; text-align:center; }
-    .warn-text { font-size:11px; color:#991b1b; font-weight:700; margin:4px 0; }
-    .terms { margin:12px 0; }
-    .term { font-size:12px; color:#374151; line-height:1.55; margin:8px 0; }
-    .responsa { font-size:11px; color:#6b7280; text-align:center; font-style:italic; margin:14px 0 0 0; }
-    .footer { text-align:center; border-top:1px solid #e5e7eb; color:#9ca3af; font-size:10px; padding:10px 8px; }
-    .brand { text-align:center; font-size:12px; color:#6b7280; padding:8px 0 16px 0; }
-    @media (max-width:620px) {
-      .content { padding:16px; }
-      .row { gap:10px; }
-      .col { min-width:160px; }
+    * {
+      box-sizing: border-box;
+    }
+    
+    body { 
+      margin:0; 
+      padding:0; 
+      background:#f5f6f7; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol"; 
+      color:#1f2937; 
+      line-height:1.4;
+      width:100%;
+    }
+    
+    .wrapper { 
+      width:100%; 
+      background:#f5f6f7; 
+      padding:0; 
+      min-height:100vh;
+    }
+    
+    .card { 
+      width:100%; 
+      margin:0; 
+      background:#ffffff; 
+      border-radius:0; 
+      overflow:hidden; 
+      box-shadow:none; 
+    }
+    
+    .header { 
+      text-align:center; 
+      border-bottom:2px solid #2563eb; 
+      padding:16px 12px; 
+      background:#ffffff;
+    }
+    
+    .title { 
+      font-size:16px; 
+      font-weight:700; 
+      color:#1f2937; 
+      margin:0 0 6px 0; 
+      line-height:1.3;
+    }
+    
+    .subtitle { 
+      font-size:13px; 
+      color:#6b7280; 
+      margin:0 0 4px 0; 
+      line-height:1.4;
+    }
+    
+    .date { 
+      font-size:11px; 
+      color:#9ca3af; 
+      margin:0; 
+    }
+    
+    .content { 
+      padding:12px; 
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;
+    }
+    
+    .intro { 
+      background:#f3f4f6; 
+      color:#374151; 
+      padding:12px; 
+      border-radius:6px; 
+      font-size:13px; 
+      line-height:1.6; 
+      margin:0 0 4px 0; 
+      grid-column:1;
+    }
+    
+    .section-title { 
+      font-size:14px; 
+      font-weight:700; 
+      color:#1f2937; 
+      padding-bottom:6px; 
+      border-bottom:1px solid #e5e7eb; 
+      margin:0 0 12px 0; 
+      grid-column:1;
+    }
+    
+    .grid { 
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      grid-column:1;
+      margin-bottom:4px;
+    }
+    
+    .field-group {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:4px;
+      margin-bottom:4px;
+    }
+    
+    .label { 
+      font-size:11px; 
+      font-weight:700; 
+      color:#374151; 
+      margin:0 0 4px 0; 
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+    }
+    
+    .value { 
+      font-size:12px; 
+      color:#111827; 
+      background:#f9fafb; 
+      border-radius:4px; 
+      padding:8px 10px; 
+      margin:0 0 4px 0; 
+      border:1px solid #e5e7eb;
+      word-break:break-word;
+    }
+    
+    .vehicle { 
+      background:#fef3c7; 
+      border:1px solid #f59e0b; 
+      border-radius:6px; 
+      padding:12px; 
+      margin:0 0 4px 0; 
+      grid-column:1;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8px;
+    }
+    
+    .vehicle-title { 
+      font-size:13px; 
+      font-weight:700; 
+      color:#92400e; 
+      text-align:center; 
+      margin:0 0 8px 0; 
+      grid-column:1;
+    }
+    
+    .warn { 
+      background:#fef2f2; 
+      border:1px solid #f87171; 
+      border-radius:6px; 
+      padding:10px; 
+      margin:0 0 4px 0; 
+      text-align:center; 
+      grid-column:1;
+    }
+    
+    .warn-text { 
+      font-size:11px; 
+      color:#991b1b; 
+      font-weight:700; 
+      margin:2px 0 4px 0; 
+    }
+    
+    .terms { 
+      margin:0 0 4px 0; 
+      grid-column:1;
+    }
+    
+    .term { 
+      font-size:11px; 
+      color:#374151; 
+      line-height:1.5; 
+      margin:6px 0 4px 0; 
+      padding-left:6px;
+    }
+    
+    .responsa { 
+      font-size:11px; 
+      color:#6b7280; 
+      text-align:center; 
+      font-style:italic; 
+      margin:8px 0 4px 0; 
+      grid-column:1;
+    }
+    
+    .footer { 
+      text-align:center; 
+      border-top:1px solid #e5e7eb; 
+      color:#9ca3af; 
+      font-size:10px; 
+      padding:8px; 
+      background:#f9fafb;
+      margin-bottom:4px;
+    }
+    
+    .brand { 
+      text-align:center; 
+      font-size:11px; 
+      color:#6b7280; 
+      padding:8px 0 12px 0; 
+      line-height:1.4;
+      grid-column:1;
+      margin-bottom:4px;
     }
   </style>
 </head>
@@ -121,53 +292,62 @@ const sendPatentePiscinaSantiago = async (emailUser, nameUser, vehicleData = {})
 
         <p class="section-title">DATOS PERSONALES DEL USUARIO</p>
         <div class="grid">
-          <div class="row">
-            <div class="col">
-              <p class="label">Nombre</p>
-              <p class="value">${nombre || nameUser || 'N/A'}</p>
+          <div class="field-group">
+            <p class="label">Nombre</p>
+            <p class="value">${nombre || nameUser || 'N/A'}</p>
+          </div>
 
-              <p class="label">Apellido</p>
-              <p class="value">${apellido || 'N/A'}</p>
+          <div class="field-group">
+            <p class="label">Apellido</p>
+            <p class="value">${apellido || 'N/A'}</p>
+          </div>
 
-              <p class="label">RUT</p>
-              <p class="value">${rut || 'N/A'}</p>
-            </div>
-            <div class="col">
-              <p class="label">Correo Electrónico</p>
-              <p class="value">${correo || emailUser || 'N/A'}</p>
+          <div class="field-group">
+            <p class="label">RUT</p>
+            <p class="value">${rut || 'N/A'}</p>
+          </div>
 
-              <p class="label">Tipo de Usuario</p>
-              <p class="value">${tipoUsuarioLegible}</p>
+          <div class="field-group">
+            <p class="label">Correo Electrónico</p>
+            <p class="value">${correo || emailUser || 'N/A'}</p>
+          </div>
 
-              ${institucionNombre ? `
-              <p class="label">Institución</p>
-              <p class="value">${institucionNombre}</p>` : ''}
+          <div class="field-group">
+            <p class="label">Tipo de Usuario</p>
+            <p class="value">${tipoUsuarioLegible}</p>
+          </div>
 
-              <p class="label">Día de Asistencia</p>
-              <p class="value">${diaAsistencia || 'N/A'}</p>
+          ${institucionNombre ? `
+          <div class="field-group">
+            <p class="label">Institución</p>
+            <p class="value">${institucionNombre}</p>
+          </div>` : ''}
 
-              <p class="label">Número de contrato</p>
-              <p class="value">${contrato || 'N/A'}</p>
-            </div>
+          <div class="field-group">
+            <p class="label">Día de Asistencia</p>
+            <p class="value">${diaAsistencia || 'N/A'}</p>
+          </div>
+
+          <div class="field-group">
+            <p class="label">Número de contrato</p>
+            <p class="value">${contrato || 'N/A'}</p>
           </div>
         </div>
 
         <div class="vehicle">
           <p class="vehicle-title">DATOS DEL VEHÍCULO AUTORIZADO</p>
           <div class="grid">
-            <div class="row">
-              <div class="col">
-                <p class="label">Tipo de Vehículo</p>
-                <p class="value">${tipoVehiculoLegible}</p>
-              </div>
-              <div class="col">
-                <p class="label">Marca</p>
-                <p class="value">${marcaVehiculo || 'N/A'}</p>
-              </div>
-              <div class="col">
-                <p class="label">Patente</p>
-                <p class="value">${patente || 'N/A'}</p>
-              </div>
+            <div class="field-group">
+              <p class="label">Tipo de Vehículo</p>
+              <p class="value">${tipoVehiculoLegible}</p>
+            </div>
+            <div class="field-group">
+              <p class="label">Marca</p>
+              <p class="value">${marcaVehiculo || 'N/A'}</p>
+            </div>
+            <div class="field-group">
+              <p class="label">Patente</p>
+              <p class="value">${patente || 'N/A'}</p>
             </div>
           </div>
         </div>
