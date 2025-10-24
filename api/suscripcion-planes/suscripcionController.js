@@ -97,6 +97,37 @@ const suscripcionController = {
         }
 
 
+    },
+    obtenerUltimaSuscripcionPorUsuario: async (req, res) => {
+        const { usuarioId } = req.params;
+
+        try {
+            const suscripcion = await SuscripcionPlanes.findOne({ usuario: usuarioId }).sort({ createdAt: -1 }).populate({ path: 'planId', select: 'nombrePlan tipo valor' }).populate({ path: 'varianteId', select: 'dia horario' });
+            if (!suscripcion) {
+                return res.status(404).json({ message: "No se encontró ninguna suscripcion para el usuario", success: false });
+            }
+
+            const ultimaSuscripcion = {
+                _id: suscripcion._id,
+                plan: suscripcion.planId.nombrePlan,
+                dias: suscripcion.varianteId.dia,
+                horarios: suscripcion.varianteId.horario,
+                valor: suscripcion.planId.valor,
+
+
+
+            }
+
+            res.status(200).json({
+                message: "Ultima suscripcion obtenida correctamente",
+                ultimaSuscripcion,
+                success: true,
+            });
+        } catch (error) {
+            res.status(500).json({ message: "Error al obtener la ultima suscripcion del usuario", error: error.message });
+        }
+
+
     }
 
 }
