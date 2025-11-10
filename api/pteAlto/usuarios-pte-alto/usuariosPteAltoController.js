@@ -131,6 +131,27 @@ const usuariosPteAltoController = {
             res.status(500).json({ message: "Error al desloguear usuario PTE Alto", error: error });
         }
     },
-}
+    obtenerTodosLosUsuariosPteAlto : async (req, res) =>{
+
+        try {
+
+            const usuariosPteAlto = await UsuariosPteAlto.find().sort({createAt : -1})
+
+            if (usuariosPteAlto?.length > 0) {
+
+                res.status(200).json({
+                    response: usuariosPteAlto,
+                    message: "Usuarios PTE Alto encontrados",
+                    success: true
+                });
+            } else {
+                res.status(404).json({ message: "No se encontraron usuarios PTE Alto" });
+            }
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener usuarios PTE Alto", error: error });
+        }
+    },
+};
 
 module.exports = usuariosPteAltoController;

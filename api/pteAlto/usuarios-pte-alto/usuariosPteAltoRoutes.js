@@ -8,5 +8,6 @@ router.delete("/eliminar-usuario/:id", usuariosPteAltoController.eliminarUsuario
 router.get("/obtener-usuario/:id", usuariosPteAltoController.obtenerUsuarioPteAlto);
 router.post("/login-usuario", usuariosPteAltoController.loginUsuarioPteAlto);
 router.post("/logout-usuario/:id", usuariosPteAltoController.logoutUsuarioPteAlto);
+router.get("/obtener-todos-los-usuarios", usuariosPteAltoController.obtenerTodosLosUsuariosPteAlto);
 
 module.exports = router;
