@@ -29,7 +29,7 @@ const usuariosPteAltoController = {
             const password = generateRandomPassword(8);
             const passwordHashed = bcryptjs.hashSync(password, 10);
             const nuevoUsuarioPteAlto = new UsuariosPteAlto({ 
-                nombre, apellido, email,rut, rol, password: passwordHashed
+                nombre, apellido, email,rut, rol, password: [passwordHashed]
             });
 
             await nuevoUsuarioPteAlto.save();
