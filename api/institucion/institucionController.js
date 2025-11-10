@@ -41,6 +41,18 @@ const populateUsersInstitucion = [
   {
     path: 'espaciosDeportivos',
     select: 'nombre descripcion direccion imgUrl email telefono rut ciudad comuna deporte horarios pago valor capacidad status createdAt',
+  },
+  {
+    path: 'usuariosPteAlto',
+    select: 'nombre apellido rut rol telefono email status createdAt',
+  },
+  {
+    path: 'adminsPteAlto',
+    select: 'nombre apellido rut rol telefono email status createdAt',
+    populate: {
+      path: 'usuariosPteAlto',
+      select: 'nombre apellido rut rol telefono email status createdAt',
+    }
   }
 ]
 
