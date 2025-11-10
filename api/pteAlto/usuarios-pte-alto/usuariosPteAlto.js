@@ -5,7 +5,7 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     apellido: { type: String },
     email: { type: String },
     rut: { type: String },
-    password: { type: String },
+    password: [{ type: String }],
     rol: { type: String },
     status: { type: Boolean, default: true },
 },
