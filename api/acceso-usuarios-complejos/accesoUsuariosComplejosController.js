@@ -16,7 +16,7 @@ const queryPopulate = [
 
 ]
 
-const calcularFechasPorPeriodo = (periodo) => {
+const calcularFechasPorPeriodo = (periodo, fechaInicio = null, fechaFin = null) => {
     const ahora = new Date();
     const inicio = new Date();
     const fin = new Date();
@@ -51,6 +51,20 @@ const calcularFechasPorPeriodo = (periodo) => {
         case 'todos':
             // No aplicar filtro de fecha
             return null;
+
+        case 'rango':
+            // Aplicar filtro de fecha usando los parámetros fechaInicio y fechaFin
+            if (fechaInicio && fechaFin) {
+                inicio.setTime(new Date(fechaInicio).getTime());
+                inicio.setHours(0, 0, 0, 0);
+                
+                fin.setTime(new Date(fechaFin).getTime());
+                fin.setHours(23, 59, 59, 999);
+                
+                return { inicio, fin };
+            }
+            // Si no se proporcionan las fechas, retornar null
+            return null;
         
         default:
             // Por defecto, retornar todos los accesos
@@ -74,13 +88,18 @@ const AccesoUsuariosComplejosController = {
     obtenerAccesosPorInstitucion: async (req, res) => {
         try {
             const { institucion, periodo = 'todos' } = req.params;
+            const { fechaInicio, fechaFin } = req.query;
             
             // Construir el query base
             let query = { institucion };
             
             // Aplicar filtro de fecha si no es 'todos'
             if (periodo !== 'todos') {
-                const fechas = calcularFechasPorPeriodo(periodo);
+                // Si el periodo es 'rango', pasar los parámetros fechaInicio y fechaFin
+                const fechas = periodo === 'rango' 
+                    ? calcularFechasPorPeriodo(periodo, fechaInicio, fechaFin)
+                    : calcularFechasPorPeriodo(periodo);
+                
                 if (fechas) {
                     query.createdAt = {
                         $gte: fechas.inicio,
