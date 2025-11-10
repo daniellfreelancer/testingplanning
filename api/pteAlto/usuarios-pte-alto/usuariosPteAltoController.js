@@ -90,14 +90,29 @@ const usuariosPteAltoController = {
             const { email, password } = req.body;
             const usuarioPteAlto = await UsuariosPteAlto.findOne({ email });
             if (!usuarioPteAlto) {
-                return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+                return res.status(404).json({ message: "Usuario no encontrado, verifica tu correo." });
+            } else {
+                const isMatch = usuarioPteAlto.password.filter((userpassword) =>
+                    bcryptjs.compareSync(password, userpassword)
+                  );
+
+                  if (isMatch.length > 0) {
+                    const token = jwt.sign(
+                      {
+                        id: usuarioPteAlto._id,
+                        role: usuarioPteAlto.rol,
+                      },
+                      process.env.KEY_JWT,
+                      {
+                        expiresIn: 60 * 60 * 24,
+                      }
+                    );
+                    res.status(200).json({ message: "Usuario PTE Alto logueado correctamente", usuarioPteAlto, token });
+                  } else {
+                    return res.status(401).json({ message: "Contraseña incorrecta" });
+                  }
             }
-            const passwordHashed = bcryptjs.compareSync(password, usuarioPteAlto.password);
-            if (!passwordHashed) {
-                return res.status(401).json({ message: "Contraseña incorrecta" });
-            }
-            const token = jwt.sign({ id: usuarioPteAlto._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-            res.status(200).json({ message: "Usuario PTE Alto logueado correctamente", usuarioPteAlto, token });
+            
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al loguear usuario PTE Alto", error: error });
