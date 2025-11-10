@@ -19,6 +19,8 @@ const complejosSchema = new mongoose.Schema({
   usuarios: [{ type: mongoose.Types.ObjectId, ref:'usuariosComplejos' }],
   profesores: [{ type: mongoose.Types.ObjectId, ref:'usuariosComplejos' }],
   empleados:[{type: mongoose.Types.ObjectId, ref:'usuariosComplejos'}],
+  usuariosPteAlto:[{type: mongoose.Types.ObjectId, ref:'usuariosPteAlto'}],
+  adminsPteAlto:[{type: mongoose.Types.ObjectId, ref:'usuariosPteAlto'}],
 
 }, {
     timestamps: true

@@ -74,6 +74,9 @@ const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
 const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRoutes')
 const emailService = require('./api/email/emailServiceRoutes')
 
+//Rutas para gestion de usuarios PTE Alto
+const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
+const accesoPteAlto = require('./api/pteAlto/acceso-usuarios-pte-alto/accesoPteAltoRoutes')
 
 var app = express();
 
@@ -151,6 +154,9 @@ app.use('/suscripciones-piscinas', suscripcionesPiscinas)
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
 app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall
 
+//Rutas para gestion de usuarios PTE Alto
+app.use('/pte-alto', usuariosPteAlto)
+app.use('/acceso-pte-alto', accesoPteAlto)
 // Liveness Routes
 app.use("/liveness", livenessRoutes);
 
