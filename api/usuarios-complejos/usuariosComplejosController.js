@@ -597,8 +597,8 @@ const usuariosComplejosController = {
           nombre: user.nombre,
           apellido: user.apellido,
           rut: user.rut,
-          email: user.email,
-          telefono: user.telefono,
+         // email: user.email,
+         // telefono: user.telefono,
           rol: user.rol,
           tipoPlan: user.tipoPlan,
           tipoCurso: user.tipoCurso,
@@ -610,6 +610,7 @@ const usuariosComplejosController = {
           nombreArrendatario: user.nombreArrendatario,
           suscripcionesActivas: suscripcionesActivasFiltradas,
           aptoNadolibre: user.aptoNadolibre,
+          statusArrendatario: user.statusArrendatario,
         },
       });
     } catch (error) {
