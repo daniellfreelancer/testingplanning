@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const gestionPlanesNSchema = new mongoose.Schema({
     tipo: { type: String, required: true,
-        enum: ['curso', 'nadoLibre', 'gimnasio']
+        enum: ['curso', 'nadoLibre', 'gimnasio', 'cursoTemporada']
      },
     nombrePlan: { type: String },
     variantesPlan: [{ type: mongoose.Types.ObjectId, ref: 'variantesPlanes' }],

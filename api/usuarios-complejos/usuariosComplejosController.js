@@ -1251,7 +1251,7 @@ const usuariosComplejosController = {
           }
         ]
       })
-        .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario correo email fechaRegistro telefono')
+        .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario correo email fechaRegistro telefono direccion numeroDireccion')
         .lean() // Objetos planos, más rápido
         .exec();
 
@@ -1274,6 +1274,8 @@ const usuariosComplejosController = {
         email: user.email,
         fechaRegistro: user.fechaRegistro ? user.fechaRegistro.toISOString() : null,
         telefono: user.telefono,
+        direccion: user.direccion,
+        numeroDireccion: user.numeroDireccion,
       }));
 
       const responseTime = Date.now() - startTime;
