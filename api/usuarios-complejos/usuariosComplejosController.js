@@ -1505,7 +1505,7 @@ const usuariosComplejosController = {
 
   },
 
-  obtenerUsuarioSuscripcion: async (req, res) => {
+  obtenerUsuarioSuscripcionFiltrado: async (req, res) => {
     try {
       const { institucion } = req.params;
       const suscripciones = await SuscripcionPlanes.find({

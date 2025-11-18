@@ -48,6 +48,6 @@ router.get("/obtener-usuarios-piscina-natacion-paginado/:institucion", usuariosC
 router.get("/obtener-usuario-por-id/:id", usuariosComplejosController.obtenerUsuarioPorId); //tested
 router.post("/crear-usuario-piscina-arrendatario/:institucion", usuariosComplejosController.crearUsuarioPiscinaArrendatario); //tested
 
-router.get("/obtener-usuarios-por-suscripcion/:institucion", usuariosComplejosController.obtenerUsuarioSuscripcion); 
+router.get("/obtener-usuarios-por-suscripcion-filtrado/:institucion", usuariosComplejosController.obtenerUsuarioSuscripcionFiltrado); 
 
 module.exports = router;
