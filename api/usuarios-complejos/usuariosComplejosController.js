@@ -597,8 +597,8 @@ const usuariosComplejosController = {
           nombre: user.nombre,
           apellido: user.apellido,
           rut: user.rut,
-         // email: user.email,
-         // telefono: user.telefono,
+          // email: user.email,
+          // telefono: user.telefono,
           rol: user.rol,
           tipoPlan: user.tipoPlan,
           tipoCurso: user.tipoCurso,
@@ -1503,7 +1503,97 @@ const usuariosComplejosController = {
       res.status(500).json({ message: "Error al crear usuario de piscina arrendatario", error });
     }
 
-  }
+  },
+
+  obtenerUsuarioSuscripcion: async (req, res) => {
+    try {
+      const { institucion } = req.params;
+      const suscripciones = await SuscripcionPlanes.find({
+        institucion,
+        status: true,
+      })
+        .populate({
+          path: "usuario",
+          select: "nombre apellido email rut",
+        })
+        .populate({
+          path: "planId",
+          select: "tipo nombrePlan valor",
+        })
+        .populate({
+          path: "varianteId",
+          select: "dia horario",
+        })
+        .populate({
+          path: "pago",
+          select: "transaccion voucher monto fechaPago recepcion createdAt",
+        });
+
+      const ahora = new Date();
+
+      const aDesactivar = [];
+      const vigentes = [];
+
+      suscripciones.forEach((sus) => {
+        const { tipoConsumo, horasDisponibles } = sus;
+
+        // 1) tipoConsumo = "horas"
+        if (tipoConsumo === "horas") {
+          if (horasDisponibles === 0) {
+            aDesactivar.push(sus);
+          } else {
+            vigentes.push(sus);
+          }
+          return;
+        }
+
+        // 2) tipoConsumo = "mensual"
+        if (tipoConsumo === "mensual") {
+          // Tomamos fechaPago (si existe) o fechaInicio como fallback
+          const fechaBase = sus?.pago?.fechaPago || sus.fechaInicio;
+          if (!fechaBase) {
+            aDesactivar.push(sus);// Si no hay fecha, por seguridad lo consideramos a desactivar
+            return;
+          }
+
+          const fechaPago = new Date(fechaBase);
+
+          // Expira el 5 del mes siguiente
+          const fechaExpiracion = new Date(fechaPago);
+          fechaExpiracion.setMonth(fechaExpiracion.getMonth() + 1);
+          fechaExpiracion.setDate(5);
+          fechaExpiracion.setHours(23, 59, 59, 999);
+
+          // Si hoy es mayor que el 5 del mes siguiente -> a desactivar
+          if (ahora > fechaExpiracion) {
+            aDesactivar.push(sus);
+          } else {
+            vigentes.push(sus);
+          }
+
+          return;
+        }
+        vigentes.push(sus);  // Cualquier otro tipoConsumo como vigentes
+      });
+
+      return res.status(200).json({
+        message: "Suscripciones categorizadas correctamente",
+        success: true,
+        institucion,
+        data: {
+          aDesactivar,
+          vigentes,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Error al obtener suscripciones de usuarios",
+        error: error.message,
+        success: false,
+      });
+    }
+  },
 
 };
 
