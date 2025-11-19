@@ -10,7 +10,7 @@ const queryPopulateUsuarios = [
   },
   {
     path: 'variantesPlan',
-    select: 'dia horario horasDisponibles',
+    select: 'dia horario horasDisponibles fechaInicio fechaFin',
     populate: {
       path: 'usuarios',
       select: 'nombre apellido email rut'
