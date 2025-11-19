@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const gestionPlanesSchema = new mongoose.Schema({
     tipo: { type: String, required: true,
-        enum: ['curso', 'nadoLibre', 'gimnasio']
+        enum: ['curso', 'nadoLibre', 'gimnasio','cursoTemporada']
      },
     tipoPlan: { type: String, required: true },
     plan: { type: String, required: true },
