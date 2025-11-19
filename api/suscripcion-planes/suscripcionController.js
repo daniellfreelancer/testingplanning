@@ -1,9 +1,9 @@
 const SuscripcionPlanes = require("./suscripcionPlanes");
 
 const populateOptions = [
-    { path: 'usuario', select: 'nombre apellido email rut' },
+    { path: 'usuario', select: 'nombre apellido email rut telefono direccion numeroDireccion comuna fecha_nacimiento contactoEmergencia createdAt fechaRegistro' },
     { path: 'planId', select: 'valor tipo nombrePlan' },
-    { path: 'varianteId', select: 'dia horario' },
+    { path: 'varianteId', select: 'dia horario fechaInicio fechaFin horasDisponibles' },
     { path: 'pago', select: 'transaccion voucher monto fechaPago recepcion fechaFin horasDisponibles bloquesDisponibles createdAt' },
 ]
 
