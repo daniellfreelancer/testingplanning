@@ -597,8 +597,8 @@ const usuariosComplejosController = {
           nombre: user.nombre,
           apellido: user.apellido,
           rut: user.rut,
-         // email: user.email,
-         // telefono: user.telefono,
+          // email: user.email,
+          // telefono: user.telefono,
           rol: user.rol,
           tipoPlan: user.tipoPlan,
           tipoCurso: user.tipoCurso,
@@ -1503,7 +1503,95 @@ const usuariosComplejosController = {
       res.status(500).json({ message: "Error al crear usuario de piscina arrendatario", error });
     }
 
-  }
+  },
+
+  obtenerUsuarioSuscripcionFiltrado: async (req, res) => {
+    try {
+      const { institucion } = req.params;
+
+      const suscripciones = await SuscripcionPlanes.find({
+        institucion,
+        status: true,
+      })
+        .populate({
+          path: "usuario",
+          select: "nombre apellido email rut",
+        })
+        .populate({
+          path: "planId",
+          select: "tipo nombrePlan valor",
+        })
+        .populate({
+          path: "varianteId",
+          select: "dia horario",
+        })
+        .populate({
+          path: "pago",
+          select: "transaccion voucher monto fechaPago recepcion createdAt",
+        });
+
+      // Fecha “hoy” normalizada a inicio de día
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      const aDesactivar = [];
+      const vigentes = [];
+
+      suscripciones.forEach((sus) => {
+        const { tipoConsumo, horasDisponibles, fechaFin } = sus;
+
+        // 1) tipoConsumo = "horas"
+        if (tipoConsumo === "horas") {
+          if (horasDisponibles === 0) {
+            aDesactivar.push(sus);
+          } else {
+            vigentes.push(sus);
+          }
+          return;
+        }
+
+        // 2) tipoConsumo = "mensual" basado en fechaFin
+        if (tipoConsumo === "mensual") {
+          if (!fechaFin) {
+            // si no hay fechaFin, a desactivar
+            aDesactivar.push(sus);
+            return;
+          }
+
+          const fechaFinNormalizada = new Date(fechaFin);
+          fechaFinNormalizada.setHours(0, 0, 0, 0);
+
+          // si fechaFin < hoy -> a desactivar
+          if (fechaFinNormalizada < hoy) {
+            aDesactivar.push(sus);
+          } else {
+            vigentes.push(sus);
+          }
+          return;
+        }
+
+        vigentes.push(sus); // Cualquier otro tipoConsumo como vigentes
+      });
+
+      return res.status(200).json({
+        message: "Suscripciones categorizadas correctamente",
+        success: true,
+        institucion,
+        data: {
+          aDesactivar,
+          vigentes,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Error al obtener suscripciones de usuarios",
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
 
 };
 
