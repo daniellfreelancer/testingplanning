@@ -1508,6 +1508,7 @@ const usuariosComplejosController = {
   obtenerUsuarioSuscripcionFiltrado: async (req, res) => {
     try {
       const { institucion } = req.params;
+
       const suscripciones = await SuscripcionPlanes.find({
         institucion,
         status: true,
@@ -1529,13 +1530,15 @@ const usuariosComplejosController = {
           select: "transaccion voucher monto fechaPago recepcion createdAt",
         });
 
-      const ahora = new Date();
+      // Fecha “hoy” normalizada a inicio de día
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
 
       const aDesactivar = [];
       const vigentes = [];
 
       suscripciones.forEach((sus) => {
-        const { tipoConsumo, horasDisponibles } = sus;
+        const { tipoConsumo, horasDisponibles, fechaFin } = sus;
 
         // 1) tipoConsumo = "horas"
         if (tipoConsumo === "horas") {
@@ -1547,33 +1550,27 @@ const usuariosComplejosController = {
           return;
         }
 
-        // 2) tipoConsumo = "mensual"
+        // 2) tipoConsumo = "mensual" basado en fechaFin
         if (tipoConsumo === "mensual") {
-          // Tomamos fechaPago (si existe) o fechaInicio como fallback
-          const fechaBase = sus?.pago?.fechaPago || sus.fechaInicio;
-          if (!fechaBase) {
-            aDesactivar.push(sus);// Si no hay fecha, por seguridad lo consideramos a desactivar
+          if (!fechaFin) {
+            // si no hay fechaFin, a desactivar
+            aDesactivar.push(sus);
             return;
           }
 
-          const fechaPago = new Date(fechaBase);
+          const fechaFinNormalizada = new Date(fechaFin);
+          fechaFinNormalizada.setHours(0, 0, 0, 0);
 
-          // Expira el 5 del mes siguiente
-          const fechaExpiracion = new Date(fechaPago);
-          fechaExpiracion.setMonth(fechaExpiracion.getMonth() + 1);
-          fechaExpiracion.setDate(5);
-          fechaExpiracion.setHours(23, 59, 59, 999);
-
-          // Si hoy es mayor que el 5 del mes siguiente -> a desactivar
-          if (ahora > fechaExpiracion) {
+          // si fechaFin < hoy -> a desactivar
+          if (fechaFinNormalizada < hoy) {
             aDesactivar.push(sus);
           } else {
             vigentes.push(sus);
           }
-
           return;
         }
-        vigentes.push(sus);  // Cualquier otro tipoConsumo como vigentes
+
+        vigentes.push(sus); // Cualquier otro tipoConsumo como vigentes
       });
 
       return res.status(200).json({
@@ -1594,6 +1591,7 @@ const usuariosComplejosController = {
       });
     }
   },
+
 
 };
 
