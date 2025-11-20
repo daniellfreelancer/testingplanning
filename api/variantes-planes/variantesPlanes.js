@@ -6,6 +6,9 @@ const variantesPlanesSchema = new mongoose.Schema({
     dia: { type: String },
     horario: { type: String },
     horasDisponibles: { type: Number },
+    // Campos para cursoTemporada
+    fechaInicio: { type: Date },
+    fechaFin: { type: Date },
 },{
     timestamps: true
 });
