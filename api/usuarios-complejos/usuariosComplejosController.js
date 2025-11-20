@@ -15,7 +15,8 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 const publicKey = process.env.AWS_PUBLIC_KEY;
 const privateKey = process.env.AWS_SECRET_KEY;
 const SuscripcionPlanes = require('../suscripcion-planes/suscripcionPlanes')
-const RegistroAccesos = require('../acceso-usuarios-complejos/accesoUsuariosComplejosModel')
+const RegistroAccesos = require('../acceso-usuarios-complejos/accesoUsuariosComplejosModel');
+const { listenerCount } = require("process");
 
 function generateRandomPassword(length = 8) {
   const characters =
@@ -1509,79 +1510,200 @@ const usuariosComplejosController = {
     try {
       const { institucion } = req.params;
 
+      //busca las suscripciones de la institucion
       const suscripciones = await SuscripcionPlanes.find({
         institucion,
         status: true,
       })
+        .select("usuario planId fechaInicio fechaFin horasDisponibles")
         .populate({
           path: "usuario",
-          select: "nombre apellido email rut",
+          select: "rut",
         })
         .populate({
           path: "planId",
-          select: "tipo nombrePlan valor",
+          select: "tipo",
         })
-        .populate({
-          path: "varianteId",
-          select: "dia horario",
-        })
-        .populate({
-          path: "pago",
-          select: "transaccion voucher monto fechaPago recepcion createdAt",
-        });
 
-      // Fecha “hoy” normalizada a inicio de día
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
+      let fechaFinNL = new Date();
+      fechaFinNL.setDate(fechaFinNL.getDate() );
+      fechaFinNL.setHours(22, 0, 0, 0);
 
-      const aDesactivar = [];
-      const vigentes = [];
 
-      suscripciones.forEach((sus) => {
-        const { tipoConsumo, horasDisponibles, fechaFin } = sus;
 
-        // 1) tipoConsumo = "horas"
-        if (tipoConsumo === "horas") {
-          if (horasDisponibles === 0) {
-            aDesactivar.push(sus);
-          } else {
-            vigentes.push(sus);
-          }
-          return;
+      // retornar un array de suscripciones que fechaFin sea menor a la fechaFinNL y el planId?.tipo sea nadoLibre y el campo horasDisponibles sea 0
+      let nadoLibreExpiradosCero = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0 && suscripcion.fechaFin < fechaFinNL) {
+          return true;
         }
-
-        // 2) tipoConsumo = "mensual" basado en fechaFin
-        if (tipoConsumo === "mensual") {
-          if (!fechaFin) {
-            // si no hay fechaFin, a desactivar
-            aDesactivar.push(sus);
-            return;
-          }
-
-          const fechaFinNormalizada = new Date(fechaFin);
-          fechaFinNormalizada.setHours(0, 0, 0, 0);
-
-          // si fechaFin < hoy -> a desactivar
-          if (fechaFinNormalizada < hoy) {
-            aDesactivar.push(sus);
-          } else {
-            vigentes.push(sus);
-          }
-          return;
-        }
-
-        vigentes.push(sus); // Cualquier otro tipoConsumo como vigentes
+        return false;
       });
+
+      // retornar un array de suscripciones que fechaFin sea menor a la fechaFinNL y el planId?.tipo sea nadoLibre y el campo horasDisponibles sea mayor a 0
+      let nadoLibreExpiradosMayorCero = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles > 0 && suscripcion.fechaFin < fechaFinNL) {
+          return true;
+        }
+        return false;
+      });
+
+      //_id de usuarios con suscripciones expiradas en nado libre con horas disponibles mayor a 0
+      let usuariosNadoLibreExpiradosMayorCero = nadoLibreExpiradosMayorCero.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+
+      //_id de usuarios con suscripciones expiradas en nado libre con horas disponibles 0
+      let usuariosNadoLibreExpiradosCero = nadoLibreExpiradosCero.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+
+
+            // retornar un array de suscripciones de planId?.tipo sea igual a gimnasio y fechaFin sea menor a la fechaFinNL
+            let suscripcionesGimnasio = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "gimnasio" && suscripcion.fechaFin < fechaFinNL) {
+          return true;
+        }
+        return false;
+      });
+
+
+      // _id y rut de usuarios con suscripciones de gimasios expirados
+      let usuariosSuscripcionesGimnasioExpirados = suscripcionesGimnasio.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+      // retornar un array de suscripciones de planId?.tipo sea igual a curso y fechaFin sea menor a la fechaFinNL
+      let suscripcionesCurso = suscripciones.filter((suscripcion) => {
+
+        //normalizar la fechaFin
+        let fechaFin = new Date(suscripcion.fechaFin);
+        fechaFin.setHours(22, 0, 0, 0);
+
+        if (suscripcion.planId?.tipo === "curso" && fechaFin <= fechaFinNL) {
+          return true;
+        }
+        return false;
+      });
+
+      // _id de usuarios con suscripciones de cursos expirados
+      let usuariosSuscripcionesCursoExpirados = suscripcionesCurso.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+
+      // _id de usuarios con ExpiradosCero y ExpiradosMayorCero y suscripciones de gimasios expirados
+      let usuariosExpirados = [...usuariosNadoLibreExpiradosCero, ...usuariosNadoLibreExpiradosMayorCero, ...usuariosSuscripcionesGimnasioExpirados, ...usuariosSuscripcionesCursoExpirados];
+      let cantidadUsuariosExpirados = usuariosExpirados.length;
+
+
+      //Usuarios con suscripciones expiradas y agotadas
+      usuariosExpirados = usuariosExpirados.filter((usuario, index, self) =>
+        self.indexOf(usuario) === index
+      );
+      cantidadUsuariosExpirados = usuariosExpirados.length;
+      
+      /**
+       * suscripciones activas
+       */
+      // fecha de expiracion del 6 de diciembre
+      let expiracionDiciembre = new Date();
+      expiracionDiciembre.setDate(25);
+      expiracionDiciembre.setMonth(11);
+      expiracionDiciembre.setHours(0, 0, 0, 0);
+
+
+      // fecha inicio de contratos del 25 de octubre
+      let inicioContratosNoviembre = new Date();
+      inicioContratosNoviembre.setDate(25);
+      inicioContratosNoviembre.setMonth(9);
+      inicioContratosNoviembre.setHours(0, 0, 0, 0);
+      // retornar un array de suscripciones de planId?.tipo sea igual a gimnasio y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
+      let suscripcionesGimnasioActivas = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "gimnasio" && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
+          return true;
+        }
+        return false;
+      });
+
+
+      // _id y rut de usuarios con suscripciones de gimasios activas
+      let usuariosSuscripcionesGimnasioActivas = suscripcionesGimnasioActivas.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+      // retonar un array de usuarios con suscripciones de nado libre con horas disponibles mayor a 0 y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
+
+      let usuariosSuscripcionesNLActivas = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles > 0 && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
+          return true;
+        }
+        return false;
+      });
+
+      // _id y rut de usuarios con suscripciones de nado libre con horas disponibles mayor a 0 y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre, evitar duplicados
+      let usuariosSuscripcionesNLActivasRut = usuariosSuscripcionesNLActivas.filter((usuario, index, self) =>
+        self.indexOf(usuario) === index
+      ).map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+      // retornar un array de usuarios con suscripciones de cursos con fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
+      let usuariosSuscripcionesCursosActivas = suscripciones.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === "curso" && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
+          return true;
+        }
+        return false;
+      });
+      
+      // _id y rut de usuarios con suscripciones de cursos con fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre, evitar duplicados
+      let usuariosSuscripcionesCursosActivasRut = usuariosSuscripcionesCursosActivas.filter((usuario, index, self) =>
+        self.indexOf(usuario) === index
+      ).map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+
+      // Usuarios con suscripciones activas
+      let usuariosSuscripcionesActivas = [...usuariosSuscripcionesGimnasioActivas, ...usuariosSuscripcionesNLActivasRut, ...usuariosSuscripcionesCursosActivasRut];
+
+
+      //Retornar un array de usuarios, comparando el array de usuariosExpirados con el array de usuariosSuscripcionesActivas y  retonar un array de usuarios que no tengan suscripciones activas 
+
+
+      // conparar _id de usuariosExpirados con _id de usuariosSuscripcionesActivas
+      let usuariosParaEliminar = usuariosExpirados.filter(usuario => !usuariosSuscripcionesActivas.some(s => s._id === usuario._id));
+      let cantidadUsuariosParaEliminar = usuariosParaEliminar.length;
 
       return res.status(200).json({
-        message: "Suscripciones categorizadas correctamente",
-        success: true,
-        institucion,
-        data: {
-          aDesactivar,
-          vigentes,
-        },
+        messageUno: "Usuarios Suscripciones Activas",
+        usuariosParaEliminar: usuariosParaEliminar,
+        cantidadUsuariosParaEliminar: cantidadUsuariosParaEliminar,
+
       });
+
     } catch (error) {
       console.error(error);
       return res.status(500).json({
