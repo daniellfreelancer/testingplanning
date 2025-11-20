@@ -14,6 +14,7 @@ router.post("/forgot-password-usuario", usuariosComplejosController.forgotPasswo
 router.post("/asignar-alumnos-a-entrenador", usuariosComplejosController.asignarAlumnosAEntrenador); //tested
 router.post("/desasignar-alumno-de-entrenador", usuariosComplejosController.desasignarAlumnoDeEntrenador); //tested
 
+
 // Usuarios de piscina
 router.post("/crear-usuario-piscina/:institucion", upload.fields([
     { name: 'fotoCedulaFrontal', maxCount: 1 },
@@ -47,5 +48,6 @@ router.get("/obtener-usuarios-piscina-natacion-paginado/:institucion", usuariosC
 router.get("/obtener-usuario-por-id/:id", usuariosComplejosController.obtenerUsuarioPorId); //tested
 router.post("/crear-usuario-piscina-arrendatario/:institucion", usuariosComplejosController.crearUsuarioPiscinaArrendatario); //tested
 
+router.get("/obtener-usuarios-por-suscripcion-filtrado/:institucion", usuariosComplejosController.obtenerUsuarioSuscripcionFiltrado); 
 
 module.exports = router;
