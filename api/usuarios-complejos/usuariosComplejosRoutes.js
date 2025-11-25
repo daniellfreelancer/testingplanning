@@ -49,5 +49,5 @@ router.get("/obtener-usuario-por-id/:id", usuariosComplejosController.obtenerUsu
 router.post("/crear-usuario-piscina-arrendatario/:institucion", usuariosComplejosController.crearUsuarioPiscinaArrendatario); //tested
 
 router.get("/obtener-usuarios-por-suscripcion-filtrado/:institucion", usuariosComplejosController.obtenerUsuarioSuscripcionFiltrado); 
-
+router.get("/obtener-todos-nombres-arrendatarios", usuariosComplejosController.obtenerTodosLosNombresArrendatarios); //tested
 module.exports = router;

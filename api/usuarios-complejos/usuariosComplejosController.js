@@ -1713,6 +1713,42 @@ const usuariosComplejosController = {
       });
     }
   },
+  obtenerTodosLosNombresArrendatarios: async (req, res) => {
+    try {
+      const arrendatarios = await UsuariosComplejos.find({ arrendatario: true }).select("nombreArrendatario");
+
+
+      //eliminar duplicados
+
+      let nombresExternos = arrendatarios.map((arrendatario) => {
+        return {
+          nombre: arrendatario.nombreArrendatario,
+          _id: arrendatario._id,
+        };
+      });
+
+      // eliminar duplicados si campo nombre es igual y diferentes a null o string vacio
+      nombresExternos = nombresExternos.filter((nombre, index, self) =>
+        self.findIndex(n => n.nombre === nombre.nombre && n.nombre !== null && n.nombre !== "") === index
+      );
+
+
+
+      return res.status(200).json({
+        message: "Nombres de arrendatarios encontrados correctamente",
+        nombresExternos: nombresExternos,
+
+      });
+    }
+    catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Error al obtener nombres de arrendatarios",
+        error: error.message,
+        success: false,
+      });
+    }
+  },
 
 
 };
