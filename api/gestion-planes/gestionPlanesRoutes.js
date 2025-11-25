@@ -22,6 +22,10 @@ router.post('/crear-variante-plan-n', gestionPlanesController.crearVariantePlanN
 router.put('/editar-variante-plan-n/:id', gestionPlanesController.editarVariantePlanN);
 router.delete('/eliminar-variante-plan-n/:id', gestionPlanesController.eliminarVariantePlanN);
 
+//stats planes N
+router.get('/stats-planes-n', gestionPlanesController.statsPlanesN);
+//stats suscripciones
+router.get('/stats-suscripciones', gestionPlanesController.statsSuscripciones);
 
 
 module.exports = router;

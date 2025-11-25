@@ -2,6 +2,7 @@ const Usuarios = require("../usuarios-complejos/usuariosComplejos");
 const Planes = require("./gestionPlanes");
 const PlanesN = require("./gestionPlanesN");
 const VariantesPlanes = require("../variantes-planes/variantesPlanes");
+const SuscripcionPlanes = require("../suscripcion-planes/suscripcionPlanes");
 
 const queryPopulateUsuarios = [
   {
@@ -326,7 +327,163 @@ const gestionPlanesController = {
     } catch (error) {
       res.status(500).json({ message: "Error al actualizar la variante", error: error.message });
     }
+  },
+  statsPlanesN: async (req, res) => {
+    try {
+      const stats = await PlanesN.find().populate({
+        path: 'variantesPlan',
+        select: 'dia horario horasDisponibles fechaInicio fechaFin planId usuarios'
+      });
+
+      let cursos = []
+      let nadoLibre = []
+      let gimnasio = []
+      let cursoTemporada = []
+
+      for (const plan of stats) {
+        if (plan.tipo === 'curso') {
+          cursos.push({ nombrePlan: plan.nombrePlan, variantes: plan.variantesPlan });
+
+        } else if (plan.tipo === 'nadoLibre') {
+          nadoLibre.push({ nombrePlan: plan.nombrePlan, variantes: plan.variantesPlan });
+        }
+        if (plan.tipo === 'gimnasio') {
+          gimnasio.push({ nombrePlan: plan.nombrePlan, variantes: plan.variantesPlan });
+        }
+        if (plan.tipo === 'cursoTemporada') {
+          cursoTemporada.push({ nombrePlan: plan.nombrePlan, variantes: plan.variantesPlan });
+        }
+      }
+
+      res.status(200).json({
+        message: "Stats obtenidas exitosamente",
+        success: true,
+        cursos: cursos,
+        nadoLibre: nadoLibre,
+        gimnasio: gimnasio,
+        cursoTemporada: cursoTemporada,
+      });
+
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener las stats", error: error.message });
+    }
+  },
+  statsSuscripciones: async (req, res) => {
+
+    /**
+     * Ejemplo log
+     * {
+      "_id": "68efdf61124d4be4a57d1160",
+      "planId": {
+      "_id": "68e6e78c4e3edd13eb6d2752",
+      "tipo": "nadoLibre",
+      "nombrePlan": "Nado libre 4"
+      },
+      "varianteId": {
+      "_id": "68e6e78c4e3edd13eb6d2753",
+      "dia": "Nado Libre",
+      "horario": "Flexible"
+      },
+      "fechaInicio": "2025-10-15T14:51:00.000Z",
+      "fechaFin": "2025-11-14T00:00:00.000Z",
+      "horasDisponibles": 0
+      },
+     * 
+     * 
+     * 
+     */
+
+    try {
+      const stats = await SuscripcionPlanes.find()
+        .populate({
+          path: 'planId',
+          select: 'nombrePlan tipo'
+        })
+        .populate({
+          path: 'varianteId',
+          select: 'dia horario'
+        }).select('planId varianteId fechaInicio fechaFin horasDisponibles')
+
+      let tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate());
+
+      // dia 6 del proximo mes
+      let fechaFinCurso = new Date();
+      fechaFinCurso.setDate(6);
+      fechaFinCurso.setMonth(fechaFinCurso.getMonth() + 1);
+      fechaFinCurso.setHours(0, 0, 0, 0);
+
+      //dia 25 del mes anterior
+      let fechaInicioCurso = new Date();
+      fechaInicioCurso.setDate(24);
+      fechaInicioCurso.setMonth(fechaInicioCurso.getMonth() - 1);
+      fechaInicioCurso.setHours(0, 0, 0, 0);
+
+
+
+
+      //para cursos el planId?.tipo sea igual a curso y fechaFin sea igual o menor a tomorrow
+      let cursos = stats.filter((suscripcion) => {
+        //normalizar la fechaFin
+        let fechaFin = new Date(suscripcion.fechaFin);
+
+        // fechaFin.setHours(0, 0, 0, 0);
+        // if (suscripcion.planId?.tipo === 'curso' && fechaFin <= fechaFinCurso && suscripcion.fechaInicio >= fechaInicioCurso) {
+        //   return true;
+        // }
+
+        fechaFin.setHours(0, 0, 0, 0);
+        if (suscripcion.planId?.tipo === 'curso' && fechaFin >= tomorrow) {
+          return true;
+        }
+
+        return false;
+      });
+
+      // para nado libre el planId?.tipo sea igual a nadoLibre y fechaFin sea igual o menor a tomorrow y horasDisponibles sea mayor a 0
+      let nadoLibre = stats.filter((suscripcion) => {
+
+        let fechaFin = new Date(suscripcion.fechaFin);
+        if (suscripcion.planId?.tipo === 'nadoLibre' && fechaFin >= tomorrow && suscripcion.horasDisponibles > 0) {
+          return true;
+        }
+        return false;
+      });
+
+      // para gimnasio el planId?.tipo sea igual a gimnasio y fechaFin sea igual o menor a tomorrow
+      let gimnasio = stats.filter((suscripcion) => {
+        //normalizar la fechaFin
+        let fechaFin = new Date(suscripcion.fechaFin);
+        fechaFin.setHours(0, 0, 0, 0);
+        if (suscripcion.planId?.tipo === 'gimnasio' && fechaFin >= tomorrow) {
+          return true;
+        }
+        return false;
+      });
+
+
+      // para curso temporada el planId?.tipo sea igual a cursoTemporada y fechaFin sea igual o menor a tomorrow
+      let cursoTemporada = stats.filter((suscripcion) => {
+        if (suscripcion.planId?.tipo === 'cursoTemporada') {
+          return true;
+        }
+        return false;
+      });
+
+      res.status(200).json({
+        message: "Stats obtenidas exitosamente",
+        cursos,
+        cantidadCursos: cursos.length,
+        cursoTemporada,
+        cantidadCursoTemporada: cursoTemporada.length,
+        gimnasio,
+        cantidadGimnasio: gimnasio.length,
+        success: true
+      });
+
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener las stats de suscripciones", error: error.message });
+    }
   }
 };
-
 module.exports = gestionPlanesController;
