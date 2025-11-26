@@ -484,6 +484,130 @@ const gestionPlanesController = {
     } catch (error) {
       res.status(500).json({ message: "Error al obtener las stats de suscripciones", error: error.message });
     }
+  },
+  statsSuscripcionesParaDesactivaciones: async (req, res) => {
+    try {
+      const stats = await SuscripcionPlanes.find()
+        .populate({
+          path: 'planId',
+          select: 'nombrePlan tipo'
+        })
+        .populate({
+          path: 'varianteId',
+          select: 'dia horario'
+        }).select('planId varianteId fechaInicio fechaFin horasDisponibles usuario')
+
+      let tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate());
+
+      //para cursos el planId?.tipo sea igual a curso y fechaFin sea igual o menor a tomorrow
+      let cursos = stats.filter((suscripcion) => {
+        //normalizar la fechaFin
+        let fechaFin = new Date(suscripcion.fechaFin);
+
+        // fechaFin.setHours(0, 0, 0, 0);
+        // if (suscripcion.planId?.tipo === 'curso' && fechaFin <= fechaFinCurso && suscripcion.fechaInicio >= fechaInicioCurso) {
+        //   return true;
+        // }
+
+        fechaFin.setHours(0, 0, 0, 0);
+        if (suscripcion.planId?.tipo === 'curso' && fechaFin >= tomorrow) {
+          return true;
+        }
+
+        return false;
+      });
+
+      // para nado libre el planId?.tipo sea igual a nadoLibre y fechaFin sea igual o menor a tomorrow y horasDisponibles sea mayor a 0
+      let nadoLibre = stats.filter((suscripcion) => {
+
+        let fechaFin = new Date(suscripcion.fechaFin);
+        if (suscripcion.planId?.tipo === 'nadoLibre' && suscripcion.horasDisponibles > 0) {
+          return true;
+        }
+        return false;
+      });
+
+
+      let usuariosCursos = cursos.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+      let usuariosNadoLibre = nadoLibre.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+
+
+      let gimnasio = stats.filter((suscripcion) => {
+        return suscripcion.planId?.tipo === 'gimnasio';
+      });
+      let usuariosGimnasio = gimnasio.map((suscripcion) => {
+        return {
+          _id: suscripcion.usuario?._id,
+          rut: suscripcion.usuario?.rut,
+        };
+      });
+
+      // guardar solo el _id de totalUsuarios
+      let totalUsuarios = [...usuariosCursos, ...usuariosNadoLibre, ...usuariosGimnasio];
+      totalUsuarios = totalUsuarios.map((usuario) => {
+        return usuario._id ? usuario._id.toString() : null;
+      }).filter((id) => id !== null);
+      // Eliminar duplicados
+      totalUsuarios = [...new Set(totalUsuarios)];
+
+
+      const allUsers = await Usuarios.find({
+        rol: "usuario",
+        // Filtro: traer usuarios que no sean arrendatarios
+        $and: [
+          {
+            $or: [
+              { arrendatario: { $exists: false } },
+              { arrendatario: false }
+            ]
+          },
+          {
+            $or: [
+              { statusArrendatario: { $exists: false } },
+              { statusArrendatario: false }
+            ]
+          }
+        ]
+      })
+        .select('_id rut tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario')
+        .lean() // Objetos planos, más rápido
+        .exec();
+
+      // guardar solo el _id de allUsers como strings
+      let allUsersIds = allUsers.map((user) => {
+        return user._id ? user._id.toString() : null;
+      }).filter((id) => id !== null);
+      // Eliminar duplicados
+      allUsersIds = [...new Set(allUsersIds)];
+
+      // Retornar los usuarios que no están en totalUsuarios
+      let usuariosNoSuscripciones = allUsersIds.filter((id) => {
+        return !totalUsuarios.includes(id);
+      });
+
+
+      res.status(200).json({
+        usuariosNoSuscripciones,
+        cantidadUsuariosNoSuscripciones: usuariosNoSuscripciones.length,
+        success: true
+      });
+
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener las stats de suscripciones", error: error.message });
+    }
   }
 };
 module.exports = gestionPlanesController;
