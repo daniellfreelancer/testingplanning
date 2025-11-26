@@ -26,6 +26,8 @@ router.delete('/eliminar-variante-plan-n/:id', gestionPlanesController.eliminarV
 router.get('/stats-planes-n', gestionPlanesController.statsPlanesN);
 //stats suscripciones
 router.get('/stats-suscripciones', gestionPlanesController.statsSuscripciones);
+//stats suscripciones para desactivaciones
+router.get('/stats-suscripciones-para-desactivaciones', gestionPlanesController.statsSuscripcionesParaDesactivaciones);
 
 
 module.exports = router;
