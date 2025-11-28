@@ -228,7 +228,7 @@ const gestionPagosController = {
 
     },
     crearRenovacion: async (req, res) => {
-        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, } = req.body;
+        const { transaccion, voucher, monto, fechaPago, recepcion, fechaFin, beneficio, horasDisponibles } = req.body;
         const { suscripcionId } = req.params;
 
         try {
@@ -253,7 +253,7 @@ const gestionPagosController = {
             const pagoGuardado = await pago.save();
 
             ///actualizamos la suscripcion
-            await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin } });
+            await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin, horasDisponibles: horasDisponibles } });
             ///agregar el pago al usuario
             await Usuarios.findByIdAndUpdate(suscripcion.usuario, { $push: { pagos: pagoGuardado._id }, $set: { status: true } });
 
