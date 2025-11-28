@@ -255,7 +255,7 @@ const gestionPagosController = {
             ///actualizamos la suscripcion
             await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin } });
             ///agregar el pago al usuario
-            await Usuarios.findByIdAndUpdate(suscripcion.usuario, { $push: { pagos: pagoGuardado._id } });
+            await Usuarios.findByIdAndUpdate(suscripcion.usuario, { $push: { pagos: pagoGuardado._id }, $set: { status: true } });
 
             res.status(201).json({ message: "Renovacion creada exitosamente", pago: pagoGuardado, success: true });
 
