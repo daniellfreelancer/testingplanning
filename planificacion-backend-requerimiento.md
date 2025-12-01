@@ -9,6 +9,8 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 
 ### ✅ Módulos Existentes (Reutilizar)
 - ✅ `api/pteAlto/usuarios-pte-alto` - Modelo de usuarios PTE Alto
+- ✅ `api/pteAlto/complejos-deportivos/` - CRUD completo de complejos deportivos PTE Alto (modelo, controlador, rutas)
+- ✅ `api/pteAlto/espacios-deportivos/` - Modelo de espacios deportivos PTE Alto (pendiente: controlador y rutas)
 - ✅ `api/reservas/` - Modelo base de reservas
 - ✅ `api/espacios-deportivos/` - CRUD de espacios
 - ✅ `api/centros-deportivos/` - CRUD de complejos
@@ -22,10 +24,11 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 1. ✅ ~~Sistema de validación de usuarios (estado pendiente/validado/rechazado)~~ **COMPLETADO**
 2. ✅ ~~Endpoints de registro con subida de documentos~~ **COMPLETADO**
 3. 🔄 Mejorar endpoints de complejos deportivos (validación, filtros, seguridad)
-4. Endpoints de administración completos
-5. Validación de disponibilidad de reservas
-6. Sistema de reservas recurrentes/largas
-7. Endpoints de métricas y reportes
+4. 🔄 **Implementar CRUD completo de espacios deportivos PTE Alto** (controlador y rutas)
+5. Endpoints de administración completos
+6. Validación de disponibilidad de reservas
+7. Sistema de reservas recurrentes/largas
+8. Endpoints de métricas y reportes
 
 ---
 
@@ -148,11 +151,11 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 **Checklist**:
 
 #### **1.3.1: Listar Usuarios Pendientes**
-- [ ] Crear función `obtenerTodosLosUsuariosPteAlto`
-- [ ] Query: `rol: 'USER'`
-- [ ] Ordenar por `createdAt` (más antiguos primero)
+- [x ] Crear función `obtenerTodosLosUsuariosPteAlto`
+- [x ] Query: `rol: 'USER'`
+- [x] Ordenar por `createdAt` (más antiguos primero)
 - [ ] Paginación (opcional para MVP)
-- [ ] Retornar: id, nombre, apellido, email, rut, rol, status, institucion, estadoValidacion, certificadoDomicilio, createdAt, updatedAt
+- [ x] Retornar: id, nombre, apellido, email, rut, rol, status, institucion, estadoValidacion, certificadoDomicilio, createdAt, updatedAt
 
 **Endpoint**: `GET /pte-alto/obtener-todos-los-usuarios`
 
@@ -160,9 +163,9 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 - [x ] Crear función `validarUsuario`
 - [ x] Validar que usuario existe
 - [ x] Validar que estado es `pendiente`
-- [ ] Actualizar `estadoValidacion: 'validado'`
-- [ ] Guardar cambios
-- [ ] Retornar usuario actualizado
+- [x ] Actualizar `estadoValidacion: 'validado'`
+- [x ] Guardar cambios
+- [ x] Retornar usuario actualizado
 
 **Endpoint**: `PUT /pte-alto/validar-usuario/:id`
 
@@ -320,45 +323,60 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 
 ## 🏢 GESTIÓN DE COMPLEJOS DEPORTIVOS
 
-### **Tarea CD.1: Revisar y Mejorar Modelo de Complejos Deportivos**
-**Archivo**: `backend/api/centros-deportivos/centrosDeportivosModel.js`
+**Estado Actual**: ✅ Modelo, controlador y rutas implementados en `backend/api/pteAlto/complejos-deportivos/`
 
-**Estado Actual**: ✅ Modelo existe con campos básicos
+### **Tarea CD.1: Revisar y Mejorar Modelo de Complejos Deportivos**
+**Archivo**: `backend/api/pteAlto/complejos-deportivos/complejosDeportivosPteAlto.js`
+
+**Estado Actual**: ✅ Modelo implementado con campos básicos
 
 **Checklist**:
 - [x] Verificar que modelo tiene todos los campos necesarios:
   - [x] `nombre`, `descripcion`, `direccion`, `telefono`, `email`, `rut`
-  - [x] `ciudad`, `comuna`
-  - [x] `institucion` (array de referencias)
+  - [x] `ciudad`, `comuna`, `region`
+  - [x] `institucion` (referencia a ObjectId)
   - [x] `espaciosDeportivos` (array de referencias)
-  - [x] `horarios` (array para horarios de apertura/cierre)
-  - [x] `status` (boolean)
+  - [x] `horarioApertura`, `horarioCierre`, `horarioAtencion`, `horarioAtencionFin`
+  - [x] `status` (boolean, default: true)
+  - [x] `timestamps` (createdAt, updatedAt)
 - [ ] Agregar validaciones al schema:
-  - [ ] `nombre` requerido
-  - [ ] `rut` único (ya validado en controller)
+  - [ ] `nombre` requerido (ya está como required: true)
+  - [ ] `rut` único (validar en controller)
   - [ ] `email` formato válido (opcional)
 - [ ] Agregar índices para performance:
   ```javascript
-  centrosDeportivosSchema.index({ institucion: 1 });
-  centrosDeportivosSchema.index({ status: 1 });
-  centrosDeportivosSchema.index({ rut: 1 }, { unique: true });
+  complejosDeportivosPteAltoSchema.index({ institucion: 1 });
+  complejosDeportivosPteAltoSchema.index({ status: 1 });
+  complejosDeportivosPteAltoSchema.index({ rut: 1 }, { unique: true });
+  complejosDeportivosPteAltoSchema.index({ ciudad: 1, comuna: 1 });
   ```
 
 **Criterios de Aceptación**:
-- [ ] Modelo tiene validaciones
+- [x] Modelo creado y funcional
+- [ ] Validaciones mejoradas
 - [ ] Índices creados
-- [ ] Compatible con datos existentes
+- [x] Compatible con datos existentes
 
 ---
 
 ### **Tarea CD.2: Mejorar Endpoints de Complejos Deportivos**
-**Archivo**: `backend/api/centros-deportivos/centrosDeportivosController.js`
+**Archivo**: `backend/api/pteAlto/complejos-deportivos/complejosDeportivosPteAltoController.js`
 
-**Estado Actual**: ✅ CRUD básico existe, necesita mejoras
+**Estado Actual**: ✅ CRUD básico implementado, necesita mejoras (validación Joi, populate, filtros)
 
 **Checklist**:
 
 #### **CD.2.1: Mejorar Crear Complejo Deportivo**
+**Estado**: ✅ Implementado básico, necesita mejoras
+
+**Implementado**:
+- [x] Crear complejo deportivo
+- [x] Verificar que institución existe antes de crear
+- [x] Agregar complejo a la institución (actualizar array `complejosPteAlto`)
+- [x] Asignar referencia de institución al complejo
+- [x] Manejo básico de errores
+
+**Pendiente de Mejora**:
 - [ ] Agregar validación con Joi:
   - [ ] `nombre`: string requerido, min 3 caracteres
   - [ ] `descripcion`: string opcional
@@ -368,16 +386,13 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
   - [ ] `rut`: string, formato RUT chileno válido, único
   - [ ] `ciudad`: string requerido
   - [ ] `comuna`: string requerido
-  - [ ] `institucion`: ObjectId válido (requerido)
-  - [ ] `horarios`: array opcional con estructura válida
-- [ ] Verificar que institución existe antes de crear
-- [ ] Verificar que RUT no existe (ya está implementado)
+  - [ ] `region`: string opcional
+  - [ ] `horarioApertura`, `horarioCierre`, `horarioAtencion`, `horarioAtencionFin`: string opcional
+- [ ] Verificar que RUT no existe (validar duplicados)
 - [ ] Mejorar respuesta: incluir complejo con populate de institución
 - [ ] Agregar manejo de errores más descriptivo
 
-**Endpoint Actual**: `POST /vm-centros-deportivos/crear-centro-deportivo/:id`
-
-**Mejora Sugerida**: Cambiar a `POST /vm-centros-deportivos` y obtener adminId del token JWT
+**Endpoint Actual**: `POST /pte-alto/complejos-deportivos/crear-complejo-deportivo/:institucion`
 
 **Request Body**:
 ```json
@@ -420,11 +435,19 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 ```
 
 #### **CD.2.2: Mejorar Listar Complejos Deportivos**
+**Estado**: ✅ Implementado básico, necesita mejoras
+
+**Implementado**:
+- [x] Listar todos los complejos deportivos
+- [x] Retornar respuesta estructurada con success y message
+
+**Pendiente de Mejora**:
 - [ ] Agregar filtros (query params):
   - [ ] `institucion`: filtrar por institución
   - [ ] `status`: filtrar por status (true/false)
   - [ ] `ciudad`: filtrar por ciudad
   - [ ] `comuna`: filtrar por comuna
+  - [ ] `region`: filtrar por región
 - [ ] Agregar populate de `institucion` y `espaciosDeportivos`
 - [ ] Agregar paginación (opcional para MVP):
   - [ ] `page`: número de página (default: 1)
@@ -432,7 +455,7 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 - [ ] Ordenar por `nombre` o `createdAt`
 - [ ] Retornar total de resultados
 
-**Endpoint**: `GET /vm-centros-deportivos/obtener-todos-los-centros-deportivos`
+**Endpoint Actual**: `GET /pte-alto/complejos-deportivos/complejos-deportivos`
 
 **Query Params** (opcionales):
 ```
@@ -468,33 +491,53 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 ```
 
 #### **CD.2.3: Mejorar Obtener Complejo por ID**
+**Estado**: ✅ Implementado básico, necesita mejoras
+
+**Implementado**:
+- [x] Obtener complejo por ID
+- [x] Retornar respuesta estructurada
+
+**Pendiente de Mejora**:
 - [ ] Agregar populate completo:
   - [ ] `institucion`
   - [ ] `espaciosDeportivos`
-  - [ ] `admins` (opcional)
-- [ ] Validar que complejo existe
-- [ ] Retornar error 404 si no existe
+- [ ] Validar que complejo existe (retornar 404 si no existe)
+- [ ] Mejorar manejo de errores
 
-**Endpoint**: `GET /vm-centros-deportivos/obtener-centro-deportivo/:id`
+**Endpoint Actual**: `GET /pte-alto/complejos-deportivos/obtener-complejo-deportivo/:id`
 
 #### **CD.2.4: Mejorar Actualizar Complejo**
+**Estado**: ✅ Implementado básico, necesita mejoras
+
+**Implementado**:
+- [x] Actualizar complejo por ID
+- [x] Actualizar todos los campos enviados
+- [x] Retornar complejo actualizado
+
+**Pendiente de Mejora**:
 - [ ] Agregar validación con Joi (misma que crear, pero todos opcionales)
-- [ ] Validar que complejo existe
+- [ ] Validar que complejo existe (retornar 404 si no existe)
 - [ ] Validar que RUT no está duplicado (si se actualiza)
-- [ ] Permitir actualizar solo campos enviados
 - [ ] Retornar complejo actualizado con populate
 
-**Endpoint**: `PUT /vm-centros-deportivos/actualizar-centro-deportivo/:id`
+**Endpoint Actual**: `PUT /pte-alto/complejos-deportivos/actualizar-complejo-deportivo/:id`
 
 #### **CD.2.5: Mejorar Eliminar Complejo**
-- [ ] Validar que complejo existe
+**Estado**: ✅ Implementado básico, necesita mejoras
+
+**Implementado**:
+- [x] Eliminar complejo por ID
+- [x] Limpiar referencias en institución (remover de array `complejosPteAlto`)
+- [x] Retornar confirmación
+
+**Pendiente de Mejora**:
+- [ ] Validar que complejo existe (retornar 404 si no existe)
 - [ ] Verificar que no tiene espacios deportivos activos (opcional, o solo deshabilitar)
 - [ ] Verificar que no tiene reservas activas (opcional)
-- [ ] Opción: Soft delete (cambiar `status: false` en lugar de eliminar)
-- [ ] Limpiar referencias en institución
-- [ ] Retornar confirmación
+- [ ] Opción: Soft delete (cambiar `status: false` en lugar de eliminar físicamente)
+- [ ] Mejorar manejo de errores
 
-**Endpoint**: `DELETE /vm-centros-deportivos/eliminar-centro-deportivo/:id`
+**Endpoint Actual**: `DELETE /pte-alto/complejos-deportivos/eliminar-complejo-deportivo/:id`
 
 **Criterios de Aceptación**:
 - [ ] Todos los endpoints tienen validación Joi
@@ -543,14 +586,16 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 ---
 
 ### **Tarea CD.4: Agregar Middlewares de Seguridad**
-**Archivo**: `backend/api/centros-deportivos/centrosDeportivosRoutes.js`
+**Archivo**: `backend/api/pteAlto/complejos-deportivos/complejosDeportivosPteAlto.routes.js`
+
+**Estado Actual**: ⚠️ Rutas creadas pero sin middlewares de seguridad
 
 **Checklist**:
-- [ ] Importar middlewares de autenticación
+- [ ] Importar middlewares de autenticación (`authenticateToken`, `requireAdmin`)
 - [ ] Proteger todas las rutas con `authenticateToken`
 - [ ] Proteger rutas de creación/edición/eliminación con `requireAdmin` o verificar que usuario pertenece a la institución
 - [ ] Permitir lectura a usuarios validados
-- [ ] Actualizar rutas en `app.js` si es necesario
+- [ ] Verificar que rutas están registradas en `app.js`
 
 **Criterios de Aceptación**:
 - [ ] Rutas protegidas correctamente
@@ -560,19 +605,28 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 ---
 
 ### **Tarea CD.5: Actualizar Rutas**
-**Archivo**: `backend/api/centros-deportivos/centrosDeportivosRoutes.js`
+**Archivo**: `backend/api/pteAlto/complejos-deportivos/complejosDeportivosPteAlto.routes.js`
 
-**Checklist**:
-- [ ] Revisar rutas existentes
-- [ ] Agregar nuevas rutas:
+**Estado Actual**: ✅ Rutas básicas implementadas
+
+**Rutas Implementadas**:
+- [x] `POST /crear-complejo-deportivo/:institucion` → `crearComplejoDeportivoPteAlto`
+- [x] `GET /complejos-deportivos` → `obtenerTodosLosComplejosDeportivosPteAlto`
+- [x] `GET /obtener-complejo-deportivo/:id` → `obtenerComplejoDeportivoPteAltoPorId`
+- [x] `PUT /actualizar-complejo-deportivo/:id` → `actualizarComplejoDeportivoPteAltoPorId`
+- [x] `DELETE /eliminar-complejo-deportivo/:id` → `eliminarComplejoDeportivoPteAltoPorId`
+
+**Pendiente**:
+- [ ] Agregar nuevas rutas adicionales:
   - [ ] `GET /por-institucion/:institucionId` → `obtenerComplejosPorInstitucion`
   - [ ] `PUT /:id/toggle-status` → `toggleStatusComplejo`
   - [ ] `GET /:id/estadisticas` → `obtenerEstadisticasComplejo`
 - [ ] Aplicar middlewares a cada ruta
 - [ ] Documentar rutas con comentarios
+- [ ] Verificar que rutas están registradas en `app.js` con prefijo `/pte-alto/complejos-deportivos`
 
 **Criterios de Aceptación**:
-- [ ] Todas las rutas están definidas
+- [x] Rutas CRUD básicas definidas
 - [ ] Middlewares aplicados
 - [ ] Rutas registradas en app.js
 
@@ -584,6 +638,327 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 - [ ] Filtros y paginación funcionando
 - [ ] Endpoints adicionales implementados
 - [ ] Middlewares de seguridad aplicados
+- [ ] Testing manual completo
+
+---
+
+## 🏟️ GESTIÓN DE ESPACIOS DEPORTIVOS PTE ALTO
+
+**Estado Actual**: ✅ Modelo creado, pendiente controlador y rutas
+
+**Descripción**: Los espacios deportivos son las canchas u otros espacios de recreación que pertenecen a un complejo deportivo. Cada espacio puede tener horarios, valores de reserva, y estar asociado a talleres.
+
+### **Tarea ED.1: Revisar y Mejorar Modelo de Espacios Deportivos**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAlto.js`
+
+**Estado Actual**: ✅ Modelo implementado con campos básicos
+
+**Checklist**:
+- [x] Verificar que modelo tiene todos los campos necesarios:
+  - [x] `nombre`, `descripcion`, `direccion`
+  - [x] `ciudad`, `comuna`, `region`
+  - [x] `complejoDeportivo` (referencia a ObjectId)
+  - [x] `talleres` (array de referencias)
+  - [x] `status` (boolean, default: true)
+  - [x] `horarioApertura`, `horarioCierre`
+  - [x] `valor` (Number) - precio de reserva
+  - [x] `pago` (Boolean) - si requiere pago
+  - [x] `timestamps` (createdAt, updatedAt)
+- [x] Agregar campos adicionales útiles
+  - [ ] `deporte`: String (tipo de deporte: fútbol, básquetbol, etc.)
+  - [x] `galeria`: [String] (galeria de imagenes)
+- [x] Agregar validaciones al schema:
+  - [ ] `nombre` requerido (ya está como required: true)
+  - [ ] `complejoDeportivo` requerido
+  - [ ] `valor` debe ser >= 0 si `pago` es true
+- [ ] Agregar índices para performance:
+  ```javascript
+  espaciosDeportivosPteAltoSchema.index({ complejoDeportivo: 1 });
+  espaciosDeportivosPteAltoSchema.index({ status: 1 });
+  espaciosDeportivosPteAltoSchema.index({ ciudad: 1, comuna: 1 });
+  espaciosDeportivosPteAltoSchema.index({ deporte: 1 });
+  ```
+
+**Criterios de Aceptación**:
+- [x] Modelo creado y funcional
+- [ ] Validaciones mejoradas
+- [ ] Índices creados
+- [x] Compatible con datos existentes
+
+---
+
+### **Tarea ED.2: Crear Controlador de Espacios Deportivos**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAltoController.js`
+
+**Estado Actual**: ⚠️ Archivo vacío, necesita implementación completa
+
+**Checklist**:
+
+#### **ED.2.1: Crear Espacio Deportivo**
+- [ ] Crear función `crearEspacioDeportivoPteAlto`
+- [ ] Validar con Joi:
+  - [ ] `nombre`: string requerido, min 3 caracteres
+  - [ ] `descripcion`: string opcional
+  - [ ] `direccion`: string opcional
+  - [ ] `ciudad`, `comuna`, `region`: string opcional
+  - [ ] `complejoDeportivo`: ObjectId válido (requerido)
+  - [ ] `horarioApertura`, `horarioCierre`: string opcional (formato HH:mm)
+  - [ ] `valor`: number, >= 0 (opcional)
+  - [ ] `pago`: boolean (opcional, default: false)
+  - [ ] `capacidad`: number, > 0 (opcional)
+  - [ ] `deporte`: string opcional
+- [ ] Verificar que complejo deportivo existe
+- [ ] Agregar espacio al array `espaciosDeportivos` del complejo
+- [ ] Crear espacio deportivo
+- [ ] Retornar espacio creado con populate de `complejoDeportivo`
+
+**Endpoint**: `POST /pte-alto/espacios-deportivos/crear-espacio-deportivo/:complejoDeportivo`
+
+**Request Body**:
+```json
+{
+  "nombre": "Cancha de Fútbol 1",
+  "descripcion": "Cancha de fútbol 11 con césped sintético",
+  "direccion": "Av. Principal 123",
+  "ciudad": "Santiago",
+  "comuna": "Puente Alto",
+  "region": "Región Metropolitana",
+  "horarioApertura": "08:00",
+  "horarioCierre": "22:00",
+  "valor": 15000,
+  "pago": true,
+  "capacidad": 22,
+  "deporte": "Fútbol"
+}
+```
+
+**Response 201**:
+```json
+{
+  "success": true,
+  "message": "Espacio deportivo creado correctamente",
+  "espacioDeportivo": {
+    "id": "ObjectId",
+    "nombre": "string",
+    "complejoDeportivo": {
+      "id": "ObjectId",
+      "nombre": "string"
+    },
+    "status": true,
+    "createdAt": "Date"
+  }
+}
+```
+
+#### **ED.2.2: Listar Espacios Deportivos**
+- [ ] Crear función `obtenerTodosLosEspaciosDeportivosPteAlto`
+- [ ] Agregar filtros (query params):
+  - [ ] `complejoDeportivo`: filtrar por complejo
+  - [ ] `status`: filtrar por status (true/false)
+  - [ ] `ciudad`: filtrar por ciudad
+  - [ ] `comuna`: filtrar por comuna
+  - [ ] `deporte`: filtrar por tipo de deporte
+  - [ ] `pago`: filtrar por si requiere pago (true/false)
+- [ ] Agregar populate de `complejoDeportivo` y `talleres`
+- [ ] Agregar paginación (opcional para MVP):
+  - [ ] `page`: número de página (default: 1)
+  - [ ] `limit`: elementos por página (default: 10)
+- [ ] Ordenar por `nombre` o `createdAt`
+- [ ] Retornar total de resultados
+
+**Endpoint**: `GET /pte-alto/espacios-deportivos/espacios-deportivos`
+
+**Query Params** (opcionales):
+```
+?complejoDeportivo=ObjectId&status=true&deporte=Fútbol&page=1&limit=10
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "espaciosDeportivos": [
+    {
+      "id": "ObjectId",
+      "nombre": "string",
+      "complejoDeportivo": {
+        "id": "ObjectId",
+        "nombre": "string"
+      },
+      "deporte": "string",
+      "valor": 15000,
+      "pago": true,
+      "status": true
+    }
+  ],
+  "total": 10,
+  "page": 1,
+  "limit": 10
+}
+```
+
+#### **ED.2.3: Obtener Espacio Deportivo por ID**
+- [ ] Crear función `obtenerEspacioDeportivoPteAltoPorId`
+- [ ] Validar que espacio existe
+- [ ] Agregar populate completo:
+  - [ ] `complejoDeportivo`
+  - [ ] `talleres`
+- [ ] Retornar error 404 si no existe
+- [ ] Retornar espacio completo
+
+**Endpoint**: `GET /pte-alto/espacios-deportivos/obtener-espacio-deportivo/:id`
+
+#### **ED.2.4: Actualizar Espacio Deportivo**
+- [ ] Crear función `actualizarEspacioDeportivoPteAltoPorId`
+- [ ] Agregar validación con Joi (misma que crear, pero todos opcionales)
+- [ ] Validar que espacio existe
+- [ ] Si se actualiza `complejoDeportivo`, actualizar referencias:
+  - [ ] Remover de array del complejo anterior
+  - [ ] Agregar al array del nuevo complejo
+- [ ] Permitir actualizar solo campos enviados
+- [ ] Retornar espacio actualizado con populate
+
+**Endpoint**: `PUT /pte-alto/espacios-deportivos/actualizar-espacio-deportivo/:id`
+
+#### **ED.2.5: Eliminar Espacio Deportivo**
+- [ ] Crear función `eliminarEspacioDeportivoPteAltoPorId`
+- [ ] Validar que espacio existe
+- [ ] Verificar que no tiene reservas activas (opcional, o solo deshabilitar)
+- [ ] Verificar que no tiene talleres activos (opcional)
+- [ ] Opción: Soft delete (cambiar `status: false` en lugar de eliminar físicamente)
+- [ ] Limpiar referencias en complejo deportivo (remover de array `espaciosDeportivos`)
+- [ ] Retornar confirmación
+
+**Endpoint**: `DELETE /pte-alto/espacios-deportivos/eliminar-espacio-deportivo/:id`
+
+**Criterios de Aceptación**:
+- [ ] Todos los endpoints tienen validación Joi
+- [ ] Filtros funcionan correctamente
+- [ ] Populate funciona en listados
+- [ ] Manejo de errores es descriptivo
+- [ ] Respuestas son consistentes
+- [ ] Referencias se actualizan correctamente
+
+---
+
+### **Tarea ED.3: Agregar Endpoints Adicionales**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAltoController.js`
+
+**Checklist**:
+
+#### **ED.3.1: Listar Espacios por Complejo Deportivo**
+- [ ] Crear función `obtenerEspaciosPorComplejoDeportivo`
+- [ ] Filtrar por `complejoDeportivo: req.params.complejoDeportivoId`
+- [ ] Filtrar solo activos (`status: true`)
+- [ ] Populate `talleres`
+- [ ] Ordenar por `nombre`
+
+**Endpoint**: `GET /pte-alto/espacios-deportivos/por-complejo-deportivo/:complejoDeportivoId`
+
+#### **ED.3.2: Habilitar/Deshabilitar Espacio**
+- [ ] Crear función `toggleStatusEspacioDeportivo`
+- [ ] Validar que espacio existe
+- [ ] Cambiar `status: !status`
+- [ ] Retornar espacio actualizado
+
+**Endpoint**: `PUT /pte-alto/espacios-deportivos/:id/toggle-status`
+
+#### **ED.3.3: Obtener Estadísticas del Espacio**
+- [ ] Crear función `obtenerEstadisticasEspacioDeportivo`
+- [ ] Calcular:
+  - [ ] Total de reservas (último mes)
+  - [ ] Reservas activas vs canceladas
+  - [ ] Horarios más solicitados
+  - [ ] Ingresos generados (si aplica)
+- [ ] Retornar estadísticas
+
+**Endpoint**: `GET /pte-alto/espacios-deportivos/:id/estadisticas`
+
+#### **ED.3.4: Asignar Taller a Espacio**
+- [ ] Crear función `asignarTallerEspacio`
+- [ ] Validar que espacio existe
+- [ ] Validar que taller existe
+- [ ] Validar disponibilidad del espacio en las fechas del taller
+- [ ] Agregar taller al array `talleres` del espacio
+- [ ] Retornar espacio actualizado
+
+**Endpoint**: `PUT /pte-alto/espacios-deportivos/:id/asignar-taller`
+
+**Request Body**:
+```json
+{
+  "taller": "ObjectId"
+}
+```
+
+**Criterios de Aceptación**:
+- [ ] Endpoints funcionan correctamente
+- [ ] Respuestas son útiles para frontend
+
+---
+
+### **Tarea ED.4: Agregar Middlewares de Seguridad**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAlto.routes.js`
+
+**Checklist**:
+- [ ] Importar middlewares de autenticación (`authenticateToken`, `requireAdmin`)
+- [ ] Proteger todas las rutas con `authenticateToken`
+- [ ] Proteger rutas de creación/edición/eliminación con `requireAdmin` o verificar que usuario pertenece a la institución del complejo
+- [ ] Permitir lectura a usuarios validados
+- [ ] Verificar que rutas están registradas en `app.js`
+
+**Criterios de Aceptación**:
+- [ ] Rutas protegidas correctamente
+- [ ] Solo admins pueden crear/editar/eliminar
+- [ ] Usuarios validados pueden leer
+
+---
+
+### **Tarea ED.5: Crear Rutas**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAlto.routes.js`
+
+**Estado Actual**: ⚠️ Archivo vacío, necesita implementación completa
+
+**Checklist**:
+- [ ] Crear archivo de rutas con Express Router
+- [ ] Importar controlador
+- [ ] Definir rutas CRUD:
+  - [ ] `POST /crear-espacio-deportivo/:complejoDeportivo` → `crearEspacioDeportivoPteAlto`
+  - [ ] `GET /espacios-deportivos` → `obtenerTodosLosEspaciosDeportivosPteAlto`
+  - [ ] `GET /obtener-espacio-deportivo/:id` → `obtenerEspacioDeportivoPteAltoPorId`
+  - [ ] `PUT /actualizar-espacio-deportivo/:id` → `actualizarEspacioDeportivoPteAltoPorId`
+  - [ ] `DELETE /eliminar-espacio-deportivo/:id` → `eliminarEspacioDeportivoPteAltoPorId`
+- [ ] Agregar rutas adicionales:
+  - [ ] `GET /por-complejo-deportivo/:complejoDeportivoId` → `obtenerEspaciosPorComplejoDeportivo`
+  - [ ] `PUT /:id/toggle-status` → `toggleStatusEspacioDeportivo`
+  - [ ] `GET /:id/estadisticas` → `obtenerEstadisticasEspacioDeportivo`
+  - [ ] `PUT /:id/asignar-taller` → `asignarTallerEspacio`
+- [ ] Aplicar middlewares a cada ruta
+- [ ] Documentar rutas con comentarios
+- [ ] Verificar que rutas están registradas en `app.js` con prefijo `/pte-alto/espacios-deportivos`
+
+**Criterios de Aceptación**:
+- [ ] Todas las rutas están definidas
+- [ ] Middlewares aplicados
+- [ ] Rutas registradas en app.js
+
+---
+
+### **Checkpoint Espacios Deportivos PTE Alto**
+**Estado General**: ⚠️ Modelo creado, pendiente implementación completa
+
+**Completado**:
+- [x] Modelo creado con campos básicos (`espaciosDeportivosPteAlto.js`)
+
+**Pendiente**:
+- [ ] Modelo mejorado con validaciones e índices
+- [ ] Controlador completo con CRUD
+- [ ] Validación Joi en todos los endpoints
+- [ ] Filtros y paginación funcionando
+- [ ] Populate de relaciones (complejoDeportivo, talleres)
+- [ ] Endpoints adicionales implementados
+- [ ] Middlewares de seguridad aplicados
+- [ ] Rutas creadas y registradas
 - [ ] Testing manual completo
 
 ---
