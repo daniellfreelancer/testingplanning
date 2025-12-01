@@ -21,6 +21,9 @@ const complejosSchema = new mongoose.Schema({
   empleados:[{type: mongoose.Types.ObjectId, ref:'usuariosComplejos'}],
   usuariosPteAlto:[{type: mongoose.Types.ObjectId, ref:'usuariosPteAlto'}],
   adminsPteAlto:[{type: mongoose.Types.ObjectId, ref:'usuariosPteAlto'}],
+  complejosPteAlto:[{type: mongoose.Types.ObjectId, ref:'complejosPteAlto'}], // son los complejos 
+  espaciosPteAlto:[{type: mongoose.Types.ObjectId, ref:'espaciosPteAlto'}], // son los espacios deportivos canchas deportivas
+
 
 }, {
     timestamps: true

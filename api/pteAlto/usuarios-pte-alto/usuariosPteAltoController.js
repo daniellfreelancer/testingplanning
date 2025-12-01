@@ -3,17 +3,33 @@ const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
+const sendWelcomeMailPteAlto = require("../../mail/welcomeUsuariosPteAlto");
+
+const clientAWS = new S3Client({
+    region: bucketRegion,
+    credentials: {
+        accessKeyId: publicKey,
+        secretAccessKey: privateKey,
+    },
+})
+
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
 
 function generateRandomPassword(length = 8) {
     const characters =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let password = "";
     for (let i = 0; i < length; i++) {
-      const randomIndex = crypto.randomInt(0, characters.length);
-      password += characters[randomIndex];
+        const randomIndex = crypto.randomInt(0, characters.length);
+        password += characters[randomIndex];
     }
     return password;
-  }
+}
 const usuariosPteAltoController = {
     crearUsuarioPteAlto: async (req, res) => {
 
@@ -28,16 +44,75 @@ const usuariosPteAltoController = {
 
             const password = generateRandomPassword(8);
             const passwordHashed = bcryptjs.hashSync(password, 10);
-            const nuevoUsuarioPteAlto = new UsuariosPteAlto({ 
-                nombre, apellido, email,rut, rol, password: [passwordHashed]
+            const nuevoUsuarioPteAlto = new UsuariosPteAlto({
+                nombre, apellido, email, rut, rol, password: [passwordHashed]
             });
 
+            nuevoUsuarioPteAlto.status = true;
+            nuevoUsuarioPteAlto.estadoValidacion = 'validado';
             await nuevoUsuarioPteAlto.save();
 
             //mostrar por consola el password generado
             console.log("Password generado:", password);
             res.status(201).json({ message: "Usuario PTE Alto creado correctamente", usuarioPteAlto: nuevoUsuarioPteAlto, password });
-            
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al crear usuario PTE Alto", error: error });
+        }
+
+    },
+    crearUsuarioExternoPteAlto: async (req, res) => {
+
+        try {
+            const { nombre, apellido, email, rut, rol, institucion } = req.body;
+
+            //validar si el correo y rut ya existen
+            const usuarioPteAltoEmail = await UsuariosPteAlto.findOne({ email });
+            const usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut });
+            if (usuarioPteAltoEmail || usuarioPteAltoRut) {
+                return res.status(400).json({ message: "El correo o rut ya existe" });
+            }
+
+            const password = generateRandomPassword(8);
+            const passwordHashed = bcryptjs.hashSync(password, 10);
+            const nuevoUsuarioPteAlto = new UsuariosPteAlto({
+                nombre, apellido, email, rut, rol, password: [passwordHashed], institucion
+            });
+
+            let institucionDoc = await Institucion.findById(institucion);
+            if (!institucionDoc) {
+                return res.status(404).json({ message: "Institución no encontrada" });
+            }
+
+            institucionDoc.usuariosPteAlto.push(nuevoUsuarioPteAlto._id);
+            await institucionDoc.save();
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                nuevoUsuarioPteAlto.certificadoDomicilio = fileName;
+            }
+
+            await nuevoUsuarioPteAlto.save();
+
+            //ENVIAR EMAIL DE BIENVENIDA
+            await sendWelcomeMailPteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
+
+            res.status(201).json({ message: "Usuario PTE Alto creado correctamente", usuarioPteAlto: nuevoUsuarioPteAlto, password });
+
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al crear usuario PTE Alto", error: error });
@@ -94,25 +169,25 @@ const usuariosPteAltoController = {
             } else {
                 const isMatch = usuarioPteAlto.password.filter((userpassword) =>
                     bcryptjs.compareSync(password, userpassword)
-                  );
+                );
 
-                  if (isMatch.length > 0) {
+                if (isMatch.length > 0) {
                     const token = jwt.sign(
-                      {
-                        id: usuarioPteAlto._id,
-                        role: usuarioPteAlto.rol,
-                      },
-                      process.env.KEY_JWT,
-                      {
-                        expiresIn: 60 * 60 * 24,
-                      }
+                        {
+                            id: usuarioPteAlto._id,
+                            role: usuarioPteAlto.rol,
+                        },
+                        process.env.KEY_JWT,
+                        {
+                            expiresIn: 60 * 60 * 24,
+                        }
                     );
                     res.status(200).json({ message: "Usuario PTE Alto logueado correctamente", usuarioPteAlto, token });
-                  } else {
+                } else {
                     return res.status(401).json({ message: "Contraseña incorrecta" });
-                  }
+                }
             }
-            
+
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al loguear usuario PTE Alto", error: error });
@@ -131,11 +206,13 @@ const usuariosPteAltoController = {
             res.status(500).json({ message: "Error al desloguear usuario PTE Alto", error: error });
         }
     },
-    obtenerTodosLosUsuariosPteAlto : async (req, res) =>{
+    obtenerTodosLosUsuariosPteAlto: async (req, res) => {
 
         try {
 
-            const usuariosPteAlto = await UsuariosPteAlto.find().sort({createAt : -1})
+            // con rol USER
+            const usuariosPteAlto = await UsuariosPteAlto.find({ rol: 'USER' }).sort({ createAt: -1 })
+            .select('nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio createdAt updatedAt');
 
             if (usuariosPteAlto?.length > 0) {
 
@@ -152,6 +229,47 @@ const usuariosPteAltoController = {
             res.status(500).json({ message: "Error al obtener usuarios PTE Alto", error: error });
         }
     },
+    asignarAdminPteAlto: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { institucion } = req.body;
+            const usuarioPteAlto = await UsuariosPteAlto.findById(id);
+            if (!usuarioPteAlto) {
+                return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+            }
+            let institucionDoc = await Institucion.findById(institucion);
+            if (!institucionDoc) {
+                return res.status(404).json({ message: "Institución no encontrada" });
+            }
+            institucionDoc.adminsPteAlto.push(usuarioPteAlto._id);
+            await institucionDoc.save();
+            res.status(200).json({ message: "Admin PTE Alto asignado correctamente", institucionDoc });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al asignar admin PTE Alto", error: error });
+        }
+    },
+    validarUsuarioPteAlto: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { estadoValidacion } = req.body;
+            const usuarioPteAlto = await UsuariosPteAlto.findByIdAndUpdate(id, { estadoValidacion, }, { new: true });
+            if (!usuarioPteAlto) {
+                return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+            }
+
+            usuarioPteAlto.status = true;
+            usuarioPteAlto.estadoValidacion = estadoValidacion;
+         
+            await usuarioPteAlto.save();
+            res.status(200).json({ message: "Usuario PTE Alto validado correctamente", usuarioPteAlto });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al validar usuario PTE Alto", error: error });
+        }
+    }
+
 };
 
 module.exports = usuariosPteAltoController;
