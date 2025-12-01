@@ -80,6 +80,8 @@ const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAlto
 const accesoPteAlto = require('./api/pteAlto/acceso-usuarios-pte-alto/accesoPteAltoRoutes')
 const complejosDeportivosPteAlto = require('./api/pteAlto/complejos-deportivos/complejosDeportivosPteAlto.routes')
 const espaciosDeportivosPteAlto = require('./api/pteAlto/espacios-deportivos/espaciosDeportivosPteAlto.routes')
+const talleresDeportivosPteAlto = require('./api/pteAlto/talleres-deportivos/talleresDeportivosPteAlto.routes')
+
 var app = express();
 
 // view engine setup
@@ -161,6 +163,7 @@ app.use('/pte-alto', usuariosPteAlto)
 app.use('/acceso-pte-alto', accesoPteAlto)
 app.use('/cd-pte-alto', complejosDeportivosPteAlto)
 app.use('/ed-pte-alto', espaciosDeportivosPteAlto)
+app.use('/td-pte-alto', talleresDeportivosPteAlto)
 
 // Liveness Routes
 app.use("/liveness", livenessRoutes);
