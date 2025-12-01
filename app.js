@@ -79,6 +79,7 @@ const notasUsuarios = require('./api/notas-usuarios/notasUsuariosRoutes')
 const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
 const accesoPteAlto = require('./api/pteAlto/acceso-usuarios-pte-alto/accesoPteAltoRoutes')
 const complejosDeportivosPteAlto = require('./api/pteAlto/complejos-deportivos/complejosDeportivosPteAlto.routes')
+const espaciosDeportivosPteAlto = require('./api/pteAlto/espacios-deportivos/espaciosDeportivosPteAlto.routes')
 var app = express();
 
 // view engine setup
@@ -159,7 +160,7 @@ app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall
 app.use('/pte-alto', usuariosPteAlto)
 app.use('/acceso-pte-alto', accesoPteAlto)
 app.use('/cd-pte-alto', complejosDeportivosPteAlto)
-
+app.use('/ed-pte-alto', espaciosDeportivosPteAlto)
 
 // Liveness Routes
 app.use("/liveness", livenessRoutes);
