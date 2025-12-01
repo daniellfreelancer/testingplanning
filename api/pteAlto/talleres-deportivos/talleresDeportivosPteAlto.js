@@ -3,16 +3,15 @@ const mongoose = require('mongoose');
 const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
     descripcion: { type: String },
-    imagen: { type: String },
+    galeria: [{ type: String }],
     video: { type: String },
     link: { type: String },
-    complejoDeportivo: { type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' },
     espacioDeportivo: { type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' },
     capacidad: { type: Number },
     valor: { type: Number },
     pago: { type: Boolean },
     horarios: { type: Array },
-    dias: { type: Array },
+    dia: { type: Array },
     fechaInicio: { type: Date },
     fechaFin: { type: Date },
     usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
@@ -24,3 +23,5 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
 });
 
 const TalleresDeportivosPteAlto = mongoose.model('talleresDeportivosPteAlto', talleresDeportivosPteAltoSchema);
+
+module.exports = TalleresDeportivosPteAlto;
