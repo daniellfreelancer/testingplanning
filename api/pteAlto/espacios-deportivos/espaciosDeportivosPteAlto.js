@@ -16,7 +16,7 @@ const espaciosDeportivosPteAltoSchema = new mongoose.Schema({
     valor: { type: Number },
     pago: { type: Boolean },
     deporte: { type: String },
-    galeria :[{type: String}],
+    imgUrl: { type: String },
 }, {
     timestamps: true
 });

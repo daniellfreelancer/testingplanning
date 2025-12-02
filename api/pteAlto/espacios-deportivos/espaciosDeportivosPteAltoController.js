@@ -1,5 +1,26 @@
 const EspaciosDeportivos = require('./espaciosDeportivosPteAlto');
 const ComplejosDeportivos = require('../complejos-deportivos/complejosDeportivosPteAlto');
+const crypto = require('crypto');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const bucketRegion = process.env.AWS_BUCKET_REGION
+const bucketName = process.env.AWS_BUCKET_NAME
+const publicKey = process.env.AWS_PUBLIC_KEY
+const privateKey = process.env.AWS_SECRET_KEY
+
+
+const clientAWS = new S3Client({
+    region: bucketRegion,
+    credentials: {
+        accessKeyId: publicKey,
+        secretAccessKey: privateKey,
+    },
+})
+
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
+
+
+
 const espaciosDeportivosPteAltoController = {
     //crear espacio deportivo PTE Alt, agregarlo y agregarlo al complejo deportivo
     crearEspacioDeportivoPteAlto: async (req, res) => {
@@ -12,6 +33,24 @@ const espaciosDeportivosPteAltoController = {
 
             nuevoEspacioDeportivoPteAlto.complejoDeportivo = complejoDeportivo;
             await nuevoEspacioDeportivoPteAlto.save();
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                nuevoEspacioDeportivoPteAlto.imgUrl = fileName;
+                await nuevoEspacioDeportivoPteAlto.save();
+            }
 
 
             const complejoEncontrado = await ComplejosDeportivos.findById(complejoDeportivo);
