@@ -25,9 +25,9 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 2. ✅ ~~Endpoints de registro con subida de documentos~~ **COMPLETADO**
 3. 🔄 Mejorar endpoints de complejos deportivos (validación, filtros, seguridad)
 4. 🔄 **Implementar CRUD completo de espacios deportivos PTE Alto** (controlador y rutas)
-5. Endpoints de administración completos
-6. Validación de disponibilidad de reservas
-7. Sistema de reservas recurrentes/largas
+5. 🔄 **Sistema de reservas PTE Alto** (en desarrollo - ver sección completa)
+6. Endpoints de administración completos
+7. Sistema de reservas recurrentes/largas (opcional para MVP)
 8. Endpoints de métricas y reportes
 
 ---
@@ -959,6 +959,689 @@ Desarrollar la API REST completa para el SAAS Ligup Chile, proporcionando endpoi
 - [ ] Endpoints adicionales implementados
 - [ ] Middlewares de seguridad aplicados
 - [ ] Rutas creadas y registradas
+- [ ] Testing manual completo
+
+---
+
+## 🎫 SISTEMA DE RESERVAS PTE ALTO
+
+### **📋 Lógica Base del Sistema de Reservas**
+
+**Conceptos Clave**:
+1. **Reservas de Espacios Deportivos**: Usuarios pueden reservar un espacio en un rango de fechas/horas específico
+2. **Reservas de Talleres**: Usuarios se inscriben en talleres deportivos (el taller ya tiene horarios definidos)
+3. **Talleres como Reservas Internas**: Cuando un taller se asigna a un espacio, automáticamente ocupa esos horarios/días, bloqueando el espacio para otras reservas
+4. **Consulta de Disponibilidad**: Usuarios pueden consultar disponibilidad por deporte o por fecha específica antes de reservar
+5. **Control de Estado**: Admins pueden deshabilitar espacios (status: false) para que no se puedan reservar
+
+**Flujo de Reserva**:
+```
+Usuario → Consulta Disponibilidad (por deporte o fecha) 
+       → Selecciona Espacio/Taller 
+       → Verifica Disponibilidad en rango específico 
+       → Crea Reserva
+```
+
+---
+
+### **Tarea R.1: Mejorar Modelo de Reservas**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAlto.js`
+
+**Estado Actual**: ✅ Modelo básico existe con campos necesarios
+
+**Checklist**:
+- [x] Verificar campos existentes:
+  - [x] `usuario` (referencia a usuariosPteAlto)
+  - [x] `taller` (referencia a talleresDeportivosPteAlto, opcional)
+  - [x] `espacioDeportivo` (referencia a espaciosDeportivosPteAlto, opcional)
+  - [x] `fechaInicio` y `fechaFin` (Date)
+  - [x] `estado` (enum: 'activa', 'cancelada')
+- [ ] Agregar campos adicionales:
+  - [X ] `tipoReserva`: { type: String, enum: ['espacio', 'taller'], required: true }
+  - [] `esRecurrente`: { type: Boolean, default: false }
+  - [ ] `reservaPadre`: { type: ObjectId, ref: 'reservasPteAlto' } (para reservas recurrentes)
+  - [X] `canceladoPor`: { type: String }
+  - [ ] `canceladoPor`: { type: String, enum: ['usuario', 'admin', 'sistema'] }
+  - [ ] `notas`: { type: String } (opcional, para observaciones)
+  - [ ] `esReservaInterna`: { type: Boolean, default: false } (para talleres que bloquean espacios)
+- [ ] Agregar índices para performance:
+  ```javascript
+  reservasPteAltoSchema.index({ espacioDeportivo: 1, fechaInicio: 1, fechaFin: 1 });
+  reservasPteAltoSchema.index({ taller: 1 });
+  reservasPteAltoSchema.index({ usuario: 1 });
+  reservasPteAltoSchema.index({ estado: 1 });
+  reservasPteAltoSchema.index({ fechaInicio: 1 });
+  reservasPteAltoSchema.index({ tipoReserva: 1 });
+  ```
+- [ ] Agregar validaciones:
+  - [ ] `fechaInicio` debe ser menor que `fechaFin`
+  - [ ] Si `tipoReserva === 'espacio'`, `espacioDeportivo` es requerido
+  - [ ] Si `tipoReserva === 'taller'`, `taller` es requerido
+  - [ ] No pueden estar ambos `espacioDeportivo` y `taller` al mismo tiempo (excepto en lógica interna)
+
+**Criterios de Aceptación**:
+- [X ] Modelo tiene todos los campos necesarios
+- [ ] Índices creados para consultas eficientes
+- [ ] Validaciones funcionan correctamente
+
+---
+
+### **Tarea R.2: Lógica de Disponibilidad**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+
+#### **R.2.1: Función Helper - Verificar Disponibilidad de Espacio**
+- [ ] Crear función `verificarDisponibilidadEspacio(espacioId, fechaInicio, fechaFin)`
+- [ ] **Lógica**:
+  - [ ] Buscar todas las reservas activas del espacio en el rango de fechas
+  - [ ] Buscar todos los talleres activos asignados al espacio que se solapen con el rango
+  - [ ] Verificar que el espacio tiene `status: true`
+  - [ ] Verificar que las fechas están dentro de los horarios del espacio (si están definidos)
+  - [ ] Retornar `{ disponible: boolean, conflictos: [] }`
+- [ ] Manejar casos edge:
+  - [ ] Reservas que empiezan antes pero terminan dentro del rango
+  - [ ] Reservas que empiezan dentro pero terminan después
+  - [ ] Reservas que contienen completamente el rango solicitado
+  - [ ] Talleres que ocupan días/horarios específicos
+
+#### **R.2.2: Función Helper - Obtener Horarios Ocupados**
+- [ ] Crear función `obtenerHorariosOcupados(espacioId, fechaInicio, fechaFin)`
+- [ ] Retornar array de objetos con:
+  ```javascript
+  {
+    fechaInicio: Date,
+    fechaFin: Date,
+    tipo: 'reserva' | 'taller',
+    id: ObjectId,
+    nombre: String
+  }
+  ```
+
+#### **R.2.3: Función Helper - Calcular Slots Disponibles**
+- [ ] Crear función `calcularSlotsDisponibles(espacioId, fecha, duracionMinima)`
+- [ ] Considerar:
+  - [ ] Horarios de apertura/cierre del espacio
+  - [ ] Reservas existentes
+  - [ ] Talleres asignados (verificar días y horarios del taller)
+  - [ ] Duración mínima de reserva (ej: 1 hora)
+- [ ] Retornar array de slots disponibles:
+  ```javascript
+  [
+    { inicio: Date, fin: Date, disponible: true },
+    ...
+  ]
+  ```
+
+**Criterios de Aceptación**:
+- [ ] Funciones helper funcionan correctamente
+- [ ] Manejan todos los casos edge
+- [ ] Performance aceptable (consultas optimizadas)
+
+---
+
+### **Tarea R.3: Endpoints de Consulta de Disponibilidad**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+
+#### **R.3.1: Consultar Disponibilidad por Deporte**
+- [ ] Crear función `consultarDisponibilidadPorDeporte`
+- [ ] Validar con Joi:
+  - [ ] `deporte`: string requerido
+  - [ ] `fechaInicio`: Date (opcional, default: hoy)
+  - [ ] `fechaFin`: Date (opcional, default: +30 días)
+- [ ] **Lógica**:
+  - [ ] Buscar todos los espacios con `deporte` y `status: true`
+  - [ ] Para cada espacio, calcular disponibilidad en el rango
+  - [ ] Retornar espacios con información de disponibilidad
+- [ ] Retornar estructura:
+  ```json
+  {
+    "success": true,
+    "espacios": [
+      {
+        "id": "ObjectId",
+        "nombre": "string",
+        "deporte": "string",
+        "complejoDeportivo": {...},
+        "disponibilidad": {
+          "total": 100,
+          "ocupados": 20,
+          "disponibles": 80,
+          "porcentaje": 80
+        },
+        "proximosDisponibles": [
+          { "fecha": "Date", "horarios": [...] }
+        ]
+      }
+    ]
+  }
+  ```
+
+**Endpoint**: `GET /reservas-pte-alto/disponibilidad-por-deporte`
+
+**Query Params**:
+```
+?deporte=futbol&fechaInicio=2025-01-15&fechaFin=2025-01-30
+```
+
+#### **R.3.2: Consultar Disponibilidad por Fecha Específica**
+- [ ] Crear función `consultarDisponibilidadPorFecha`
+- [ ] Validar con Joi:
+  - [ ] `fecha`: Date requerido (solo fecha, sin hora)
+  - [ ] `deporte`: string (opcional, filtrar por deporte)
+  - [ ] `complejoDeportivo`: ObjectId (opcional)
+- [ ] **Lógica**:
+  - [ ] Buscar espacios disponibles (filtros aplicados)
+  - [ ] Para cada espacio, calcular slots disponibles del día
+  - [ ] Retornar espacios con slots horarios disponibles
+- [ ] Retornar estructura:
+  ```json
+  {
+    "success": true,
+    "fecha": "2025-01-15",
+    "espacios": [
+      {
+        "id": "ObjectId",
+        "nombre": "string",
+        "deporte": "string",
+        "slotsDisponibles": [
+          { "inicio": "08:00", "fin": "10:00", "disponible": true },
+          { "inicio": "10:00", "fin": "12:00", "disponible": false },
+          ...
+        ],
+        "horariosOcupados": [
+          { "inicio": "10:00", "fin": "12:00", "tipo": "reserva", "nombre": "Reserva Juan" },
+          { "inicio": "14:00", "fin": "16:00", "tipo": "taller", "nombre": "Taller de Fútbol" }
+        ]
+      }
+    ]
+  }
+  ```
+
+**Endpoint**: `GET /reservas-pte-alto/disponibilidad-por-fecha`
+
+**Query Params**:
+```
+?fecha=2025-01-15&deporte=futbol&complejoDeportivo=ObjectId
+```
+
+#### **R.3.3: Verificar Disponibilidad de Rango Específico**
+- [ ] Crear función `verificarDisponibilidadRango`
+- [ ] Validar con Joi:
+  - [ ] `espacioDeportivo`: ObjectId requerido
+  - [ ] `fechaInicio`: Date requerido
+  - [ ] `fechaFin`: Date requerido
+- [ ] **Lógica**:
+  - [ ] Usar función helper `verificarDisponibilidadEspacio`
+  - [ ] Retornar resultado detallado
+- [ ] Retornar estructura:
+  ```json
+  {
+    "success": true,
+    "disponible": false,
+    "espacioDeportivo": "ObjectId",
+    "fechaInicio": "Date",
+    "fechaFin": "Date",
+    "conflictos": [
+      {
+        "tipo": "reserva",
+        "fechaInicio": "Date",
+        "fechaFin": "Date",
+        "nombre": "string"
+      },
+      {
+        "tipo": "taller",
+        "fechaInicio": "Date",
+        "fechaFin": "Date",
+        "nombre": "Taller de Fútbol"
+      }
+    ]
+  }
+  ```
+
+**Endpoint**: `GET /reservas-pte-alto/verificar-disponibilidad`
+
+**Query Params**:
+```
+?espacioDeportivo=ObjectId&fechaInicio=2025-01-15T10:00:00Z&fechaFin=2025-01-15T12:00:00Z
+```
+
+**Criterios de Aceptación**:
+- [ ] Todos los endpoints de consulta funcionan
+- [ ] Retornan información útil para el frontend
+- [ ] Performance aceptable
+
+---
+
+### **Tarea R.4: Crear Reserva de Espacio Deportivo**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+- [ ] Crear función `crearReservaEspacio`
+- [ ] Validar con Joi:
+  - [ ] `espacioDeportivo`: ObjectId requerido
+  - [ ] `fechaInicio`: Date requerido, no en el pasado
+  - [ ] `fechaFin`: Date requerido, después de fechaInicio
+  - [ ] `notas`: string opcional
+- [ ] **Validaciones de Negocio**:
+  - [ ] Verificar que usuario está autenticado y validado (`estadoValidacion === 'validado'`)
+  - [ ] Verificar que espacio existe y tiene `status: true`
+  - [ ] Verificar disponibilidad usando `verificarDisponibilidadEspacio`
+  - [ ] Si no está disponible, retornar error con conflictos
+  - [ ] Verificar que fechas están dentro de horarios del espacio (si están definidos)
+- [ ] **Crear Reserva**:
+  - [ ] Crear reserva con:
+    - [ ] `tipoReserva: 'espacio'`
+    - [ ] `usuario: req.user.userId`
+    - [ ] `espacioDeportivo: req.body.espacioDeportivo`
+    - [ ] `estado: 'activa'`
+  - [ ] Guardar en BD
+- [ ] Retornar reserva creada con populate
+
+**Endpoint**: `POST /reservas-pte-alto/crear-reserva-espacio`
+
+**Request Body**:
+```json
+{
+  "espacioDeportivo": "ObjectId",
+  "fechaInicio": "2025-01-15T10:00:00Z",
+  "fechaFin": "2025-01-15T12:00:00Z",
+  "notas": "Reserva para partido amistoso"
+}
+```
+
+**Response 201**:
+```json
+{
+  "success": true,
+  "message": "Reserva creada correctamente",
+  "reserva": {
+    "id": "ObjectId",
+    "tipoReserva": "espacio",
+    "usuario": {
+      "id": "ObjectId",
+      "nombre": "string"
+    },
+    "espacioDeportivo": {
+      "id": "ObjectId",
+      "nombre": "string",
+      "deporte": "string"
+    },
+    "fechaInicio": "Date",
+    "fechaFin": "Date",
+    "estado": "activa"
+  }
+}
+```
+
+**Criterios de Aceptación**:
+- [ ] Reserva se crea correctamente
+- [ ] Validaciones funcionan
+- [ ] No permite reservas en espacios ocupados
+- [ ] Respuesta incluye información completa
+
+---
+
+### **Tarea R.5: Crear Reserva de Taller (Inscripción)**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+- [ ] Crear función `inscribirseEnTaller`
+- [ ] Validar con Joi:
+  - [ ] `taller`: ObjectId requerido
+- [ ] **Validaciones de Negocio**:
+  - [ ] Verificar que usuario está autenticado y validado
+  - [ ] Verificar que taller existe y tiene `status: true`
+  - [ ] Verificar que taller tiene `fechaInicio` y `fechaFin` definidos
+  - [ ] Verificar que usuario no está ya inscrito en el taller
+  - [ ] Verificar capacidad del taller (si tiene límite)
+  - [ ] Si taller está asignado a un espacio, verificar que el espacio está disponible en esos horarios (ya está bloqueado por el taller)
+- [ ] **Crear Reserva**:
+  - [ ] Crear reserva con:
+    - [ ] `tipoReserva: 'taller'`
+    - [ ] `usuario: req.user.userId`
+    - [ ] `taller: req.body.taller`
+    - [ ] `espacioDeportivo: taller.espacioDeportivo` (si existe)
+    - [ ] `fechaInicio: taller.fechaInicio`
+    - [ ] `fechaFin: taller.fechaFin`
+    - [ ] `estado: 'activa'`
+  - [ ] Agregar usuario al array `taller.usuarios`
+  - [ ] Guardar reserva y taller
+- [ ] Retornar reserva creada con populate
+
+**Endpoint**: `POST /reservas-pte-alto/inscribirse-taller`
+
+**Request Body**:
+```json
+{
+  "taller": "ObjectId"
+}
+```
+
+**Response 201**:
+```json
+{
+  "success": true,
+  "message": "Inscripción al taller realizada correctamente",
+  "reserva": {
+    "id": "ObjectId",
+    "tipoReserva": "taller",
+    "usuario": {...},
+    "taller": {
+      "id": "ObjectId",
+      "nombre": "string",
+      "fechaInicio": "Date",
+      "fechaFin": "Date"
+    },
+    "estado": "activa"
+  }
+}
+```
+
+**Criterios de Aceptación**:
+- [ ] Inscripción funciona correctamente
+- [ ] Valida capacidad del taller
+- [ ] No permite doble inscripción
+- [ ] Actualiza array de usuarios del taller
+
+---
+
+### **Tarea R.6: Talleres como Reservas Internas**
+**Archivo**: `backend/api/pteAlto/talleres-deportivos/talleresDeportivosPteAltoController.js`
+
+**Checklist**:
+
+#### **R.6.1: Modificar Crear Taller**
+- [ ] En función `crearTallerDeportivoPteAlto`:
+  - [ ] Si se asigna a un espacio (`espacioDeportivo`):
+    - [ ] Verificar que espacio existe y está activo
+    - [ ] Verificar disponibilidad del espacio en el rango `fechaInicio` - `fechaFin`
+    - [ ] Si hay conflictos, retornar error
+    - [ ] **Crear reserva interna automática**:
+      - [ ] Crear reserva con `tipoReserva: 'taller'` (marcada como interna)
+      - [ ] `usuario: null` (o admin que crea)
+      - [ ] `taller: nuevoTaller._id`
+      - [ ] `espacioDeportivo: espacio._id`
+      - [ ] `fechaInicio: taller.fechaInicio`
+      - [ ] `fechaFin: taller.fechaFin`
+      - [ ] `estado: 'activa'`
+      - [ ] `esReservaInterna: true`
+    - [ ] Guardar reserva interna
+    - [ ] **Importante**: Considerar los `horarios` y `dia` del taller para bloquear solo esos días/horarios específicos
+
+#### **R.6.2: Modificar Actualizar Taller**
+- [ ] En función `actualizarTallerDeportivoPteAltoPorId`:
+  - [ ] Si se cambia `espacioDeportivo`, `fechaInicio`, `fechaFin`, `horarios` o `dia`:
+    - [ ] Buscar reserva interna del taller
+    - [ ] Si existe, actualizar o eliminar según corresponda
+    - [ ] Si se asigna a nuevo espacio, verificar disponibilidad
+    - [ ] Crear/actualizar reserva interna con nuevos horarios
+
+#### **R.6.3: Modificar Eliminar Taller**
+- [ ] En función `eliminarTallerDeportivoPteAltoPorId`:
+  - [ ] Buscar y eliminar reserva interna del taller
+  - [ ] Continuar con eliminación normal del taller
+
+#### **R.6.4: Función Helper - Crear Reserva Interna de Taller**
+- [ ] Crear función `crearReservaInternaTaller(tallerId, espacioId, fechaInicio, fechaFin, horarios, dias)`
+- [ ] Considerar `horarios` y `dia` del taller para crear múltiples reservas internas si es necesario
+- [ ] Reutilizar en crear y actualizar taller
+
+**Criterios de Aceptación**:
+- [ ] Talleres asignados a espacios bloquean correctamente los horarios
+- [ ] No se pueden crear reservas en espacios ocupados por talleres
+- [ ] Actualización y eliminación manejan reservas internas correctamente
+- [ ] Considera días y horarios específicos del taller
+
+---
+
+### **Tarea R.7: Listar Reservas del Usuario**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+- [ ] Crear función `misReservas`
+- [ ] Filtrar por `usuario: req.user.userId`
+- [ ] Filtros opcionales (query params):
+  - [ ] `estado`: 'activa' | 'cancelada'
+  - [ ] `tipoReserva`: 'espacio' | 'taller'
+  - [ ] `fechaDesde`: Date
+  - [ ] `fechaHasta`: Date
+- [ ] Ordenar por `fechaInicio` descendente
+- [ ] Populate `espacioDeportivo`, `taller`, `usuario`
+- [ ] Retornar lista de reservas
+
+**Endpoint**: `GET /reservas-pte-alto/mis-reservas`
+
+**Query Params** (opcionales):
+```
+?estado=activa&tipoReserva=espacio&fechaDesde=2025-01-01
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "reservas": [
+    {
+      "id": "ObjectId",
+      "tipoReserva": "espacio",
+      "espacioDeportivo": {
+        "id": "ObjectId",
+        "nombre": "Cancha 1",
+        "deporte": "futbol"
+      },
+      "fechaInicio": "Date",
+      "fechaFin": "Date",
+      "estado": "activa"
+    }
+  ],
+  "total": 10
+}
+```
+
+**Criterios de Aceptación**:
+- [ ] Lista solo reservas del usuario autenticado
+- [ ] Filtros funcionan correctamente
+- [ ] Populate funciona
+
+---
+
+### **Tarea R.8: Cancelar Reserva (Usuario)**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+- [ ] Crear función `cancelarReserva`
+- [ ] Validar que reserva existe
+- [ ] Validar que reserva pertenece al usuario (`reserva.usuario === req.user.userId`)
+- [ ] Validar que reserva está activa
+- [ ] Validar que no se cancela muy cerca de la fecha (ej: máximo 2 horas antes, opcional)
+- [ ] **Cancelar Reserva**:
+  - [ ] Actualizar `estado: 'cancelada'`
+  - [ ] Guardar `motivoCancelacion` (opcional en body)
+  - [ ] Guardar `canceladoPor: 'usuario'`
+- [ ] Si es reserva de taller:
+  - [ ] Remover usuario del array `taller.usuarios`
+  - [ ] Guardar taller
+- [ ] Retornar reserva cancelada
+
+**Endpoint**: `PUT /reservas-pte-alto/:id/cancelar`
+
+**Request Body** (opcional):
+```json
+{
+  "motivoCancelacion": "Cambio de planes"
+}
+```
+
+**Criterios de Aceptación**:
+- [ ] Solo el dueño puede cancelar
+- [ ] Actualiza estado correctamente
+- [ ] Si es taller, actualiza array de usuarios
+
+---
+
+### **Tarea R.9: Endpoints de Administración de Reservas**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+
+#### **R.9.1: Listar Todas las Reservas (Admin)**
+- [ ] Crear función `listarTodasReservas`
+- [ ] Filtros opcionales:
+  - [ ] `espacioDeportivo`: ObjectId
+  - [ ] `taller`: ObjectId
+  - [ ] `usuario`: ObjectId
+  - [ ] `estado`: 'activa' | 'cancelada'
+  - [ ] `tipoReserva`: 'espacio' | 'taller'
+  - [ ] `fechaDesde`: Date
+  - [ ] `fechaHasta`: Date
+- [ ] Ordenar por `fechaInicio` descendente
+- [ ] Populate todas las relaciones
+- [ ] Paginación (opcional)
+
+**Endpoint**: `GET /reservas-pte-alto/admin/todas`
+
+#### **R.9.2: Cancelar Reserva (Admin)**
+- [ ] Crear función `cancelarReservaAdmin`
+- [ ] Validar que reserva existe
+- [ ] Validar que reserva está activa
+- [ ] Actualizar `estado: 'cancelada'`
+- [ ] Guardar `motivoCancelacion` y `canceladoPor: 'admin'`
+- [ ] Si es taller, remover usuario del array
+- [ ] Retornar reserva cancelada
+
+**Endpoint**: `PUT /reservas-pte-alto/admin/:id/cancelar`
+
+#### **R.9.3: Obtener Reserva por ID (Admin)**
+- [ ] Crear función `obtenerReservaPorId`
+- [ ] Populate completo
+- [ ] Retornar reserva
+
+**Endpoint**: `GET /reservas-pte-alto/admin/:id`
+
+**Criterios de Aceptación**:
+- [ ] Solo admins pueden acceder
+- [ ] Filtros funcionan
+- [ ] Cancelación funciona
+
+---
+
+### **Tarea R.10: Control de Estado de Espacios (Admin)**
+**Archivo**: `backend/api/pteAlto/espacios-deportivos/espaciosDeportivosPteAltoController.js`
+
+**Checklist**:
+
+#### **R.10.1: Deshabilitar/Habilitar Espacio**
+- [ ] Crear función `toggleStatusEspacio`
+- [ ] Validar que espacio existe
+- [ ] Cambiar `status: !status`
+- [ ] Si se deshabilita:
+  - [ ] Opcional: Cancelar reservas futuras (o solo prevenir nuevas)
+  - [ ] Retornar advertencia si hay reservas activas
+- [ ] Retornar espacio actualizado
+
+**Endpoint**: `PUT /ed-pte-alto/:id/toggle-status`
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "message": "Espacio deshabilitado correctamente",
+  "espacio": {
+    "id": "ObjectId",
+    "status": false,
+    "reservasActivas": 5
+  }
+}
+```
+
+#### **R.10.2: Verificar Reservas Activas de un Espacio**
+- [ ] Crear función `obtenerReservasActivasEspacio`
+- [ ] Buscar reservas activas del espacio
+- [ ] Retornar lista con información relevante
+
+**Endpoint**: `GET /ed-pte-alto/:id/reservas-activas`
+
+**Criterios de Aceptación**:
+- [ ] Solo admins pueden cambiar status
+- [ ] Deshabilitar previene nuevas reservas
+- [ ] Muestra información de reservas activas
+
+---
+
+### **Tarea R.11: Reservas Recurrentes (Opcional para MVP)**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAltoController.js`
+
+**Checklist**:
+- [ ] Crear función `crearReservaRecurrente`
+- [ ] Validar:
+  - [ ] `espacioDeportivo`: ObjectId
+  - [ ] `fechaInicio`: Date (primera reserva)
+  - [ ] `fechaFin`: Date (fin de cada sesión)
+  - [ ] `frecuencia`: 'diaria' | 'semanal' | 'mensual'
+  - [ ] `duracion`: Number (días/semanas/meses)
+  - [ ] `diaSemana`: Number (0-6, solo para semanal)
+- [ ] **Lógica**:
+  - [ ] Calcular todas las fechas según frecuencia
+  - [ ] Para cada fecha, verificar disponibilidad
+  - [ ] Si alguna no está disponible, retornar error
+  - [ ] Crear reserva "padre" con `esRecurrente: true`
+  - [ ] Crear todas las reservas hijas con `reservaPadre`
+  - [ ] Retornar todas las reservas creadas
+
+**Endpoint**: `POST /reservas-pte-alto/crear-reserva-recurrente`
+
+**Criterios de Aceptación**:
+- [ ] Crea todas las reservas correctamente
+- [ ] Valida disponibilidad para todas
+- [ ] Maneja errores apropiadamente
+
+---
+
+### **Tarea R.12: Crear Rutas de Reservas**
+**Archivo**: `backend/api/pteAlto/reservas-pte-alto/reservasPteAlto.routes.js`
+
+**Checklist**:
+- [ ] Crear archivo de rutas con Express Router
+- [ ] Importar controlador y middlewares (`authenticateToken`, `requireAdmin`)
+- [ ] **Rutas Públicas/Consulta** (sin auth o auth básico):
+  - [ ] `GET /disponibilidad-por-deporte` → `consultarDisponibilidadPorDeporte`
+  - [ ] `GET /disponibilidad-por-fecha` → `consultarDisponibilidadPorFecha`
+  - [ ] `GET /verificar-disponibilidad` → `verificarDisponibilidadRango`
+- [ ] **Rutas de Usuario** (con `authenticateToken`):
+  - [ ] `POST /crear-reserva-espacio` → `crearReservaEspacio`
+  - [ ] `POST /inscribirse-taller` → `inscribirseEnTaller`
+  - [ ] `GET /mis-reservas` → `misReservas`
+  - [ ] `PUT /:id/cancelar` → `cancelarReserva`
+- [ ] **Rutas de Admin** (con `requireAdmin`):
+  - [ ] `GET /admin/todas` → `listarTodasReservas`
+  - [ ] `GET /admin/:id` → `obtenerReservaPorId`
+  - [ ] `PUT /admin/:id/cancelar` → `cancelarReservaAdmin`
+- [ ] Registrar rutas en `app.js`:
+  ```javascript
+  const reservasPteAlto = require('./api/pteAlto/reservas-pte-alto/reservasPteAlto.routes')
+  app.use('/reservas-pte-alto', reservasPteAlto)
+  ```
+
+**Criterios de Aceptación**:
+- [ ] Todas las rutas definidas
+- [ ] Middlewares aplicados correctamente
+- [ ] Rutas registradas en app.js
+
+---
+
+### **Checkpoint Sistema de Reservas**
+- [ ] Modelo de reservas mejorado
+- [ ] Lógica de disponibilidad funcionando
+- [ ] Endpoints de consulta funcionando
+- [ ] Crear reserva de espacio funcionando
+- [ ] Inscripción en taller funcionando
+- [ ] Talleres bloquean espacios correctamente
+- [ ] Listar y cancelar reservas funcionando
+- [ ] Endpoints de admin funcionando
+- [ ] Control de estado de espacios funcionando
 - [ ] Testing manual completo
 
 ---
