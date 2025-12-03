@@ -50,12 +50,12 @@ POST /pte-alto/login-usuario
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/disponibilidad-por-deporte?deporte=futbol&fechaInicio=2025-01-15&fechaFin=2025-01-30
+GET http://localhost:4000/reservas-pte-alto/disponibilidad-por-deporte?deporte=futbol&fechaInicio=2025-01-15&fechaFin=2025-01-30
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/disponibilidad-por-deporte?deporte=futbol&fechaInicio=2025-01-15&fechaFin=2025-01-30"
+curl -X GET "http://localhost:4000/reservas-pte-alto/disponibilidad-por-deporte?deporte=futbol&fechaInicio=2025-01-15&fechaFin=2025-01-30"
 ```
 
 **Response 200 (Success):**
@@ -112,12 +112,12 @@ curl -X GET "http://localhost:3000/reservas-pte-alto/disponibilidad-por-deporte?
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/disponibilidad-por-fecha?fecha=2025-01-15&deporte=futbol
+GET http://localhost:4000/reservas-pte-alto/disponibilidad-por-fecha?fecha=2025-01-15&deporte=futbol
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/disponibilidad-por-fecha?fecha=2025-01-15&deporte=futbol"
+curl -X GET "http://localhost:4000/reservas-pte-alto/disponibilidad-por-fecha?fecha=2025-01-15&deporte=futbol"
 ```
 
 **Response 200 (Success):**
@@ -199,12 +199,12 @@ curl -X GET "http://localhost:3000/reservas-pte-alto/disponibilidad-por-fecha?fe
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/verificar-disponibilidad?espacioDeportivo=65a1b2c3d4e5f6g7h8i9j0k1&fechaInicio=2025-01-15T10:00:00Z&fechaFin=2025-01-15T12:00:00Z
+GET http://localhost:4000/reservas-pte-alto/verificar-disponibilidad?espacioDeportivo=65a1b2c3d4e5f6g7h8i9j0k1&fechaInicio=2025-01-15T10:00:00Z&fechaFin=2025-01-15T12:00:00Z
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/verificar-disponibilidad?espacioDeportivo=65a1b2c3d4e5f6g7h8i9j0k1&fechaInicio=2025-01-15T10:00:00Z&fechaFin=2025-01-15T12:00:00Z"
+curl -X GET "http://localhost:4000/reservas-pte-alto/verificar-disponibilidad?espacioDeportivo=65a1b2c3d4e5f6g7h8i9j0k1&fechaInicio=2025-01-15T10:00:00Z&fechaFin=2025-01-15T12:00:00Z"
 ```
 
 **Response 200 (Disponible):**
@@ -288,7 +288,7 @@ Content-Type: application/json
 
 **Ejemplo Request (Postman):**
 ```
-POST http://localhost:3000/reservas-pte-alto/crear-reserva-espacio
+POST http://localhost:4000/reservas-pte-alto/crear-reserva-espacio
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   Content-Type: application/json
@@ -304,7 +304,7 @@ Body (raw JSON):
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X POST "http://localhost:3000/reservas-pte-alto/crear-reserva-espacio" \
+curl -X POST "http://localhost:4000/reservas-pte-alto/crear-reserva-espacio" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -395,7 +395,7 @@ Content-Type: application/json
 
 **Ejemplo Request (Postman):**
 ```
-POST http://localhost:3000/reservas-pte-alto/inscribirse-taller
+POST http://localhost:4000/reservas-pte-alto/inscribirse-taller
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   Content-Type: application/json
@@ -408,7 +408,7 @@ Body (raw JSON):
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X POST "http://localhost:3000/reservas-pte-alto/inscribirse-taller" \
+curl -X POST "http://localhost:4000/reservas-pte-alto/inscribirse-taller" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -487,14 +487,14 @@ Authorization: Bearer <token>
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/mis-reservas?estado=activa&tipoReserva=espacio
+GET http://localhost:4000/reservas-pte-alto/mis-reservas?estado=activa&tipoReserva=espacio
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/mis-reservas?estado=activa&tipoReserva=espacio" \
+curl -X GET "http://localhost:4000/reservas-pte-alto/mis-reservas?estado=activa&tipoReserva=espacio" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
@@ -562,7 +562,7 @@ Content-Type: application/json
 
 **Ejemplo Request (Postman):**
 ```
-PUT http://localhost:3000/reservas-pte-alto/65a1b2c3d4e5f6g7h8i9j0k5/cancelar
+PUT http://localhost:4000/reservas-pte-alto/65a1b2c3d4e5f6g7h8i9j0k5/cancelar
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   Content-Type: application/json
@@ -575,7 +575,7 @@ Body (raw JSON):
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X PUT "http://localhost:3000/reservas-pte-alto/65a1b2c3d4e5f6g7h8i9j0k5/cancelar" \
+curl -X PUT "http://localhost:4000/reservas-pte-alto/65a1b2c3d4e5f6g7h8i9j0k5/cancelar" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -640,14 +640,14 @@ Authorization: Bearer <token>
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/admin/todas?estado=activa&tipoReserva=espacio&fechaDesde=2025-01-01
+GET http://localhost:4000/reservas-pte-alto/admin/todas?estado=activa&tipoReserva=espacio&fechaDesde=2025-01-01
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/admin/todas?estado=activa&tipoReserva=espacio&fechaDesde=2025-01-01" \
+curl -X GET "http://localhost:4000/reservas-pte-alto/admin/todas?estado=activa&tipoReserva=espacio&fechaDesde=2025-01-01" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
@@ -698,14 +698,14 @@ Authorization: Bearer <token>
 
 **Ejemplo Request (Postman):**
 ```
-GET http://localhost:3000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5
+GET http://localhost:4000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X GET "http://localhost:3000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5" \
+curl -X GET "http://localhost:4000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
@@ -774,7 +774,7 @@ Content-Type: application/json
 
 **Ejemplo Request (Postman):**
 ```
-PUT http://localhost:3000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5/cancelar
+PUT http://localhost:4000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5/cancelar
 Headers:
   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   Content-Type: application/json
@@ -787,7 +787,7 @@ Body (raw JSON):
 
 **Ejemplo Request (cURL):**
 ```bash
-curl -X PUT "http://localhost:3000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5/cancelar" \
+curl -X PUT "http://localhost:4000/reservas-pte-alto/admin/65a1b2c3d4e5f6g7h8i9j0k5/cancelar" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -857,7 +857,7 @@ Authorization: Bearer <token>
 
 Para importar en Postman, puedes crear una colección con estos endpoints. Asegúrate de:
 
-1. Crear una variable de entorno `base_url` con el valor: `http://localhost:3000`
+1. Crear una variable de entorno `base_url` con el valor: `http://localhost:4000`
 2. Crear una variable `token` para almacenar el JWT después del login
 3. Configurar un script de pre-request para agregar el token automáticamente:
 

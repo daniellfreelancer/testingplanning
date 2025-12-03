@@ -26,30 +26,46 @@ const espaciosDeportivosPteAltoController = {
     crearEspacioDeportivoPteAlto: async (req, res) => {
 
         try {
+            console.log("🔵 CREAR ESPACIO - req.body:", req.body);
+            console.log("🔵 CREAR ESPACIO - req.file:", req.file ? `Sí (${req.file.originalname})` : "No");
+
             const {complejoDeportivo} = req.params;
             const nuevoEspacioDeportivoPteAlto = new EspaciosDeportivos({
                 ...req.body,
             });
 
             nuevoEspacioDeportivoPteAlto.complejoDeportivo = complejoDeportivo;
+
+            // Add imgUrl from body if provided (for Cloudinary uploads)
+            if (req.body.imgUrl) {
+                nuevoEspacioDeportivoPteAlto.imgUrl = req.body.imgUrl;
+            }
+
             await nuevoEspacioDeportivoPteAlto.save();
 
             if (req.file) {
+                console.log("📁 Procesando archivo:", req.file.originalname);
                 const fileContent = req.file.buffer;
                 const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+                const fileName = `espacios/img-${quizIdentifier()}.${extension}`;
 
                 const uploadParams = {
                     Bucket: bucketName,
                     Key: fileName,
                     Body: fileContent,
+                    ContentType: req.file.mimetype || `image/${extension}`,
                 };
 
                 const uploadCommand = new PutObjectCommand(uploadParams);
                 await clientAWS.send(uploadCommand);
 
-                nuevoEspacioDeportivoPteAlto.imgUrl = fileName;
+                // Guardar URL completa de S3
+                const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${fileName}`;
+                nuevoEspacioDeportivoPteAlto.imgUrl = fileUrl;
                 await nuevoEspacioDeportivoPteAlto.save();
+                console.log("✅ Imagen subida a S3:", fileUrl);
+            } else {
+                console.log("⚠️ No se recibió archivo en req.file");
             }
 
 
@@ -57,8 +73,10 @@ const espaciosDeportivosPteAltoController = {
             complejoEncontrado.espaciosDeportivos.push(nuevoEspacioDeportivoPteAlto._id);
             await complejoEncontrado.save();
 
-            res.status(201).json({ 
-                message: "Espacio deportivo creado correctamente", 
+            console.log("✅ Espacio creado con imgUrl:", nuevoEspacioDeportivoPteAlto.imgUrl);
+
+            res.status(201).json({
+                message: "Espacio deportivo creado correctamente",
                 response: nuevoEspacioDeportivoPteAlto,
                 success: true });
 
@@ -95,12 +113,40 @@ const espaciosDeportivosPteAltoController = {
     actualizarEspacioDeportivoPteAltoPorId: async (req, res) => {
         try {
             const { id } = req.params;
-            const { nombre, descripcion, direccion, ciudad, comuna, region, complejoDeportivo, talleres, status, dias, horarioApertura, horarioCierre, valor, pago, deporte, galeria } = req.body;
-            const espacioDeportivoPteAlto = await EspaciosDeportivos.findByIdAndUpdate(id, { nombre, descripcion, direccion, ciudad, comuna, region, complejoDeportivo, talleres, status, dias, horarioApertura, horarioCierre, valor, pago, deporte, galeria }, { new: true });
-            res.status(200).json({ 
-                message: "Espacio deportivo PTE Alto actualizado correctamente", 
+            let updateData = { ...req.body };
+
+            // Si se sube una nueva imagen, procesarla
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `espacios/img-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                    ContentType: req.file.mimetype || `image/${extension}`,
+                };
+
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                // Actualizar con la nueva URL de S3
+                const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${fileName}`;
+                updateData.imgUrl = fileUrl;
+            }
+
+            const espacioDeportivoPteAlto = await EspaciosDeportivos.findByIdAndUpdate(
+                id,
+                updateData,
+                { new: true }
+            );
+
+            res.status(200).json({
+                message: "Espacio deportivo PTE Alto actualizado correctamente",
                 response: espacioDeportivoPteAlto,
-                success: true });
+                success: true
+            });
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al actualizar el espacio deportivo PTE Alto", error });
