@@ -465,8 +465,7 @@ const reservasPteAltoController = {
      */
     inscribirseEnTaller: async (req, res) => {
         try {
-            const { taller } = req.body;
-            const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
+            const { taller, usuario } = req.body;
             
             if (!taller) {
                 return res.status(400).json({ 
@@ -475,16 +474,10 @@ const reservasPteAltoController = {
                 });
             }
             
-            if (!usuarioId) {
-                return res.status(401).json({ 
-                    success: false,
-                    message: "Usuario no autenticado" 
-                });
-            }
             
             // Verificar que el usuario existe y está validado
-            const usuario = await UsuariosPteAlto.findById(usuarioId);
-            if (!usuario) {
+            const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
+            if (!usuarioEncontrado) {
                 return res.status(404).json({ 
                     success: false,
                     message: "Usuario no encontrado" 
@@ -522,7 +515,7 @@ const reservasPteAltoController = {
             }
             
             // Verificar que el usuario no está ya inscrito
-            if (tallerDoc.usuarios && tallerDoc.usuarios.includes(usuarioId)) {
+            if (tallerDoc.usuarios && tallerDoc.usuarios.includes(usuarioEncontrado._id)) {
                 return res.status(409).json({ 
                     success: false,
                     message: "Ya estás inscrito en este taller" 
@@ -561,7 +554,7 @@ const reservasPteAltoController = {
             
             // Crear la reserva
             const nuevaReserva = new ReservasPteAlto({
-                usuario: usuarioId,
+                usuario: usuarioEncontrado?._id,
                 taller: tallerDoc._id,
                 espacioDeportivo: tallerDoc.espacioDeportivo || null,
                 fechaInicio: tallerDoc.fechaInicio,
