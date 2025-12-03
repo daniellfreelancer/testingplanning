@@ -23,9 +23,19 @@ const talleresDeportivosPteAltoController = {
     //crear taller deportivo PTE Alto y agregarlo al espacio deportivo en caso de tenerlo
     crearTallerDeportivoPteAlto: async (req, res) => {
         try {
-            const nuevoTallerDeportivoPteAlto = new TalleresDeportivos({
-                ...req.body,
-            });
+            console.log("🔵 CREAR TALLER - req.body:", req.body);
+            console.log("🔵 CREAR TALLER - req.files:", req.files ? `Sí (${req.files.length} archivos)` : "No");
+
+            // Parsear arrays JSON si vienen como strings
+            const bodyData = { ...req.body };
+            if (typeof bodyData.horarios === 'string') {
+                bodyData.horarios = JSON.parse(bodyData.horarios);
+            }
+            if (typeof bodyData.dias === 'string') {
+                bodyData.dias = JSON.parse(bodyData.dias);
+            }
+
+            const nuevoTallerDeportivoPteAlto = new TalleresDeportivos(bodyData);
 
 
             // subir una o hasta 5 imagenes al campo galeria del taller deportivo
@@ -83,34 +93,54 @@ const talleresDeportivosPteAltoController = {
 
                 // Asignar la galería al taller
                 nuevoTallerDeportivoPteAlto.galeria = galeria;
+                console.log(`✅ ${galeria.length} imágenes subidas a la galería`);
+            } else {
+                console.log("⚠️ No se recibieron archivos en req.files");
             }
 
-         
-    
+
+
             // Cambiar req.params.espacioDeportivo por req.query.espacioDeportivo
             if (req.query.espacioDeportivo) {
                 const espacioDeportivoEncontrado = await EspaciosDeportivos.findById(req.query.espacioDeportivo);
                 if (!espacioDeportivoEncontrado) {
-                    return res.status(404).json({ message: "Espacio deportivo no encontrado" });
+                    return res.status(404).json({ message: "Espacio deportivo no encontrado", success: false });
                 }
                 espacioDeportivoEncontrado.talleres.push(nuevoTallerDeportivoPteAlto._id);
                 await espacioDeportivoEncontrado.save();
-    
+
                 nuevoTallerDeportivoPteAlto.espacioDeportivo = espacioDeportivoEncontrado._id;
                 await nuevoTallerDeportivoPteAlto.save();
-    
-                res.status(201).json({ message: "Taller deportivo PTE Alto creado correctamente", tallerDeportivoPteAlto: nuevoTallerDeportivoPteAlto });
+
+                console.log("✅ Taller creado con galería:", nuevoTallerDeportivoPteAlto.galeria);
+
+                res.status(201).json({
+                    message: "Taller deportivo PTE Alto creado correctamente",
+                    response: nuevoTallerDeportivoPteAlto,
+                    success: true
+                });
             } else {
                 nuevoTallerDeportivoPteAlto.espacioDeportivo = null;
                 await nuevoTallerDeportivoPteAlto.save();
-                res.status(201).json({ message: "Taller deportivo PTE Alto creado correctamente", tallerDeportivoPteAlto: nuevoTallerDeportivoPteAlto });
+
+                console.log("✅ Taller creado con galería:", nuevoTallerDeportivoPteAlto.galeria);
+
+                res.status(201).json({
+                    message: "Taller deportivo PTE Alto creado correctamente",
+                    response: nuevoTallerDeportivoPteAlto,
+                    success: true
+                });
             }
 
 
 
         } catch (error) {
-            console.log(error);
-            res.status(500).json({ message: "Error al crear el taller deportivo PTE Alto", error });
+            console.error("❌ Error al crear taller:", error);
+            res.status(500).json({
+                message: "Error al crear el taller deportivo PTE Alto",
+                error: error.message,
+                success: false
+            });
         }
     },
     obtenerTodosLosTalleresDeportivosPteAlto: async (req, res) => {
@@ -134,10 +164,84 @@ const talleresDeportivosPteAltoController = {
     },
     actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         try {
+            console.log("🔵 ACTUALIZAR TALLER - req.body:", req.body);
+            console.log("🔵 ACTUALIZAR TALLER - req.files:", req.files ? `Sí (${req.files.length} archivos)` : "No");
+
             const { id } = req.params;
-            const { nombre, descripcion, imagen, video, link, complejoDeportivo, espacioDeportivo, capacidad, valor, pago, horarios, dias, fechaInicio, fechaFin, usuarios, profesores, status } = req.body;
-            const tallerDeportivoPteAlto = await TalleresDeportivos.findByIdAndUpdate(id, { nombre, descripcion, imagen, video, link, complejoDeportivo, espacioDeportivo, capacidad, valor, pago, horarios, dias, fechaInicio, fechaFin, usuarios, profesores, status }, { new: true });
-            res.status(200).json({ message: "Taller deportivo PTE Alto actualizado correctamente", response: tallerDeportivoPteAlto, success: true });
+            let updateData = { ...req.body };
+
+            // Si se suben nuevas imágenes, procesarlas
+            if (req.files && req.files.length > 0) {
+                const galeriaExistente = updateData.galeria ? JSON.parse(updateData.galeria) : [];
+                const nuevasImagenes = [];
+                const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+                console.log(`📸 Procesando ${req.files.length} nuevas imágenes`);
+
+                for (const file of req.files) {
+                    const extension = file.originalname.split('.').pop().toLowerCase();
+
+                    if (!allowedExtensions.includes(extension)) {
+                        return res.status(400).json({
+                            message: `Tipo de archivo no permitido: ${extension}`,
+                            success: false
+                        });
+                    }
+
+                    const maxSize = 5 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                        return res.status(400).json({
+                            message: `El archivo ${file.originalname} excede 5MB`,
+                            success: false
+                        });
+                    }
+
+                    try {
+                        const fileContent = file.buffer;
+                        const fileName = `talleres/galeria-${quizIdentifier()}.${extension}`;
+
+                        const uploadParams = {
+                            Bucket: bucketName,
+                            Key: fileName,
+                            Body: fileContent,
+                            ContentType: file.mimetype || `image/${extension}`,
+                        };
+
+                        const uploadCommand = new PutObjectCommand(uploadParams);
+                        await clientAWS.send(uploadCommand);
+
+                        const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${fileName}`;
+                        nuevasImagenes.push(fileUrl);
+                        console.log("✅ Imagen subida:", fileUrl);
+                    } catch (uploadError) {
+                        console.error(`Error al subir ${file.originalname}:`, uploadError);
+                        return res.status(500).json({
+                            message: `Error al subir ${file.originalname}`,
+                            error: uploadError.message,
+                            success: false
+                        });
+                    }
+                }
+
+                // Combinar galería existente con nuevas imágenes (máximo 5)
+                const galeriaCompleta = [...galeriaExistente, ...nuevasImagenes].slice(0, 5);
+                updateData.galeria = galeriaCompleta;
+                console.log(`📚 Galería actualizada con ${galeriaCompleta.length} imágenes`);
+            }
+
+            const tallerDeportivoPteAlto = await TalleresDeportivos.findByIdAndUpdate(
+                id,
+                updateData,
+                { new: true }
+            );
+
+            console.log("✅ Taller actualizado con galería:", tallerDeportivoPteAlto.galeria);
+
+            res.status(200).json({
+                message: "Taller deportivo PTE Alto actualizado correctamente",
+                response: tallerDeportivoPteAlto,
+                success: true
+            });
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al actualizar el taller deportivo PTE Alto", error });
