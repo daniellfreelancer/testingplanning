@@ -348,8 +348,8 @@ const reservasPteAltoController = {
      */
     crearReservaEspacio: async (req, res) => {
         try {
-            const { espacioDeportivo, fechaInicio, fechaFin, notas } = req.body;
-            const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
+            const { espacioDeportivo, fechaInicio, fechaFin, notas, usuario } = req.body;
+          //  const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
             
             if (!espacioDeportivo || !fechaInicio || !fechaFin) {
                 return res.status(400).json({ 
@@ -358,23 +358,23 @@ const reservasPteAltoController = {
                 });
             }
             
-            if (!usuarioId) {
-                return res.status(401).json({ 
-                    success: false,
-                    message: "Usuario no autenticado" 
-                });
-            }
+            // if (!usuarioId) {
+            //     return res.status(401).json({ 
+            //         success: false,
+            //         message: "Usuario no autenticado" 
+            //     });
+            // }
             
             // Verificar que el usuario existe y está validado
-            const usuario = await UsuariosPteAlto.findById(usuarioId);
-            if (!usuario) {
+            const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
+            if (!usuarioEncontrado) {
                 return res.status(404).json({ 
                     success: false,
                     message: "Usuario no encontrado" 
                 });
             }
             
-            if (usuario.estadoValidacion !== 'validado') {
+            if (usuarioEncontrado.estadoValidacion !== 'validado') {
                 return res.status(403).json({ 
                     success: false,
                     message: "Usuario no validado. Debe esperar la validación de un administrador" 
@@ -427,7 +427,7 @@ const reservasPteAltoController = {
             
             // Crear la reserva
             const nuevaReserva = new ReservasPteAlto({
-                usuario: usuarioId,
+                usuario: usuario,
                 espacioDeportivo: espacioDeportivo,
                 fechaInicio: inicio,
                 fechaFin: fin,
