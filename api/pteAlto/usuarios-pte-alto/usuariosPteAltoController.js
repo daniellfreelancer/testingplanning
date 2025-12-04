@@ -77,7 +77,7 @@ const usuariosPteAltoController = {
             const password = generateRandomPassword(8);
             const passwordHashed = bcryptjs.hashSync(password, 10);
             const nuevoUsuarioPteAlto = new UsuariosPteAlto({
-                nombre, apellido, email, rut, rol, password: [passwordHashed], institucion
+                nombre, apellido, email, rut, rol, password: [passwordHashed], institucion, ...req.body
             });
 
             let institucionDoc = await Institucion.findById(institucion);
