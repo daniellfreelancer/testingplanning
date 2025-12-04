@@ -268,6 +268,71 @@ const usuariosPteAltoController = {
             console.log(error);
             res.status(500).json({ message: "Error al validar usuario PTE Alto", error: error });
         }
+    },
+    crearUsuarioFormPteAlto : async (req, res) => {
+        try {
+            const { nombre, apellido, email, rut } = req.body;
+
+            let institucion ='6925f10308c7b00a3c4498ca'
+            let rol = 'USER'
+            //validar si el rut ya existe
+            const usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut });
+            if (usuarioPteAltoRut) {
+                return res.status(400).json({ message: "El RUT ya existe",
+                    response: usuarioPteAltoRut?._id,
+                    success: true
+                 });
+            }
+
+
+            const nuevoUsuarioPteAlto = new UsuariosPteAlto({
+                nombre, apellido, email, rut, rol, institucion, ...req.body
+            });
+
+            let institucionDoc = await Institucion.findById(institucion);
+            if (!institucionDoc) {
+                return res.status(404).json({ message: "Institución no encontrada" });
+            }
+
+            institucionDoc.usuariosPteAlto.push(nuevoUsuarioPteAlto._id);
+            await institucionDoc.save();
+
+            if (req.file) {
+                const fileContent = req.file.buffer;
+                const extension = req.file.originalname.split('.').pop();
+                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: fileContent,
+                };
+
+                // Subir el archivo a S3
+                const uploadCommand = new PutObjectCommand(uploadParams);
+                await clientAWS.send(uploadCommand);
+
+                nuevoUsuarioPteAlto.certificadoDomicilio = fileName;
+            }
+
+            nuevoUsuarioPteAlto.status = true;
+            nuevoUsuarioPteAlto.estadoValidacion = 'validado';
+
+            await nuevoUsuarioPteAlto.save();
+
+            //ENVIAR EMAIL DE BIENVENIDA
+         //   await sendWelcomeMailPteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
+
+            res.status(201).json({ 
+                message: "Usuario creado correctamente", 
+                response: nuevoUsuarioPteAlto?._id,
+                success: true
+            });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al crear usuario PTE Alto", error: error });
+        }
     }
 
 };

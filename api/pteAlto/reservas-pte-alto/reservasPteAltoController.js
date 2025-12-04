@@ -373,13 +373,17 @@ const reservasPteAltoController = {
                     message: "Usuario no encontrado" 
                 });
             }
+
             
-            if (usuarioEncontrado.estadoValidacion !== 'validado') {
-                return res.status(403).json({ 
-                    success: false,
-                    message: "Usuario no validado. Debe esperar la validación de un administrador" 
-                });
-            }
+            /**
+             * TODO: Descomentar esta validación cuando se tenga el sistema de validación de usuarios
+             */
+            // if (usuarioEncontrado.estadoValidacion !== 'validado') {
+            //     return res.status(403).json({ 
+            //         success: false,
+            //         message: "Usuario no validado. Debe esperar la validación de un administrador" 
+            //     });
+            // }
             
             // Verificar que el espacio existe y está activo
             const espacio = await EspaciosDeportivosPteAlto.findById(espacioDeportivo);
