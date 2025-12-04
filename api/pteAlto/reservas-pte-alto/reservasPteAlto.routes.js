@@ -36,13 +36,13 @@ router.put('/:id/cancelar', reservasPteAltoController.cancelarReserva);
 // ============================================
 
 // Listar todas las reservas
-router.get('/admin/todas', reservasPteAltoController.listarTodasReservas);
+router.get('/obtener-todas-las-reservas', reservasPteAltoController.listarTodasReservas);
 
 // Obtener reserva por ID
-router.get('/admin/:id', reservasPteAltoController.obtenerReservaPorId);
+router.get('/obtener-reserva-por-id/:id', reservasPteAltoController.obtenerReservaPorId);
 
 // Cancelar reserva (admin)
-router.put('/admin/:id/cancelar', reservasPteAltoController.cancelarReservaAdmin);
+router.put('/cancelar-reserva/:id', reservasPteAltoController.cancelarReservaAdmin);
 
 module.exports = router;
 
