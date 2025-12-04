@@ -1495,6 +1495,7 @@ const usuariosComplejosController = {
         user.fechaInicioArrendatario = new Date();
         user.fechaRegistro = new Date();
         user.nombreArrendatario = userData.nombreArrendatario;
+        user.arrendatario = true;
         await user.save();
 
         return res.status(200).json({ message: "Usuario actualizado correctamente" });
