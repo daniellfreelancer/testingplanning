@@ -212,7 +212,7 @@ const usuariosPteAltoController = {
 
             // con rol USER
             const usuariosPteAlto = await UsuariosPteAlto.find({ rol: 'USER' }).sort({ createAt: -1 })
-            .select('nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio createdAt updatedAt');
+            .select('nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio comuna ciudad region fechaNacimiento sexo direccion telefono');
 
             if (usuariosPteAlto?.length > 0) {
 
