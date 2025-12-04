@@ -790,9 +790,21 @@ const reservasPteAltoController = {
             }
             
             const reservas = await ReservasPteAlto.find(query)
-                .populate('usuario', 'nombre apellido email')
-                .populate('espacioDeportivo', 'nombre deporte')
-                .populate('taller', 'nombre fechaInicio fechaFin')
+                .populate({
+                    path: 'usuario',
+                    select: 'nombre apellido email',
+                    model: UsuariosPteAlto
+                })
+                .populate({
+                    path: 'espacioDeportivo',
+                    select: 'nombre deporte',
+                    model: EspaciosDeportivosPteAlto
+                })
+                .populate({
+                    path: 'taller',
+                    select: 'nombre fechaInicio fechaFin',
+                    model: TalleresDeportivosPteAlto
+                })
                 .sort({ fechaInicio: -1 });
             
             res.status(200).json({
