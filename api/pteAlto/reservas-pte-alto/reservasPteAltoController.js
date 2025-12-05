@@ -350,15 +350,18 @@ const reservasPteAltoController = {
         try {
             const { espacioDeportivo, fechaInicio, fechaFin, notas, usuario } = req.body;
           //  const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
+
+          console.log('Body recibido:', req.body);
             
-            if (!espacioDeportivo || !fechaInicio || !fechaFin) {
+            // Validar campos requeridos
+            if (!espacioDeportivo || !fechaInicio || !fechaFin || !usuario) {
                 return res.status(400).json({ 
                     success: false,
-                    message: "Los campos 'espacioDeportivo', 'fechaInicio' y 'fechaFin' son requeridos" 
+                    message: "Los campos 'espacioDeportivo', 'fechaInicio', 'fechaFin' y 'usuario' son requeridos" 
                 });
             }
 
-            // Verificar que el usuario existe y está validado
+            // Verificar que el usuario existe
             const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
             if (!usuarioEncontrado) {
                 return res.status(404).json({ 
@@ -367,6 +370,13 @@ const reservasPteAltoController = {
                 });
             }
 
+            // Verificar que el usuario está validado (opcional, descomentar si es requerido)
+            // if (usuarioEncontrado.estadoValidacion !== 'validado') {
+            //     return res.status(403).json({ 
+            //         success: false,
+            //         message: "Usuario no validado. Debe esperar la validación de un administrador" 
+            //     });
+            // }
             
             // Verificar que el espacio existe y está activo
             const espacio = await EspaciosDeportivosPteAlto.findById(espacioDeportivo);
@@ -387,6 +397,14 @@ const reservasPteAltoController = {
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
             
+            // Validar que las fechas sean válidas
+            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: "Las fechas proporcionadas no son válidas" 
+                });
+            }
+            
             if (inicio >= fin) {
                 return res.status(400).json({ 
                     success: false,
@@ -394,10 +412,13 @@ const reservasPteAltoController = {
                 });
             }
             
-            if (inicio < new Date()) {
+            // Permitir reservas con al menos 5 minutos de anticipación
+            const ahora = new Date();
+            const cincoMinutos = 5 * 60 * 1000;
+            if (inicio.getTime() < (ahora.getTime() + cincoMinutos)) {
                 return res.status(400).json({ 
                     success: false,
-                    message: "No se pueden crear reservas en el pasado" 
+                    message: "No se pueden crear reservas con menos de 5 minutos de anticipación" 
                 });
             }
             
@@ -412,9 +433,9 @@ const reservasPteAltoController = {
                 });
             }
             
-            // Crear la reserva
+            // Crear la reserva - usar el ID del usuario, no el objeto completo
             const nuevaReserva = new ReservasPteAlto({
-                usuario: usuarioEncontrado,
+                usuario: usuario, // Usar el ID directamente del body
                 espacioDeportivo: espacioDeportivo,
                 fechaInicio: inicio,
                 fechaFin: fin,
@@ -428,15 +449,18 @@ const reservasPteAltoController = {
             // Populate para respuesta
             await nuevaReserva.populate('usuario', 'nombre apellido email');
             await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
-            
+            console.log('Reserva creada exitosamente:', nuevaReserva);
+
+
             res.status(201).json({
                 success: true,
                 message: "Reserva creada correctamente",
                 reserva: nuevaReserva
             });
+
             
         } catch (error) {
-            console.log(error);
+            console.error('Error al crear la reserva:', error);
             res.status(500).json({ 
                 success: false,
                 message: "Error al crear la reserva", 
