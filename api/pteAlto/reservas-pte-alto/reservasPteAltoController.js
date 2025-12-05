@@ -357,14 +357,7 @@ const reservasPteAltoController = {
                     message: "Los campos 'espacioDeportivo', 'fechaInicio' y 'fechaFin' son requeridos" 
                 });
             }
-            
-            // if (!usuarioId) {
-            //     return res.status(401).json({ 
-            //         success: false,
-            //         message: "Usuario no autenticado" 
-            //     });
-            // }
-            
+
             // Verificar que el usuario existe y está validado
             const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
             if (!usuarioEncontrado) {
@@ -375,16 +368,6 @@ const reservasPteAltoController = {
             }
 
             
-            /**
-             * TODO: Descomentar esta validación cuando se tenga el sistema de validación de usuarios
-             */
-            // if (usuarioEncontrado.estadoValidacion !== 'validado') {
-            //     return res.status(403).json({ 
-            //         success: false,
-            //         message: "Usuario no validado. Debe esperar la validación de un administrador" 
-            //     });
-            // }
-            
             // Verificar que el espacio existe y está activo
             const espacio = await EspaciosDeportivosPteAlto.findById(espacioDeportivo);
             if (!espacio) {
@@ -394,12 +377,12 @@ const reservasPteAltoController = {
                 });
             }
             
-            if (!espacio.status) {
-                return res.status(400).json({ 
-                    success: false,
-                    message: "El espacio deportivo está deshabilitado" 
-                });
-            }
+            // if (!espacio.status) {
+            //     return res.status(400).json({ 
+            //         success: false,
+            //         message: "El espacio deportivo está deshabilitado" 
+            //     });
+            // }
             
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
