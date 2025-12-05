@@ -431,7 +431,7 @@ const reservasPteAltoController = {
             
             // Crear la reserva
             const nuevaReserva = new ReservasPteAlto({
-                usuario: usuario,
+                usuario: usuarioEncontrado,
                 espacioDeportivo: espacioDeportivo,
                 fechaInicio: inicio,
                 fechaFin: fin,
