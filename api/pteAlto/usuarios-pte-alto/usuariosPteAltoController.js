@@ -111,7 +111,7 @@ const usuariosPteAltoController = {
             //ENVIAR EMAIL DE BIENVENIDA
             await sendWelcomeMailPteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
 
-            res.status(201).json({ message: "Usuario PTE Alto creado correctamente", usuarioPteAlto: nuevoUsuarioPteAlto, password });
+            res.status(201).json({ message: "Usuario PTE Alto creado correctamente", response: nuevoUsuarioPteAlto, password });
 
         } catch (error) {
             console.log(error);
