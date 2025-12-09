@@ -474,56 +474,59 @@ const usuariosComplejosController = {
         userData.fechaNacimiento = new Date(`${year}-${month}-${day}`);
       }
 
-      if (req.files && req.files["fotoCedulaFrontal"]) {
-        const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-        const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
-          }-${quizIdentifier()}.png`;
+      /**
+       * en espera de nueva configuracion de AWS para subir archivos
+       */
+      // if (req.files && req.files["fotoCedulaFrontal"]) {
+      //   const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
+      //   const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
+      //     }-${quizIdentifier()}.png`;
 
-        const uploadFirst = {
-          Bucket: bucketName,
-          Key: fileName,
-          Body: fileContent,
-        };
+      //   const uploadFirst = {
+      //     Bucket: bucketName,
+      //     Key: fileName,
+      //     Body: fileContent,
+      //   };
 
-        const uploadCommand = new PutObjectCommand(uploadFirst);
-        await clientAWS.send(uploadCommand);
+      //   const uploadCommand = new PutObjectCommand(uploadFirst);
+      //   await clientAWS.send(uploadCommand);
 
-        userData.fotoCedulaFrontal = fileName;
-      }
+      //   userData.fotoCedulaFrontal = fileName;
+      // }
 
-      if (req.files && req.files["fotoCedulaReverso"]) {
-        const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-        const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
-          }-${quizIdentifier()}.png`;
+      // if (req.files && req.files["fotoCedulaReverso"]) {
+      //   const fileContent = req.files["fotoCedulaReverso"][0].buffer;
+      //   const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
+      //     }-${quizIdentifier()}.png`;
 
-        const uploadSecond = {
-          Bucket: bucketName,
-          Key: fileName,
-          Body: fileContent,
-        };
+      //   const uploadSecond = {
+      //     Bucket: bucketName,
+      //     Key: fileName,
+      //     Body: fileContent,
+      //   };
 
-        const uploadCommand = new PutObjectCommand(uploadSecond);
-        await clientAWS.send(uploadCommand);
+      //   const uploadCommand = new PutObjectCommand(uploadSecond);
+      //   await clientAWS.send(uploadCommand);
 
-        userData.fotoCedulaReverso = fileName;
-      }
+      //   userData.fotoCedulaReverso = fileName;
+      // }
 
-      if (req.files && req.files["firma"]) {
-        const fileContent = req.files["firma"][0].buffer;
-        const fileName = `${req.files["firma"][0].fieldname
-          }-${quizIdentifier()}.png`;
+      // if (req.files && req.files["firma"]) {
+      //   const fileContent = req.files["firma"][0].buffer;
+      //   const fileName = `${req.files["firma"][0].fieldname
+      //     }-${quizIdentifier()}.png`;
 
-        const uploadThird = {
-          Bucket: bucketName,
-          Key: fileName,
-          Body: fileContent,
-        };
+      //   const uploadThird = {
+      //     Bucket: bucketName,
+      //     Key: fileName,
+      //     Body: fileContent,
+      //   };
 
-        const uploadCommand = new PutObjectCommand(uploadThird);
-        await clientAWS.send(uploadCommand);
+      //   const uploadCommand = new PutObjectCommand(uploadThird);
+      //   await clientAWS.send(uploadCommand);
 
-        userData.firma = fileName;
-      }
+      //   userData.firma = fileName;
+      // }
 
       // Crear usuario con los datos del body y valores por defecto
       const newUser = new UsuariosComplejos({
@@ -742,40 +745,42 @@ const usuariosComplejosController = {
         updateData.tutores = JSON.parse(updateData.tutores);
       }
 
-      // Procesar archivos de imágenes
-      if (req.files && req.files["fotoCedulaFrontal"]) {
-        const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-        const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
-          }-${quizIdentifier()}.png`;
+      /**
+       * en espera de nueva configuracion de AWS para subir archivos
+       */
+      // if (req.files && req.files["fotoCedulaFrontal"]) {
+      //   const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
+      //   const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
+      //     }-${quizIdentifier()}.png`;
 
-        const uploadParams = {
-          Bucket: bucketName,
-          Key: fileName,
-          Body: fileContent,
-        };
+      //   const uploadParams = {
+      //     Bucket: bucketName,
+      //     Key: fileName,
+      //     Body: fileContent,
+      //   };
 
-        const uploadCommand = new PutObjectCommand(uploadParams);
-        await clientAWS.send(uploadCommand);
+      //   const uploadCommand = new PutObjectCommand(uploadParams);
+      //   await clientAWS.send(uploadCommand);
 
-        updateData.fotoCedulaFrontal = fileName;
-      }
+      //   updateData.fotoCedulaFrontal = fileName;
+      // }
 
-      if (req.files && req.files["fotoCedulaReverso"]) {
-        const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-        const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
-          }-${quizIdentifier()}.png`;
+      // if (req.files && req.files["fotoCedulaReverso"]) {
+      //   const fileContent = req.files["fotoCedulaReverso"][0].buffer;
+      //   const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
+      //     }-${quizIdentifier()}.png`;
 
-        const uploadParams = {
-          Bucket: bucketName,
-          Key: fileName,
-          Body: fileContent,
-        };
+      //   const uploadParams = {
+      //     Bucket: bucketName,
+      //     Key: fileName,
+      //     Body: fileContent,
+      //   };
 
-        const uploadCommand = new PutObjectCommand(uploadParams);
-        await clientAWS.send(uploadCommand);
+      //   const uploadCommand = new PutObjectCommand(uploadParams);
+      //   await clientAWS.send(uploadCommand);
 
-        updateData.fotoCedulaReverso = fileName;
-      }
+      //   updateData.fotoCedulaReverso = fileName;
+      // }
 
       const user = await UsuariosComplejos.findByIdAndUpdate(id, updateData, {
         new: true,
