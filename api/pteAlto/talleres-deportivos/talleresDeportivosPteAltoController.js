@@ -3,6 +3,7 @@ const EspaciosDeportivos = require('../espacios-deportivos/espaciosDeportivosPte
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 const talleresDeportivosPteAltoController = {
   // crear taller deportivo PTE Alto y agregarlo al espacio deportivo en caso de tenerlo
@@ -53,7 +54,8 @@ const talleresDeportivosPteAltoController = {
           try {
             // Subir archivo a S3 usando helper
             const key = await uploadMulterFile(file);
-            const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+        //    const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+            const fileUrl = `${cloudfrontUrl}/${key}`;
             galeria.push(fileUrl);
           } catch (uploadError) {
             console.error(`Error al subir archivo ${file.originalname}:`, uploadError);
@@ -200,7 +202,8 @@ const talleresDeportivosPteAltoController = {
 
           try {
             const key = await uploadMulterFile(file);
-            const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+        //    const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+            const fileUrl = `${cloudfrontUrl}/${key}`;
             nuevasImagenes.push(fileUrl);
             console.log('✅ Imagen subida:', fileUrl);
           } catch (uploadError) {
