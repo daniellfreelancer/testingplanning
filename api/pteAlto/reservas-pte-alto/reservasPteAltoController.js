@@ -16,17 +16,17 @@ const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
  */
 const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) => {
     const conflictos = [];
-    
+
     // Verificar que el espacio existe y está activo
     const espacio = await EspaciosDeportivosPteAlto.findById(espacioId);
     if (!espacio) {
         return { disponible: false, conflictos: [{ tipo: 'error', mensaje: 'Espacio no encontrado' }] };
     }
-    
+
     if (!espacio.status) {
         return { disponible: false, conflictos: [{ tipo: 'error', mensaje: 'Espacio deshabilitado' }] };
     }
-    
+
     // Buscar reservas activas que se solapen con el rango
     const reservasConflictivas = await ReservasPteAlto.find({
         espacioDeportivo: espacioId,
@@ -40,7 +40,7 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
             { fechaInicio: { $lte: fechaInicio }, fechaFin: { $gte: fechaFin } }
         ]
     }).populate('usuario', 'nombre apellido');
-    
+
     reservasConflictivas.forEach(reserva => {
         conflictos.push({
             tipo: 'reserva',
@@ -50,7 +50,7 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
             nombre: reserva.usuario ? `${reserva.usuario.nombre} ${reserva.usuario.apellido}` : 'Reserva'
         });
     });
-    
+
     // Buscar talleres activos asignados al espacio que se solapen
     const talleresConflictivos = await TalleresDeportivosPteAlto.find({
         espacioDeportivo: espacioId,
@@ -61,7 +61,7 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
             { fechaInicio: { $lte: fechaInicio }, fechaFin: { $gte: fechaFin } }
         ]
     });
-    
+
     talleresConflictivos.forEach(taller => {
         conflictos.push({
             tipo: 'taller',
@@ -71,7 +71,7 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
             nombre: taller.nombre
         });
     });
-    
+
     return {
         disponible: conflictos.length === 0,
         conflictos
@@ -87,7 +87,7 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
  */
 const obtenerHorariosOcupados = async (espacioId, fechaInicio, fechaFin) => {
     const ocupados = [];
-    
+
     // Obtener reservas activas
     const reservas = await ReservasPteAlto.find({
         espacioDeportivo: espacioId,
@@ -95,7 +95,7 @@ const obtenerHorariosOcupados = async (espacioId, fechaInicio, fechaFin) => {
         fechaInicio: { $gte: fechaInicio },
         fechaFin: { $lte: fechaFin }
     }).populate('usuario', 'nombre apellido');
-    
+
     reservas.forEach(reserva => {
         ocupados.push({
             fechaInicio: reserva.fechaInicio,
@@ -105,7 +105,7 @@ const obtenerHorariosOcupados = async (espacioId, fechaInicio, fechaFin) => {
             nombre: reserva.usuario ? `${reserva.usuario.nombre} ${reserva.usuario.apellido}` : 'Reserva'
         });
     });
-    
+
     // Obtener talleres activos
     const talleres = await TalleresDeportivosPteAlto.find({
         espacioDeportivo: espacioId,
@@ -113,7 +113,7 @@ const obtenerHorariosOcupados = async (espacioId, fechaInicio, fechaFin) => {
         fechaInicio: { $gte: fechaInicio },
         fechaFin: { $lte: fechaFin }
     });
-    
+
     talleres.forEach(taller => {
         ocupados.push({
             fechaInicio: taller.fechaInicio,
@@ -123,7 +123,7 @@ const obtenerHorariosOcupados = async (espacioId, fechaInicio, fechaFin) => {
             nombre: taller.nombre
         });
     });
-    
+
     return ocupados;
 };
 
@@ -144,28 +144,28 @@ const reservasPteAltoController = {
     consultarDisponibilidadPorDeporte: async (req, res) => {
         try {
             const { deporte, fechaInicio, fechaFin } = req.query;
-            
+
             if (!deporte) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "El parámetro 'deporte' es requerido" 
+                    message: "El parámetro 'deporte' es requerido"
                 });
             }
-            
+
             const inicio = fechaInicio ? new Date(fechaInicio) : new Date();
             const fin = fechaFin ? new Date(fechaFin) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 días
-            
+
             // Buscar espacios con el deporte especificado y activos
             const espacios = await EspaciosDeportivosPteAlto.find({
                 deporte: deporte,
                 status: true
             }).populate('complejoDeportivo', 'nombre');
-            
+
             const espaciosConDisponibilidad = await Promise.all(
                 espacios.map(async (espacio) => {
                     const ocupados = await obtenerHorariosOcupados(espacio._id, inicio, fin);
                     const total = Math.ceil((fin - inicio) / (60 * 60 * 1000)); // Total de horas en el rango
-                    
+
                     return {
                         id: espacio._id,
                         nombre: espacio.nombre,
@@ -185,18 +185,18 @@ const reservasPteAltoController = {
                     };
                 })
             );
-            
+
             res.status(200).json({
                 success: true,
                 espacios: espaciosConDisponibilidad
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al consultar disponibilidad por deporte", 
-                error: error.message 
+                message: "Error al consultar disponibilidad por deporte",
+                error: error.message
             });
         }
     },
@@ -208,58 +208,58 @@ const reservasPteAltoController = {
     consultarDisponibilidadPorFecha: async (req, res) => {
         try {
             const { fecha, deporte, complejoDeportivo } = req.query;
-            
+
             if (!fecha) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "El parámetro 'fecha' es requerido" 
+                    message: "El parámetro 'fecha' es requerido"
                 });
             }
-            
+
             const fechaConsulta = new Date(fecha);
             const inicioDia = new Date(fechaConsulta.setHours(0, 0, 0, 0));
             const finDia = new Date(fechaConsulta.setHours(23, 59, 59, 999));
-            
+
             // Construir query de filtros
             const filtros = { status: true };
             if (deporte) filtros.deporte = deporte;
             if (complejoDeportivo) filtros.complejoDeportivo = complejoDeportivo;
-            
+
             const espacios = await EspaciosDeportivosPteAlto.find(filtros)
                 .populate('complejoDeportivo', 'nombre');
-            
+
             const espaciosConSlots = await Promise.all(
                 espacios.map(async (espacio) => {
                     const ocupados = await obtenerHorariosOcupados(espacio._id, inicioDia, finDia);
-                    
+
                     // Calcular slots disponibles (cada hora)
                     const slotsDisponibles = [];
                     const horarioApertura = espacio.horarioApertura || '08:00';
                     const horarioCierre = espacio.horarioCierre || '22:00';
-                    
+
                     const [horaApertura, minutoApertura] = horarioApertura.split(':').map(Number);
                     const [horaCierre, minutoCierre] = horarioCierre.split(':').map(Number);
-                    
+
                     for (let hora = horaApertura; hora < horaCierre; hora++) {
                         const slotInicio = new Date(inicioDia);
                         slotInicio.setHours(hora, 0, 0, 0);
                         const slotFin = new Date(inicioDia);
                         slotFin.setHours(hora + 1, 0, 0, 0);
-                        
+
                         // Verificar si el slot está ocupado
                         const estaOcupado = ocupados.some(ocupado => {
                             return (slotInicio >= ocupado.fechaInicio && slotInicio < ocupado.fechaFin) ||
-                                   (slotFin > ocupado.fechaInicio && slotFin <= ocupado.fechaFin) ||
-                                   (slotInicio <= ocupado.fechaInicio && slotFin >= ocupado.fechaFin);
+                                (slotFin > ocupado.fechaInicio && slotFin <= ocupado.fechaFin) ||
+                                (slotInicio <= ocupado.fechaInicio && slotFin >= ocupado.fechaFin);
                         });
-                        
+
                         slotsDisponibles.push({
                             inicio: `${hora.toString().padStart(2, '0')}:00`,
                             fin: `${(hora + 1).toString().padStart(2, '0')}:00`,
                             disponible: !estaOcupado
                         });
                     }
-                    
+
                     return {
                         id: espacio._id,
                         nombre: espacio.nombre,
@@ -274,19 +274,19 @@ const reservasPteAltoController = {
                     };
                 })
             );
-            
+
             res.status(200).json({
                 success: true,
                 fecha: fecha,
                 espacios: espaciosConSlots
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al consultar disponibilidad por fecha", 
-                error: error.message 
+                message: "Error al consultar disponibilidad por fecha",
+                error: error.message
             });
         }
     },
@@ -298,26 +298,26 @@ const reservasPteAltoController = {
     verificarDisponibilidadRango: async (req, res) => {
         try {
             const { espacioDeportivo, fechaInicio, fechaFin } = req.query;
-            
+
             if (!espacioDeportivo || !fechaInicio || !fechaFin) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "Los parámetros 'espacioDeportivo', 'fechaInicio' y 'fechaFin' son requeridos" 
+                    message: "Los parámetros 'espacioDeportivo', 'fechaInicio' y 'fechaFin' son requeridos"
                 });
             }
-            
+
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
-            
+
             if (inicio >= fin) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "La fecha de inicio debe ser anterior a la fecha de fin" 
+                    message: "La fecha de inicio debe ser anterior a la fecha de fin"
                 });
             }
-            
+
             const disponibilidad = await verificarDisponibilidadEspacio(espacioDeportivo, inicio, fin);
-            
+
             res.status(200).json({
                 success: true,
                 disponible: disponibilidad.disponible,
@@ -326,13 +326,13 @@ const reservasPteAltoController = {
                 fechaFin: fin,
                 conflictos: disponibilidad.conflictos
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al verificar disponibilidad", 
-                error: error.message 
+                message: "Error al verificar disponibilidad",
+                error: error.message
             });
         }
     },
@@ -349,24 +349,24 @@ const reservasPteAltoController = {
     crearReservaEspacio: async (req, res) => {
         try {
             const { espacioDeportivo, fechaInicio, fechaFin, notas, usuario } = req.body;
-          //  const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
+            //  const usuarioId = req.user?.id || req.user?.userId; // Del token JWT
 
-          console.log('Body recibido:', req.body);
-            
+            console.log('Body recibido:', req.body);
+
             // Validar campos requeridos
             if (!espacioDeportivo || !fechaInicio || !fechaFin || !usuario) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "Los campos 'espacioDeportivo', 'fechaInicio', 'fechaFin' y 'usuario' son requeridos" 
+                    message: "Los campos 'espacioDeportivo', 'fechaInicio', 'fechaFin' y 'usuario' son requeridos"
                 });
             }
 
             // Verificar que el usuario existe
             const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
             if (!usuarioEncontrado) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Usuario no encontrado" 
+                    message: "Usuario no encontrado"
                 });
             }
 
@@ -377,62 +377,62 @@ const reservasPteAltoController = {
             //         message: "Usuario no validado. Debe esperar la validación de un administrador" 
             //     });
             // }
-            
+
             // Verificar que el espacio existe y está activo
             const espacio = await EspaciosDeportivosPteAlto.findById(espacioDeportivo);
             if (!espacio) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Espacio deportivo no encontrado" 
+                    message: "Espacio deportivo no encontrado"
                 });
             }
-            
+
             // if (!espacio.status) {
             //     return res.status(400).json({ 
             //         success: false,
             //         message: "El espacio deportivo está deshabilitado" 
             //     });
             // }
-            
+
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
-            
+
             // Validar que las fechas sean válidas
             if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "Las fechas proporcionadas no son válidas" 
+                    message: "Las fechas proporcionadas no son válidas"
                 });
             }
-            
+
             if (inicio >= fin) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "La fecha de inicio debe ser anterior a la fecha de fin" 
+                    message: "La fecha de inicio debe ser anterior a la fecha de fin"
                 });
             }
-            
+
             // Permitir reservas con al menos 5 minutos de anticipación
             const ahora = new Date();
             const cincoMinutos = 5 * 60 * 1000;
             if (inicio.getTime() < (ahora.getTime() + cincoMinutos)) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "No se pueden crear reservas con menos de 5 minutos de anticipación" 
+                    message: "No se pueden crear reservas con menos de 5 minutos de anticipación"
                 });
             }
-            
+
             // Verificar disponibilidad
             const disponibilidad = await verificarDisponibilidadEspacio(espacioDeportivo, inicio, fin);
-            
+
             if (!disponibilidad.disponible) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     success: false,
                     message: "El espacio no está disponible en el rango solicitado",
                     conflictos: disponibilidad.conflictos
                 });
             }
-            
+
             // Crear la reserva - usar el ID del usuario, no el objeto completo
             const nuevaReserva = new ReservasPteAlto({
                 usuario: usuario, // Usar el ID directamente del body
@@ -443,9 +443,9 @@ const reservasPteAltoController = {
                 estado: 'activa',
                 notas: notas || null
             });
-            
+
             await nuevaReserva.save();
-            
+
             // Populate para respuesta
             await nuevaReserva.populate('usuario', 'nombre apellido email');
             await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
@@ -458,13 +458,13 @@ const reservasPteAltoController = {
                 reserva: nuevaReserva
             });
 
-            
+
         } catch (error) {
             console.error('Error al crear la reserva:', error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al crear la reserva", 
-                error: error.message 
+                message: "Error al crear la reserva",
+                error: error.message
             });
         }
     },
@@ -477,70 +477,70 @@ const reservasPteAltoController = {
     inscribirseEnTaller: async (req, res) => {
         try {
             const { taller, usuario } = req.body;
-            
+
             if (!taller) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "El campo 'taller' es requerido" 
+                    message: "El campo 'taller' es requerido"
                 });
             }
-            
-            
+
+
             // Verificar que el usuario existe y está validado
             const usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
             if (!usuarioEncontrado) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Usuario no encontrado" 
+                    message: "Usuario no encontrado"
                 });
             }
-            
+
             if (usuario.estadoValidacion !== 'validado') {
-                return res.status(403).json({ 
+                return res.status(403).json({
                     success: false,
-                    message: "Usuario no validado. Debe esperar la validación de un administrador" 
+                    message: "Usuario no validado. Debe esperar la validación de un administrador"
                 });
             }
-            
+
             // Verificar que el taller existe y está activo
             const tallerDoc = await TalleresDeportivosPteAlto.findById(taller);
             if (!tallerDoc) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Taller no encontrado" 
+                    message: "Taller no encontrado"
                 });
             }
-            
+
             if (!tallerDoc.status) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "El taller está deshabilitado" 
+                    message: "El taller está deshabilitado"
                 });
             }
-            
+
             if (!tallerDoc.fechaInicio || !tallerDoc.fechaFin) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "El taller no tiene fechas definidas" 
+                    message: "El taller no tiene fechas definidas"
                 });
             }
-            
+
             // Verificar que el usuario no está ya inscrito
             if (tallerDoc.usuarios && tallerDoc.usuarios.includes(usuarioEncontrado._id)) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     success: false,
-                    message: "Ya estás inscrito en este taller" 
+                    message: "Ya estás inscrito en este taller"
                 });
             }
-            
+
             // Verificar capacidad del taller (si tiene límite)
             if (tallerDoc.capacidad && tallerDoc.usuarios && tallerDoc.usuarios.length >= tallerDoc.capacidad) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     success: false,
-                    message: "El taller ha alcanzado su capacidad máxima" 
+                    message: "El taller ha alcanzado su capacidad máxima"
                 });
             }
-            
+
             // Si el taller está asignado a un espacio, verificar disponibilidad (aunque debería estar bloqueado)
             if (tallerDoc.espacioDeportivo) {
                 const disponibilidad = await verificarDisponibilidadEspacio(
@@ -548,21 +548,21 @@ const reservasPteAltoController = {
                     tallerDoc.fechaInicio,
                     tallerDoc.fechaFin
                 );
-                
+
                 // Si hay conflictos que no sean el mismo taller, retornar error
                 const conflictosExternos = disponibilidad.conflictos.filter(
                     conflicto => conflicto.tipo !== 'taller' || conflicto.id.toString() !== tallerDoc._id.toString()
                 );
-                
+
                 if (conflictosExternos.length > 0) {
-                    return res.status(409).json({ 
+                    return res.status(409).json({
                         success: false,
                         message: "El espacio del taller tiene conflictos",
                         conflictos: conflictosExternos
                     });
                 }
             }
-            
+
             // Crear la reserva
             const nuevaReserva = new ReservasPteAlto({
                 usuario: usuarioEncontrado?._id,
@@ -573,33 +573,33 @@ const reservasPteAltoController = {
                 tipoReserva: 'taller',
                 estado: 'activa'
             });
-            
+
             await nuevaReserva.save();
-            
+
             // Agregar usuario al array de usuarios del taller
             if (!tallerDoc.usuarios) {
                 tallerDoc.usuarios = [];
             }
             tallerDoc.usuarios.push(usuarioId);
             await tallerDoc.save();
-            
+
             // Populate para respuesta
             await nuevaReserva.populate('usuario', 'nombre apellido email');
             await nuevaReserva.populate('taller', 'nombre fechaInicio fechaFin');
             await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
-            
+
             res.status(201).json({
                 success: true,
                 message: "Inscripción al taller realizada correctamente",
                 reserva: nuevaReserva
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al inscribirse en el taller", 
-                error: error.message 
+                message: "Error al inscribirse en el taller",
+                error: error.message
             });
         }
     },
@@ -615,27 +615,27 @@ const reservasPteAltoController = {
     misReservas: async (req, res) => {
         try {
             const usuarioId = req.user?.id || req.user?.userId;
-            
+
             if (!usuarioId) {
-                return res.status(401).json({ 
+                return res.status(401).json({
                     success: false,
-                    message: "Usuario no autenticado" 
+                    message: "Usuario no autenticado"
                 });
             }
-            
+
             const { estado, tipoReserva, fechaDesde, fechaHasta } = req.query;
-            
+
             // Construir query
             const query = { usuario: usuarioId };
-            
+
             if (estado) {
                 query.estado = estado;
             }
-            
+
             if (tipoReserva) {
                 query.tipoReserva = tipoReserva;
             }
-            
+
             if (fechaDesde || fechaHasta) {
                 query.fechaInicio = {};
                 if (fechaDesde) {
@@ -645,24 +645,24 @@ const reservasPteAltoController = {
                     query.fechaInicio.$lte = new Date(fechaHasta);
                 }
             }
-            
+
             const reservas = await ReservasPteAlto.find(query)
                 .populate('espacioDeportivo', 'nombre deporte')
                 .populate('taller', 'nombre fechaInicio fechaFin')
                 .sort({ fechaInicio: -1 });
-            
+
             res.status(200).json({
                 success: true,
                 reservas: reservas,
                 total: reservas.length
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al obtener las reservas", 
-                error: error.message 
+                message: "Error al obtener las reservas",
+                error: error.message
             });
         }
     },
@@ -681,51 +681,51 @@ const reservasPteAltoController = {
             const { id } = req.params;
             const { motivoCancelacion } = req.body;
             const usuarioId = req.user?.id || req.user?.userId;
-            
+
             if (!usuarioId) {
-                return res.status(401).json({ 
+                return res.status(401).json({
                     success: false,
-                    message: "Usuario no autenticado" 
+                    message: "Usuario no autenticado"
                 });
             }
-            
+
             const reserva = await ReservasPteAlto.findById(id);
-            
+
             if (!reserva) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Reserva no encontrada" 
+                    message: "Reserva no encontrada"
                 });
             }
-            
+
             // Verificar que la reserva pertenece al usuario
             if (reserva.usuario.toString() !== usuarioId.toString()) {
-                return res.status(403).json({ 
+                return res.status(403).json({
                     success: false,
-                    message: "No tienes permiso para cancelar esta reserva" 
+                    message: "No tienes permiso para cancelar esta reserva"
                 });
             }
-            
+
             // Verificar que la reserva está activa
             if (reserva.estado !== 'activa') {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "La reserva ya está cancelada" 
+                    message: "La reserva ya está cancelada"
                 });
             }
-            
+
             // Opcional: Validar que no se cancela muy cerca de la fecha (máximo 2 horas antes)
             const ahora = new Date();
             const tiempoRestante = reserva.fechaInicio - ahora;
             const dosHoras = 2 * 60 * 60 * 1000;
-            
+
             if (tiempoRestante < dosHoras && tiempoRestante > 0) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "No se puede cancelar una reserva con menos de 2 horas de anticipación" 
+                    message: "No se puede cancelar una reserva con menos de 2 horas de anticipación"
                 });
             }
-            
+
             // Cancelar la reserva
             reserva.estado = 'cancelada';
             reserva.canceladoPor = 'USER';
@@ -733,7 +733,7 @@ const reservasPteAltoController = {
                 reserva.notas = motivoCancelacion;
             }
             await reserva.save();
-            
+
             // Si es reserva de taller, remover usuario del array
             if (reserva.tipoReserva === 'taller' && reserva.taller) {
                 const taller = await TalleresDeportivosPteAlto.findById(reserva.taller);
@@ -744,23 +744,23 @@ const reservasPteAltoController = {
                     await taller.save();
                 }
             }
-            
+
             await reserva.populate('espacioDeportivo', 'nombre deporte');
             await reserva.populate('taller', 'nombre');
             await reserva.populate('usuario', 'nombre apellido');
-            
+
             res.status(200).json({
                 success: true,
                 message: "Reserva cancelada correctamente",
                 reserva: reserva
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al cancelar la reserva", 
-                error: error.message 
+                message: "Error al cancelar la reserva",
+                error: error.message
             });
         }
     },
@@ -775,31 +775,31 @@ const reservasPteAltoController = {
      */
     listarTodasReservas: async (req, res) => {
         try {
-            const { 
-                espacioDeportivo, 
-                taller, 
-                usuario, 
-                estado, 
-                tipoReserva, 
-                fechaDesde, 
-                fechaHasta 
+            const {
+                espacioDeportivo,
+                taller,
+                usuario,
+                estado,
+                tipoReserva,
+                fechaDesde,
+                fechaHasta
             } = req.query;
-            
+
             // Construir query
             const query = {};
-            
+
             if (espacioDeportivo) query.espacioDeportivo = espacioDeportivo;
             if (taller) query.taller = taller;
             if (usuario) query.usuario = usuario;
             if (estado) query.estado = estado;
             if (tipoReserva) query.tipoReserva = tipoReserva;
-            
+
             if (fechaDesde || fechaHasta) {
                 query.fechaInicio = {};
                 if (fechaDesde) query.fechaInicio.$gte = new Date(fechaDesde);
                 if (fechaHasta) query.fechaInicio.$lte = new Date(fechaHasta);
             }
-            
+
             const reservas = await ReservasPteAlto.find(query)
                 .populate({
                     path: 'usuario',
@@ -817,19 +817,19 @@ const reservasPteAltoController = {
                     model: TalleresDeportivosPteAlto
                 })
                 .sort({ fechaInicio: -1 });
-            
+
             res.status(200).json({
                 success: true,
                 reservas: reservas,
                 total: reservas.length
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al obtener las reservas", 
-                error: error.message 
+                message: "Error al obtener las reservas",
+                error: error.message
             });
         }
     },
@@ -841,30 +841,30 @@ const reservasPteAltoController = {
     obtenerReservaPorId: async (req, res) => {
         try {
             const { id } = req.params;
-            
+
             const reserva = await ReservasPteAlto.findById(id)
                 .populate('usuario', 'nombre apellido email rut telefono')
                 .populate('espacioDeportivo', 'nombre deporte direccion')
                 .populate('taller', 'nombre descripcion fechaInicio fechaFin capacidad');
-            
+
             if (!reserva) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Reserva no encontrada" 
+                    message: "Reserva no encontrada"
                 });
             }
-            
+
             res.status(200).json({
                 success: true,
                 reserva: reserva
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al obtener la reserva", 
-                error: error.message 
+                message: "Error al obtener la reserva",
+                error: error.message
             });
         }
     },
@@ -878,23 +878,23 @@ const reservasPteAltoController = {
         try {
             const { id } = req.params;
             const { motivoCancelacion } = req.body;
-            
+
             const reserva = await ReservasPteAlto.findById(id);
-            
+
             if (!reserva) {
-                return res.status(404).json({ 
+                return res.status(404).json({
                     success: false,
-                    message: "Reserva no encontrada" 
+                    message: "Reserva no encontrada"
                 });
             }
-            
+
             if (reserva.estado !== 'activa') {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     success: false,
-                    message: "La reserva ya está cancelada" 
+                    message: "La reserva ya está cancelada"
                 });
             }
-            
+
             // Cancelar la reserva
             reserva.estado = 'cancelada';
             reserva.canceladoPor = 'ADMIN';
@@ -902,7 +902,7 @@ const reservasPteAltoController = {
                 reserva.notas = motivoCancelacion;
             }
             await reserva.save();
-            
+
             // Si es reserva de taller, remover usuario del array
             if (reserva.tipoReserva === 'taller' && reserva.taller) {
                 const taller = await TalleresDeportivosPteAlto.findById(reserva.taller);
@@ -913,23 +913,305 @@ const reservasPteAltoController = {
                     await taller.save();
                 }
             }
-            
+
             await reserva.populate('usuario', 'nombre apellido email');
             await reserva.populate('espacioDeportivo', 'nombre deporte');
             await reserva.populate('taller', 'nombre');
-            
+
             res.status(200).json({
                 success: true,
                 message: "Reserva cancelada correctamente por administrador",
                 reserva: reserva
             });
-            
+
         } catch (error) {
             console.log(error);
-            res.status(500).json({ 
+            res.status(500).json({
                 success: false,
-                message: "Error al cancelar la reserva", 
-                error: error.message 
+                message: "Error al cancelar la reserva",
+                error: error.message
+            });
+        }
+    },
+
+    // ============================================
+    // RESERVAS INTERNAS (ADMIN)
+    // ============================================
+
+    /**
+     * Obtener complejo con espacios deportivos y horarios disponibles
+     * GET /reservas-pte-alto/admin/complejo/:complejoId/espacios-disponibles?fechaInicio=2025-01-15&fechaFin=2025-01-20
+     */
+    obtenerComplejoConEspaciosDisponibles: async (req, res) => {
+        try {
+            const { complejoId } = req.params;
+            const { fechaInicio, fechaFin } = req.query;
+
+            const ComplejosDeportivosPteAlto = require('../complejos-deportivos/complejosDeportivosPteAlto');
+            const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
+
+            // Obtener el complejo
+            const complejo = await ComplejosDeportivosPteAlto.findById(complejoId)
+                .populate('espaciosDeportivos');
+
+            if (!complejo) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Complejo deportivo no encontrado"
+                });
+            }
+
+            // Obtener todos los espacios del complejo
+            const espacios = await EspaciosDeportivosPteAlto.find({
+                complejoDeportivo: complejoId,
+                status: { $in: ['activo', 'interno'] } // Solo espacios activos o internos
+            });
+
+            // Si hay fechas, calcular horarios disponibles
+            let espaciosConDisponibilidad = espacios;
+            if (fechaInicio && fechaFin) {
+                const inicio = new Date(fechaInicio);
+                const fin = new Date(fechaFin);
+
+                espaciosConDisponibilidad = await Promise.all(
+                    espacios.map(async (espacio) => {
+                        const ocupados = await obtenerHorariosOcupados(espacio._id, inicio, fin);
+                        
+                        // Calcular slots disponibles por día
+                        const slotsPorDia = [];
+                        const fechaActual = new Date(inicio);
+                        
+                        while (fechaActual <= fin) {
+                            const inicioDia = new Date(fechaActual);
+                            inicioDia.setHours(0, 0, 0, 0);
+                            const finDia = new Date(fechaActual);
+                            finDia.setHours(23, 59, 59, 999);
+
+                            const ocupadosDia = ocupados.filter(ocupado => {
+                                const inicioOcupado = new Date(ocupado.fechaInicio);
+                                const finOcupado = new Date(ocupado.fechaFin);
+                                return inicioOcupado >= inicioDia && finOcupado <= finDia;
+                            });
+
+                            const horarioApertura = espacio.horarioApertura || '08:00';
+                            const horarioCierre = espacio.horarioCierre || '22:00';
+                            const [horaApertura] = horarioApertura.split(':').map(Number);
+                            const [horaCierre] = horarioCierre.split(':').map(Number);
+
+                            const slotsDisponibles = [];
+                            for (let hora = horaApertura; hora < horaCierre; hora++) {
+                                const slotInicio = new Date(inicioDia);
+                                slotInicio.setHours(hora, 0, 0, 0);
+                                const slotFin = new Date(inicioDia);
+                                slotFin.setHours(hora + 1, 0, 0, 0);
+
+                                const estaOcupado = ocupadosDia.some(ocupado => {
+                                    const inicioOcupado = new Date(ocupado.fechaInicio);
+                                    const finOcupado = new Date(ocupado.fechaFin);
+                                    return (slotInicio >= inicioOcupado && slotInicio < finOcupado) ||
+                                        (slotFin > inicioOcupado && slotFin <= finOcupado) ||
+                                        (slotInicio <= inicioOcupado && slotFin >= finOcupado);
+                                });
+
+                                slotsDisponibles.push({
+                                    inicio: `${hora.toString().padStart(2, '0')}:00`,
+                                    fin: `${(hora + 1).toString().padStart(2, '0')}:00`,
+                                    disponible: !estaOcupado
+                                });
+                            }
+
+                            slotsPorDia.push({
+                                fecha: new Date(fechaActual),
+                                slots: slotsDisponibles
+                            });
+
+                            fechaActual.setDate(fechaActual.getDate() + 1);
+                        }
+
+                        return {
+                            ...espacio.toObject(),
+                            horariosDisponibles: slotsPorDia
+                        };
+                    })
+                );
+            }
+
+            res.status(200).json({
+                success: true,
+                complejo: {
+                    _id: complejo._id,
+                    nombre: complejo.nombre,
+                    descripcion: complejo.descripcion,
+                    direccion: complejo.direccion,
+                    horarioApertura: complejo.horarioApertura,
+                    horarioCierre: complejo.horarioCierre
+                },
+                espacios: espaciosConDisponibilidad
+            });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: "Error al obtener complejo con espacios disponibles",
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * Crear reserva interna (individual o bloque)
+     * POST /reservas-pte-alto/admin/crear-reserva-interna
+     * Body: { 
+     *   espaciosDeportivos: [ObjectId] o espacioDeportivo: ObjectId,
+     *   fechaInicio, fechaFin, 
+     *   tipoReservaInterna: 'tercero' | 'convenio' | 'cliente' | 'arrendatario' | 'mantenimiento',
+     *   reservadoPor: ObjectId (admin),
+     *   reservadoPara: String,
+     *   notas?: String
+     * }
+     */
+    crearReservaInterna: async (req, res) => {
+        try {
+            const {
+                espaciosDeportivos, // Array para bloque
+                espacioDeportivo, // Individual
+                fechaInicio,
+                fechaFin,
+                tipoReservaInterna,
+                reservadoPor,
+                reservadoPara,
+                notas
+            } = req.body;
+
+            // Validar campos requeridos
+            if (!fechaInicio || !fechaFin || !tipoReservaInterna || !reservadoPor || !reservadoPara) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Los campos 'fechaInicio', 'fechaFin', 'tipoReservaInterna', 'reservadoPor' y 'reservadoPara' son requeridos"
+                });
+            }
+
+            // Validar que se proporcione al menos un espacio
+            if (!espaciosDeportivos && !espacioDeportivo) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Debe proporcionar 'espaciosDeportivos' (array) o 'espacioDeportivo' (individual)"
+                });
+            }
+
+            // Validar tipo de reserva interna
+            const tiposValidos = ['usuario', 'tercero', 'convenio', 'cliente', 'arrendatario', 'mantenimiento'];
+            if (!tiposValidos.includes(tipoReservaInterna)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `tipoReservaInterna debe ser uno de: ${tiposValidos.join(', ')}`
+                });
+            }
+
+            // Verificar que el usuario admin existe
+            const usuarioAdmin = await UsuariosPteAlto.findById(reservadoPor);
+            if (!usuarioAdmin) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Usuario administrador no encontrado"
+                });
+            }
+
+            const inicio = new Date(fechaInicio);
+            const fin = new Date(fechaFin);
+
+            // Validar fechas
+            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Las fechas proporcionadas no son válidas"
+                });
+            }
+
+            if (inicio >= fin) {
+                return res.status(400).json({
+                    success: false,
+                    message: "La fecha de inicio debe ser anterior a la fecha de fin"
+                });
+            }
+
+            // Determinar espacios a reservar
+            const espaciosAReservar = espaciosDeportivos || [espacioDeportivo];
+
+            // Verificar disponibilidad y crear reservas
+            const reservasCreadas = [];
+            const errores = [];
+
+            for (const espacioId of espaciosAReservar) {
+                // Verificar que el espacio existe
+                const espacio = await EspaciosDeportivosPteAlto.findById(espacioId);
+                if (!espacio) {
+                    errores.push({
+                        espacioId,
+                        error: "Espacio no encontrado"
+                    });
+                    continue;
+                }
+
+                // Verificar disponibilidad (excepto para mantenimiento que puede sobrescribir)
+                if (tipoReservaInterna !== 'mantenimiento') {
+                    const disponibilidad = await verificarDisponibilidadEspacio(espacioId, inicio, fin);
+                    if (!disponibilidad.disponible) {
+                        errores.push({
+                            espacioId,
+                            error: "Espacio no disponible",
+                            conflictos: disponibilidad.conflictos
+                        });
+                        continue;
+                    }
+                }
+
+                // Crear la reserva interna
+                const nuevaReserva = new ReservasPteAlto({
+                    espacioDeportivo: espacioId,
+                    fechaInicio: inicio,
+                    fechaFin: fin,
+                    tipoReserva: 'espacio',
+                    estado: 'activa',
+                    esReservaInterna: true,
+                    tipoReservaInterna: tipoReservaInterna,
+                    reservadoPor: reservadoPor,
+                    reservadoPara: reservadoPara,
+                    notas: notas || null
+                });
+
+                await nuevaReserva.save();
+                await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
+                await nuevaReserva.populate('reservadoPor', 'nombre apellido email');
+
+                reservasCreadas.push(nuevaReserva);
+            }
+
+            if (reservasCreadas.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No se pudo crear ninguna reserva",
+                    errores
+                });
+            }
+
+            res.status(201).json({
+                success: true,
+                message: reservasCreadas.length === 1 
+                    ? "Reserva interna creada correctamente" 
+                    : `${reservasCreadas.length} reservas internas creadas correctamente`,
+                reservas: reservasCreadas,
+                total: reservasCreadas.length,
+                errores: errores.length > 0 ? errores : undefined
+            });
+
+        } catch (error) {
+            console.error('Error al crear reserva interna:', error);
+            res.status(500).json({
+                success: false,
+                message: "Error al crear la reserva interna",
+                error: error.message
             });
         }
     }

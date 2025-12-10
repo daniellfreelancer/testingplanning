@@ -33,10 +33,20 @@ const complejosDeportivosPteAltoController = {
     //obtener todos los complejos deportivos PTE Alto
     obtenerTodosLosComplejosDeportivosPteAlto: async (req, res) => {
         try {
-            const complejosDeportivosPteAlto = await ComplejosDeportivosPteAlto.find();
+            const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
+            
+            const complejosDeportivosPteAlto = await ComplejosDeportivosPteAlto.find({ status: true })
+                .populate({
+                    path: 'espaciosDeportivos',
+                    model: EspaciosDeportivosPteAlto,
+                    match: { status: { $in: ['activo', 'interno'] } }
+                });
+            
             res.status(200).json({ 
-                message: "Complejos deportivos PTE Alto obtenidos correctamente", response:complejosDeportivosPteAlto,
-                success: true });
+                message: "Complejos deportivos PTE Alto obtenidos correctamente", 
+                response: complejosDeportivosPteAlto,
+                success: true 
+            });
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al obtener los complejos deportivos PTE Alto", error });
@@ -46,11 +56,27 @@ const complejosDeportivosPteAltoController = {
     obtenerComplejoDeportivoPteAltoPorId: async (req, res) => {
         try {
             const { id } = req.params;
-            const complejoDeportivoPteAlto = await ComplejosDeportivosPteAlto.findById(id);
+            const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
+            
+            const complejoDeportivoPteAlto = await ComplejosDeportivosPteAlto.findById(id)
+                .populate({
+                    path: 'espaciosDeportivos',
+                    model: EspaciosDeportivosPteAlto,
+                    match: { status: { $in: ['activo', 'interno'] } }
+                });
+            
+            if (!complejoDeportivoPteAlto) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Complejo deportivo no encontrado"
+                });
+            }
+            
             res.status(200).json({ 
                 message: "Complejo deportivo PTE Alto obtenido correctamente", 
                 response: complejoDeportivoPteAlto,
-                success: true });
+                success: true 
+            });
         } catch (error) {
             console.log(error);
             res.status(500).json({ message: "Error al obtener el complejo deportivo PTE Alto", error });

@@ -1,44 +1,40 @@
-const Moments = require('../models/moments')
-const { S3Client, PutObjectCommand, PutObjectRetentionCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const crypto = require('crypto')
+const Moments = require('../models/moments');
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
 const sharp = require('sharp');
 
-const bucketRegion = process.env.AWS_BUCKET_REGION
-const bucketName = process.env.AWS_BUCKET_NAME
-const publicKey = process.env.AWS_PUBLIC_KEY
-const privateKey = process.env.AWS_SECRET_KEY
+// usamos el helper centralizado
+const { s3Client, uploadMulterFile, getSignedUrlForKey } = require('../utils/s3Client');
 
-const clientAWS = new S3Client({
-  region: bucketRegion,
-  credentials: {
-    accessKeyId: publicKey,
-    secretAccessKey: privateKey,
-  },
-})
+const bucketName = process.env.AWS_BUCKET_NAME;
 
+const quizIdentifier = () => crypto.randomBytes(32).toString('hex');
 
-const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+async function attachSignedMomentUrl(momentDoc) {
+  if (!momentDoc || !momentDoc.momentImg) return momentDoc;
+
+  const plain = momentDoc.toObject ? momentDoc.toObject() : momentDoc;
+  plain.momentImg = await getSignedUrlForKey(plain.momentImg);
+  return plain;
+}
 
 const momentscontroller = {
   addMoment: async (req, res) => {
-
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'Sin imagen cargada' });
       }
 
-      const optimizedImage = await sharp(req.file.buffer).toBuffer();
       const fileContent = req.file.buffer;
       const extension = req.file.originalname.split('.').pop();
-      //  const fileName = `moment-image-${quizIdentifier()}.${extension}`;
 
-      let fileName;
-      let optimizedImageBuffer;
-
+      // Leer metadata EXIF para corrección de orientación
       const exif = await sharp(fileContent).metadata();
-      console.log('Información EXIF:', exif); // Muestra la información EXIF por consola
+      console.log('Información EXIF:', exif);
 
       const orientation = exif ? exif.orientation : 1;
+
+      let optimizedImageBuffer;
 
       // Si la orientación de la imagen es horizontal, rotarla 90 grados
       if (orientation === 6 || orientation === 8) {
@@ -52,28 +48,30 @@ const momentscontroller = {
           .toBuffer();
       }
 
-      fileName = `post-image-${quizIdentifier()}.${extension}`;
-
-      const uploadParams = {
-        Bucket: bucketName,
-        Key: fileName,
-        Body: optimizedImageBuffer,
+      // armamos un "fake file" para reutilizar uploadMulterFile
+      const fakeFile = {
+        originalname: req.file.originalname,
+        buffer: optimizedImageBuffer,
+        mimetype: req.file.mimetype,
+        fieldname: req.file.fieldname || 'moment-image',
       };
 
-      // Subir la imagen a S3
-      const uploadCommand = new PutObjectCommand(uploadParams);
-      await clientAWS.send(uploadCommand);
+      // puedes dejar que el helper genere el nombre random,
+      // o pasar uno más "legible" como override:
+      const key = await uploadMulterFile(
+        fakeFile,
+        `post-image-${quizIdentifier()}.${extension}`
+      );
 
-      const { user, classroom, workshop } = req.body; // Asegúrate de que el cliente proporcione el ID de usuario
+      const { user, classroom, workshop } = req.body;
 
       const newMoment = new Moments({
-        user: user,
-        momentImg: fileName,
-        classroom: classroom,
-        workshop: workshop,
+        user,
+        momentImg: key, // guardamos el key de S3
+        classroom,
+        workshop,
       });
 
-      // Guardar el momento en la base de datos
       await newMoment.save();
 
       // Buscar momentos del usuario creados hace 7 días o más y eliminarlos
@@ -81,7 +79,7 @@ const momentscontroller = {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
       const oldMoments = await Moments.find({
-        user: user,
+        user,
         createdAt: { $lte: sevenDaysAgo },
       });
 
@@ -92,7 +90,7 @@ const momentscontroller = {
           Key: oldMoment.momentImg,
         };
 
-        await clientAWS.send(new DeleteObjectCommand(deleteParams));
+        await s3Client.send(new DeleteObjectCommand(deleteParams));
 
         // Eliminar el momento de la base de datos
         await Moments.findByIdAndDelete(oldMoment._id);
@@ -104,70 +102,76 @@ const momentscontroller = {
       return res.status(500).json({ message: 'Error adding moment' });
     }
   },
+
   getAllMoments: async (req, res) => {
     try {
-
-      // Utilizamos el método `find` para obtener todos los momentos
-      const moments = await Moments.find()
+      let moments = await Moments.find()
         .populate({
           path: 'user',
-          select: '_id name lastName imgUrl', // Seleccionamos los campos que deseamos mostrar del usuario
+          select: '_id name lastName imgUrl',
         })
-        .sort({ createdAt: -1 }) // Ordenamos por fecha de creación de mayor a menor
+        .sort({ createdAt: -1 })
         .exec();
 
-      // Respondemos con los momentos y los datos del usuario
+      // firmar las URLs para bucket privado
+      moments = await Promise.all(moments.map(m => attachSignedMomentUrl(m)));
+
       return res.status(200).json({ moments });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Error fetching moments' });
     }
   },
+
   getMomentsByType: async (req, res) => {
     try {
-
-      // Recibir el parámetro para filtrar (puede ser 'classroom' o 'workshop')
-      const filterType = req.query.filterType; // o req.params.filterType, dependiendo de cómo lo envíes
-      const filterValue = req.query.filterValue; // El valor del ID de classroom o workshop
+      const filterType = req.query.filterType;
+      const filterValue = req.query.filterValue;
 
       let filter = {};
       if (filterType && filterValue) {
         filter[filterType] = filterValue;
       }
 
-      // Utilizamos el método `find` para obtener todos los momentos
-      const moments = await Moments.find(filter)
+      let moments = await Moments.find(filter)
         .populate({
           path: 'user',
-          select: '_id name lastName imgUrl', // Seleccionamos los campos que deseamos mostrar del usuario
+          select: '_id name lastName imgUrl',
         })
-        .sort({ createdAt: -1 }) // Ordenamos por fecha de creación de mayor a menor
+        .sort({ createdAt: -1 })
         .exec();
 
-      // Respondemos con los momentos y los datos del usuario
+      moments = await Promise.all(moments.map(m => attachSignedMomentUrl(m)));
+
       return res.status(200).json({ moments });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Error fetching moments' });
     }
   },
+
   deleteMoment: async (req, res) => {
     try {
       const { momentId, userId } = req.params;
 
-      // Buscar el momento por su _id
       const moment = await Moments.findById(momentId);
 
       if (!moment) {
         return res.status(404).json({ message: 'Moment not found' });
       }
 
-      // Verificar si el usuario que realiza la solicitud es el creador del momento
       if (moment.user.toString() !== userId.toString()) {
-        return res.status(403).json({ message: 'No puedes eliminar este momento' });
+        return res
+          .status(403)
+          .json({ message: 'No puedes eliminar este momento' });
       }
 
-      // Eliminar el momento
+      const deleteParams = {
+        Bucket: bucketName,
+        Key: moment.momentImg,
+      };
+      await s3Client.send(new DeleteObjectCommand(deleteParams));
+
       await Moments.findByIdAndDelete(momentId);
 
       return res.status(200).json({ message: 'Momento eliminado correctamente' });
@@ -175,8 +179,7 @@ const momentscontroller = {
       console.error(error);
       return res.status(500).json({ message: 'Error deleting moment' });
     }
-  }
-}
+  },
+};
 
-
-module.exports = momentscontroller
+module.exports = momentscontroller;
