@@ -6,33 +6,36 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
 const path = require('path');
 
-const bucketRegion = process.env.AWS_BUCKET_REGION
-const bucketName = process.env.AWS_BUCKET_NAME
-const publicKey = process.env.AWS_PUBLIC_KEY
-const privateKey = process.env.AWS_SECRET_KEY
+// const bucketRegion = process.env.AWS_BUCKET_REGION
+// const bucketName = process.env.AWS_BUCKET_NAME
+// const publicKey = process.env.AWS_PUBLIC_KEY
+// const privateKey = process.env.AWS_SECRET_KEY
 
-const clientAWS = new S3Client({
-  region: bucketRegion,
-  credentials: {
-    accessKeyId: publicKey,
-    secretAccessKey: privateKey,
-  },
-})
+// const clientAWS = new S3Client({
+//   region: bucketRegion,
+//   credentials: {
+//     accessKeyId: publicKey,
+//     secretAccessKey: privateKey,
+//   },
+// })
 
-const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+// const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
+const { uploadMulterFile, getSignedUrlForKey } = require('../utils/s3Client');
+
 
 const clubQueryPopulate = [
     {
-        path : 'categories teachers students institution',
-        select : 'name lastName email gender age size gender'
+        path: 'categories teachers students institution',
+        select: 'name lastName email gender age size gender'
     }
 
 ]
 
 const ClubController = {
-    createClub : async (req, res) => {
+    createClub: async (req, res) => {
 
-        const {institutionId} = req.params
+        const { institutionId } = req.params
 
         try {
 
@@ -41,13 +44,13 @@ const ClubController = {
             if (club) {
 
                 const institution = await Institution.findById(institutionId)
-             
+
                 if (!institution) {
                     return res.status(404).json({
-                      message: 'Institución no encontrada',
-                      success: false
+                        message: 'Institución no encontrada',
+                        success: false
                     });
-                  }
+                }
                 institution.clubs.push(club._id)
 
                 await institution.save()
@@ -67,17 +70,17 @@ const ClubController = {
                     success: false
                 })
             }
-            
+
         } catch (error) {
             console.log(error)
             res.status(400).json({
                 message: error.message,
                 success: false
             })
-            
+
         }
     },
-    getClubs : async (req, res) => {
+    getClubs: async (req, res) => {
         try {
 
             let clubs = await Clubs.find()
@@ -94,17 +97,17 @@ const ClubController = {
                     success: false
                 })
             }
-            
+
         } catch (error) {
             console.log(error)
             res.status(400).json({
                 message: error.message,
                 success: false
             })
-            
+
         }
     },
-    getClubById : async (req, res) => {
+    getClubById: async (req, res) => {
         try {
 
             let club = await Clubs.findById(req.params.id).populate(clubQueryPopulate)
@@ -121,57 +124,97 @@ const ClubController = {
                     success: false
                 })
             }
-            
+
         } catch (error) {
             console.log(error)
             res.status(400).json({
                 message: error.message,
                 success: false
             })
-            
+
         }
     },
+    // updateClubLogo: async (req, res) => {
+    //     try {
+    //         // Actualizar solo los campos de texto
+    //         let club = await Clubs.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+    //         // Verificar si se ha recibido un archivo
+    //         if (req.file) {
+    //             const fileContent = req.file.buffer;
+    //             const extension = req.file.originalname.split('.').pop();
+    //             const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+    //             const params = {
+    //                 Bucket: bucketName,
+    //                 Key: fileName,
+    //                 Body: fileContent,
+    //                 ContentType: req.file.mimetype,
+    //             };
+
+    //             await clientAWS.send(new PutObjectCommand(params));
+    //             club.logo = fileName; // Actualizar el logo en el objeto club
+    //             await club.save(); // Guardar los cambios en el club
+    //         }
+
+    //         // Enviar la respuesta exitosa después de la actualización
+    //         res.status(200).json({
+    //             message: "Club actualizado con éxito",
+    //             response: club,
+    //             success: true
+    //         });
+
+    //     } catch (error) {
+    //         console.log(error);
+    //         res.status(400).json({
+    //             message: error.message,
+    //             success: false
+    //         });
+    //     }
+    // },
     updateClubLogo: async (req, res) => {
         try {
             // Actualizar solo los campos de texto
             let club = await Clubs.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    
-            // Verificar si se ha recibido un archivo
-            if (req.file) {
-                const fileContent = req.file.buffer;
-                const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-    
-                const params = {
-                    Bucket: bucketName,
-                    Key: fileName,
-                    Body: fileContent,
-                    ContentType: req.file.mimetype,
-                };
-    
-                await clientAWS.send(new PutObjectCommand(params));
-                club.logo = fileName; // Actualizar el logo en el objeto club
-                await club.save(); // Guardar los cambios en el club
+
+            if (!club) {
+                return res.status(404).json({
+                    message: "No se encontró el club",
+                    success: false,
+                });
             }
-    
-            // Enviar la respuesta exitosa después de la actualización
+
+            // Si viene archivo, lo subimos a S3
+            if (req.file) {
+                // opcional: keyOverride para que quede ordenado en S3
+                const key = await uploadMulterFile(
+                    req.file,
+                    `clubs/${club._id}/logo` // si no quieres override, puedes pasar solo req.file
+                );
+
+                club.logo = key;
+                await club.save();
+            }
+
             res.status(200).json({
                 message: "Club actualizado con éxito",
                 response: club,
-                success: true
+                success: true,
             });
-    
+
         } catch (error) {
             console.log(error);
             res.status(400).json({
                 message: error.message,
-                success: false
+                success: false,
             });
         }
     },
-    deleteClub : async (req, res) => {
 
-        let {institutionId, clubId} = req.params
+
+    deleteClub: async (req, res) => {
+
+        let { institutionId, clubId } = req.params
         try {
 
             const institution = await Institution.findById(institutionId)
@@ -187,7 +230,7 @@ const ClubController = {
                     })
                 }
             }
-             
+
             let club = await Clubs.findByIdAndDelete(clubId)
             if (club) {
                 res.status(200).json({
@@ -206,14 +249,14 @@ const ClubController = {
                 message: error.message,
                 success: false
             })
-            
+
         }
     },
     getClubByInstitution: async (req, res) => {
 
         try {
 
-            let {institutionId} = req.params;
+            let { institutionId } = req.params;
 
             let clubs = await Clubs.find({ institution: institutionId })
             if (clubs.length > 0) {
@@ -228,21 +271,21 @@ const ClubController = {
                     success: false
                 })
             }
-            
+
         } catch (error) {
             console.log(error)
             res.status(400).json({
                 message: error.message,
                 success: false
             })
-            
+
         }
 
 
     },
     addPlayer: async (req, res) => {
         try {
-            const {clubId, playerId } = req.params;
+            const { clubId, playerId } = req.params;
 
             const club = await Clubs.findById(clubId)
 
@@ -269,13 +312,13 @@ const ClubController = {
             res.status(201).json({
                 message: 'Jugador agregado al club con éxito',
                 success: true,
-                response:{
+                response: {
                     club: club,
                     player: player
                 }
             })
 
-            
+
         } catch (error) {
             console.error(error);
             res.status(500).json({
@@ -283,7 +326,7 @@ const ClubController = {
                 error: error.message,
                 success: false
             });
-            
+
         }
     },
     // delete player from club
@@ -312,12 +355,12 @@ const ClubController = {
             res.status(200).json({
                 message: 'Jugador eliminado del club con éxito',
                 success: true,
-                response:{
+                response: {
                     club: club,
                     player: player
                 }
             });
-            
+
         } catch (error) {
             console.error(error);
             res.status(500).json({
@@ -325,13 +368,13 @@ const ClubController = {
                 error: error.message,
                 success: false
             });
-            
+
         }
     },
     //Add teacher to club
     addTeacherToClub: async (req, res) => {
         try {
-            const {clubId, teacherId } = req.params;
+            const { clubId, teacherId } = req.params;
 
             const club = await Clubs.findById(clubId)
 
@@ -358,12 +401,12 @@ const ClubController = {
             res.status(201).json({
                 message: 'Entrenador agregado al club con éxito',
                 success: true,
-                response:{
+                response: {
                     club: club,
                     teacher: teacher
                 }
             })
-            
+
         } catch (error) {
             console.error(error);
             res.status(500).json({
@@ -371,7 +414,7 @@ const ClubController = {
                 error: error.message,
                 success: false
             });
-            
+
         }
     },
     // delete teacher from club
@@ -395,17 +438,17 @@ const ClubController = {
                     message: 'Entrenador no encontrado',
                     success: false
                 });
-            }            
+            }
 
             res.status(200).json({
                 message: 'Entrenador eliminado del club con éxito',
                 success: true,
-                response:{
+                response: {
                     club: club,
                     teacher: teacher
                 }
             });
-            
+
         } catch (error) {
             console.error(error);
             res.status(500).json({
@@ -413,7 +456,7 @@ const ClubController = {
                 error: error.message,
                 success: false
             });
-            
+
         }
     }
 
