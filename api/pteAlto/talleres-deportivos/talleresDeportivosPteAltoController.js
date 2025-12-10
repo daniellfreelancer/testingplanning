@@ -34,6 +34,12 @@ const talleresDeportivosPteAltoController = {
             if (typeof bodyData.dias === 'string') {
                 bodyData.dias = JSON.parse(bodyData.dias);
             }
+            if (typeof bodyData.horaInicio === 'string') {
+                bodyData.horaInicio = JSON.parse(bodyData.horaInicio);
+            }
+            if (typeof bodyData.horaFin === 'string') {
+                bodyData.horaFin = JSON.parse(bodyData.horaFin);
+            }
 
             const nuevoTallerDeportivoPteAlto = new TalleresDeportivos(bodyData);
 
@@ -169,6 +175,20 @@ const talleresDeportivosPteAltoController = {
 
             const { id } = req.params;
             let updateData = { ...req.body };
+
+            // Parsear arrays JSON si vienen como strings
+            if (typeof updateData.horarios === 'string') {
+                updateData.horarios = JSON.parse(updateData.horarios);
+            }
+            if (typeof updateData.dias === 'string') {
+                updateData.dias = JSON.parse(updateData.dias);
+            }
+            if (typeof updateData.horaInicio === 'string') {
+                updateData.horaInicio = JSON.parse(updateData.horaInicio);
+            }
+            if (typeof updateData.horaFin === 'string') {
+                updateData.horaFin = JSON.parse(updateData.horaFin);
+            }
 
             // Si se suben nuevas imágenes, procesarlas
             if (req.files && req.files.length > 0) {
