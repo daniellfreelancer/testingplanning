@@ -1,208 +1,143 @@
-const User = require('../models/admin')
-const crypto = require('crypto')
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-
-const bucketRegion = process.env.AWS_BUCKET_REGION
-const bucketName = process.env.AWS_BUCKET_NAME
-const publicKey = process.env.AWS_PUBLIC_KEY
-const privateKey = process.env.AWS_SECRET_KEY
-
-const clientAWS = new S3Client({
-    region: bucketRegion,
-    credentials: {
-        accessKeyId: publicKey,
-        secretAccessKey: privateKey,
-    },
-})
-
-const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+const User = require('../models/admin');
+const { uploadMulterFile } = require('../utils/s3Client'); 
 
 const docsController = {
-    idFrontUpload: async (req, res) => {
-        const { id } = req.params
-        try {
-            let user = await User.findByIdAndUpdate(id)
-            if (user && req.file) {
+  idFrontUpload: async (req, res) => {
+    const { id } = req.params;
+    try {
+      let user = await User.findById(id);
 
-                const fileContent = req.file.buffer;
-                const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+      if (user && req.file) {
+        // subir el archivo a S3 (bucket privado)
+        const key = await uploadMulterFile(
+          req.file,
+          `docs/${id}/id-front`
+        );
 
-                const uploadParams = {
-                    Bucket: process.env.AWS_BUCKET_NAME,
-                    Key: fileName,
-                    Body: fileContent,
-                };
+        user.idFront = key;
+        await user.save();
 
-                // Subir el archivo a S3
-                const uploadCommand = new PutObjectCommand(uploadParams);
-                await clientAWS.send(uploadCommand);
-                user.idFront = fileName
-                await user.save()
+        res.status(200).json({
+          message: 'Archivo cargado con exito',
+          success: true,
+          response: key,
+        });
+      } else {
+        res.status(400).json({
+          message: 'No se pudo cargar el archivo',
+          success: false,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al cargar el archivo',
+        success: false,
+      });
+    }
+  },
 
-                res.status(200).json({
-                    message: 'Archivo cargado con exito',
-                    success: true,
-                    response: fileName
-                });
+  idBackUpload: async (req, res) => {
+    const { id } = req.params;
+    try {
+      let user = await User.findById(id);
 
-            } else {
-                res.status(400).json({
-                    message: 'No se pudo cargar el archivo',
-                    success: false,
-                });
-            }
-        } catch (error) {
+      if (user && req.file) {
+        const key = await uploadMulterFile(
+          req.file,
+          `docs/${id}/id-back`
+        );
 
-            console.log(error)
-            res.status(500).json({
-                message: 'Error al cargar el archivo',
-                success: false,
-            });
-        }
-    },
-    idBackUpload: async (req, res) => {
-        const { id } = req.params
-        try {
+        user.idBack = key;
+        await user.save();
 
-            let user = await User.findByIdAndUpdate(id)
+        res.status(200).json({
+          message: 'Archivo cargado con exito',
+          success: true,
+          response: key,
+        });
+      } else {
+        res.status(400).json({
+          message: 'No se pudo cargar el archivo',
+          success: false,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al cargar el archivo',
+        success: false,
+      });
+    }
+  },
 
-            if (user && req.file) {
-                const fileContent = req.file.buffer;
-                const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+  backgroundUpload: async (req, res) => {
+    const { id } = req.params;
+    try {
+      let user = await User.findById(id);
 
-                const uploadParams = {
-                    Bucket: process.env.AWS_BUCKET_NAME,
-                    Key: fileName,
-                    Body: fileContent,
-                };
+      if (user && req.file) {
+        const key = await uploadMulterFile(
+          req.file,
+          `docs/${id}/background`
+        );
 
-                // Subir el archivo a S3
-                const uploadCommand = new PutObjectCommand(uploadParams);
-                await clientAWS.send(uploadCommand);
-                user.idBack = fileName
+        user.backgroundDoc = key;
+        await user.save();
 
-                await user.save()
+        res.status(200).json({
+          message: 'Archivo cargado con exito',
+          success: true,
+          response: key,
+        });
+      } else {
+        res.status(400).json({
+          message: 'No se pudo cargar el archivo',
+          success: false,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al cargar el archivo',
+        success: false,
+      });
+    }
+  },
 
-                res.status(200).json({
-                    message: 'Archivo cargado con exito',
-                    success: true,
-                    response: fileName
-                });
+  otherDocsUpload: async (req, res) => {
+    const { id } = req.params;
+    try {
+      let user = await User.findById(id);
 
-            } else {
-                res.status(400).json({
-                    message: 'No se pudo cargar el archivo',
-                    success: false,
-                });
-            }
-        } catch (error) {
+      if (user && req.file) {
+        const key = await uploadMulterFile(
+          req.file,
+          `docs/${id}/other-${Date.now()}`
+        );
 
-            console.log(error)
-            res.status(500).json({
-                message: 'Error al cargar el archivo',
-                success: false,
-            });
+        user.otherDocs = key;
+        await user.save();
 
-        }
-
-
-    },
-    backgroundUpload: async (req, res) => {
-        const { id } = req.params;
-        try {
-
-            let user = await User.findByIdAndUpdate(id)
-
-            if (user && req.file) {
-
-                const fileContent = req.file.buffer;
-                const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-
-                const uploadParams = {
-                    Bucket: process.env.AWS_BUCKET_NAME,
-                    Key: fileName,
-                    Body: fileContent,
-                };
-
-                // Subir el archivo a S3
-                const uploadCommand = new PutObjectCommand(uploadParams);
-                await clientAWS.send(uploadCommand);
-
-                user.backgroundDoc = fileName
-
-                await user.save()
-                res.status(200).json({
-                    message: 'Archivo cargado con exito',
-                    success: true,
-                    response: fileName
-                });
-
-            } else {
-                res.status(400).json({
-                    message: 'No se pudo cargar el archivo',
-                    success: false,
-                });
-            }
-        } catch (error) {
-
-            console.log(error)
-            res.status(500).json({
-                message: 'Error al cargar el archivo',
-                success: false,
-            });
-
-        }
-    },
-    otherDocsUpload: async (req, res) => {
-        const { id } = req.params;
-        try {
-
-            let user = await User.findByIdAndUpdate(id)
-
-            if (user && req.file) {
-
-                const fileContent = req.file.buffer;
-                const extension = req.file.originalname.split('.').pop();
-                const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-
-                const uploadParams = {
-                    Bucket: process.env.AWS_BUCKET_NAME,
-                    Key: fileName,
-                    Body: fileContent,
-                };
-
-                // Subir el archivo a S3
-                const uploadCommand = new PutObjectCommand(uploadParams);
-                await clientAWS.send(uploadCommand);
-
-                user.otherDocs = fileName
-
-                await user.save()
-                res.status(200).json({
-                    message: 'Archivo cargado con exito',
-                    success: true,
-                    response: fileName
-                });
-
-            } else {
-                res.status(400).json({
-                    message: 'No se pudo cargar el archivo',
-                    success: false,
-                });
-            }
-        } catch (error) {
-
-            console.log(error)
-            res.status(500).json({
-                message: 'Error al cargar el archivo',
-                success: false,
-            });
-
-        }
-    },
-}
+        res.status(200).json({
+          message: 'Archivo cargado con exito',
+          success: true,
+          response: key,
+        });
+      } else {
+        res.status(400).json({
+          message: 'No se pudo cargar el archivo',
+          success: false,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al cargar el archivo',
+        success: false,
+      });
+    }
+  },
+};
 
 module.exports = docsController;

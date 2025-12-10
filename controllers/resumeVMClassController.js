@@ -1,16 +1,18 @@
 const ResumeVmClass = require('../models/resumeVMclass');
-const ClassRoom = require('../models/classroom')
-const Workshop = require('../models/workshop')
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const upLoadFiles = require('../s3')
-const crypto = require('crypto')
-const Survey = require('../models/survey')
+const ClassRoom = require('../models/classroom');
+const Workshop = require('../models/workshop');
+const Survey = require('../models/survey');
+
+// nuevo helper centralizado VMCLASS
+const {
+  uploadMulterFileVmclass,
+} = require('../utils/s3ClientVMclass');
 
 const resumeQueryPopulate = [
   {
-    path: 'byTeacher plannerClass'
-  }
-]
+    path: 'byTeacher plannerClass',
+  },
+];
 
 const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId) => {
   const surveys = [];
@@ -23,8 +25,6 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
   let moodLevel = 0;
 
   for (const studentId of arrayStudentsForSurvey) {
-
-
     if (studentId.attendance == 'true') {
       const newSurvey = new Survey({
         classroom: classroomId,
@@ -35,8 +35,8 @@ const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classr
         fatigueLevel,
         muscleLevel,
         moodLevel,
-        status
-      })
+        status,
+      });
 
       surveys.push(newSurvey);
     }
@@ -56,8 +56,6 @@ const createSurveysForStudentsWorkshop = async (resumeId, arrayStudentsForSurvey
   let moodLevel = 0;
 
   for (const studentId of arrayStudentsForSurvey) {
-
-
     if (studentId.attendance == 'true') {
       const newSurvey = new Survey({
         workshop: workshopId,
@@ -68,8 +66,8 @@ const createSurveysForStudentsWorkshop = async (resumeId, arrayStudentsForSurvey
         fatigueLevel,
         muscleLevel,
         moodLevel,
-        status
-      })
+        status,
+      });
 
       surveys.push(newSurvey);
     }
@@ -78,22 +76,9 @@ const createSurveysForStudentsWorkshop = async (resumeId, arrayStudentsForSurvey
   await Survey.insertMany(surveys);
 };
 
-
 const resumeVMClassController = {
-
   createResume: async (req, res) => {
-
-    const clientAWS = new S3Client({
-      region: process.env.AWS_BUCKET_REGION_VMCLASS,
-      credentials: {
-        accessKeyId: process.env.AWS_PUBLIC_KEY_VMCLASS,
-        secretAccessKey: process.env.AWS_SECRET_KEY_VMCLASS,
-      },
-    })
-    const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
-
     try {
-      // Extraer los campos necesarios de req.body
       const {
         imgFirstVMClass,
         imgSecondVMClass,
@@ -113,7 +98,6 @@ const resumeVMClassController = {
         workshopId,
       } = req.body;
 
-      //   Crear una nueva instancia del modelo
       const resume = new ResumeVmClass({
         imgFirstVMClass,
         imgSecondVMClass,
@@ -130,117 +114,102 @@ const resumeVMClassController = {
         plannerNoClass,
         classroomId,
         workshopClass,
-        workshopId
+        workshopId,
       });
 
+      // ⬇️ Subidas a S3 (VMCLASS) usando el helper
 
-
-      if (req.files && req.files['imgFirstVMClass']) {
-        const fileContent = req.files['imgFirstVMClass'][0].buffer;
-        const fileName = `${req.files['imgFirstVMClass'][0].fieldname}-${quizIdentifier()}.png`;
-
-        const uploadFirst = {
-          Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
-          Key: fileName,
-          Body: fileContent,
-        };
-
-        const uploadCommand = new PutObjectCommand(uploadFirst);
-        await clientAWS.send(uploadCommand);
-
-        resume.imgFirstVMClass = fileName;
-      }
-      // Verificar si se cargó la imagen del campo imgSecondVMClass
-      if (req.files && req.files['imgSecondVMClass']) {
-        const fileContent = req.files['imgSecondVMClass'][0].buffer;
-        const fileName = `${req.files['imgSecondVMClass'][0].fieldname}-${quizIdentifier()}.png`;
-
-        const uploadSecond = {
-          Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
-          Key: fileName,
-          Body: fileContent,
-        };
-
-        const uploadCommand = new PutObjectCommand(uploadSecond);
-        await clientAWS.send(uploadCommand);
-
-        resume.imgSecondVMClass = fileName;
-      }
-      if (req.files && req.files['imgThirdVMClass']) {
-        const fileContent = req.files['imgThirdVMClass'][0].buffer;
-        const fileName = `${req.files['imgThirdVMClass'][0].fieldname}-${quizIdentifier()}.png`;
-
-        const uploadThird = {
-          Bucket: process.env.AWS_BUCKET_NAME_VMCLASS,
-          Key: fileName,
-          Body: fileContent,
-        };
-
-        const uploadCommand = new PutObjectCommand(uploadThird);
-        await clientAWS.send(uploadCommand);
-
-        resume.imgThirdVMClass = fileName;
+      if (req.files && req.files['imgFirstVMClass']?.[0]) {
+        const file = req.files['imgFirstVMClass'][0];
+        const key = await uploadMulterFileVmclass(file);
+        resume.imgFirstVMClass = key;
       }
 
-      // Guardar la instancia del modelo en la base de datos
+      if (req.files && req.files['imgSecondVMClass']?.[0]) {
+        const file = req.files['imgSecondVMClass'][0];
+        const key = await uploadMulterFileVmclass(file);
+        resume.imgSecondVMClass = key;
+      }
+
+      if (req.files && req.files['imgThirdVMClass']?.[0]) {
+        const file = req.files['imgThirdVMClass'][0];
+        const key = await uploadMulterFileVmclass(file);
+        resume.imgThirdVMClass = key;
+      }
+
+      // Guardar resumen
       await resume.save();
 
-      // Obtener el ID del resume guardado
       const resumeId = resume._id;
       const arrayStudentsForSurvey = resume.presentStudents;
 
       try {
-
         if (req.body.classroomId) {
-          const classroom = await ClassRoom.findById(req.body.classroomId)
+          const classroom = await ClassRoom.findById(req.body.classroomId);
           if (classroom) {
-            classroom.classHistory.push(resumeId)
+            classroom.classHistory.push(resumeId);
             await classroom.save();
 
-            // Crear encuestas para los estudiantes
-            await createSurveysForStudents(resumeId, arrayStudentsForSurvey, req.body.classroomId);
-            res.status(200).json({
+            await createSurveysForStudents(
+              resumeId,
+              arrayStudentsForSurvey,
+              req.body.classroomId
+            );
+
+            return res.status(200).json({
               message: 'VMClass Finalizado con exito',
               success: true,
-              response: resume
+              response: resume,
             });
           }
         }
 
         if (req.body.workshopId) {
-          const workshop = await Workshop.findById(req.body.workshopId)
+          const workshop = await Workshop.findById(req.body.workshopId);
 
           if (workshop) {
+            workshop.workshopHistory.push(resumeId);
+            await workshop.save();
 
-            workshop.workshopHistory.push(resumeId)
-            await workshop.save()
-            await createSurveysForStudentsWorkshop(resumeId, arrayStudentsForSurvey, req.body.workshopId);
-            res.status(200).json({
+            await createSurveysForStudentsWorkshop(
+              resumeId,
+              arrayStudentsForSurvey,
+              req.body.workshopId
+            );
+
+            return res.status(200).json({
               message: 'VMClass Finalizado con exito',
               success: true,
-              response: resume
+              response: resume,
             });
           }
         }
 
+        // Si no vino ni classroomId ni workshopId
+        return res.status(200).json({
+          message: 'VMClass creado (sin classroom/workshop asociado)',
+          success: true,
+          response: resume,
+        });
       } catch (error) {
-        console.log(error)
+        console.log(error);
         return res.status(500).send({
-          message: "Error al guardar el VMClass en la base de datos.",
-          success: false
-        })
+          message: 'Error al guardar el VMClass en la base de datos.',
+          success: false,
+        });
       }
-
     } catch (error) {
       console.log(error);
       res.status(500).json({ error: 'Failed to add Resume VM' });
     }
   },
+
   getResume: async (req, res) => {
     try {
-      // Obtener todos los documentos ResumeVmClass
       const resumes = await ResumeVmClass.find()
-        .populate('byTeacher', ({ name: 1, lastName: 1 })).populate('plannerClass').populate('classroomId', ({ grade: 1, level: 1, section: 1 }))
+        .populate('byTeacher', { name: 1, lastName: 1 })
+        .populate('plannerClass')
+        .populate('classroomId', { grade: 1, level: 1, section: 1 });
 
       res.status(200).json(resumes);
     } catch (error) {
@@ -248,46 +217,23 @@ const resumeVMClassController = {
       res.status(500).json({ error: 'Failed to fetch resumes' });
     }
   },
-  // getResumeById: async (req, res) => {
 
-  //   let { id } = req.params;
-
-  //   try {
-
-  //     const resumeFund = await ResumeVmClass.findById(id).populate('byTeacher', { name: 1, lastName: 1 }).populate('plannerClass').populate('classroomId', { grade: 1, section: 1, level: 1 })
-
-  //     if (resumeFund) {
-  //       res.status(200).json({
-  //         response: resumeFund,
-  //         success: true,
-  //         message: "Resumen VMClass encontrado"
-  //       })
-  //     } else res.status(404).json({ message: "no se pudo encontrar Resumen VMClass", success: false })
-
-  //   } catch (error) {
-  //     console.log(error)
-  //     res.status(400).json({
-  //       message: "Error al realizar peticion de busqueda de busqueda",
-  //       success: false
-  //     })
-  //   }
-  // },
   getResumeByClassroom: async (req, res) => {
-    const { classroomId } = req.params; // Obtén el classroomId de los parámetros de la solicitud
+    const { classroomId } = req.params;
 
     try {
-      const resumes = await ResumeVmClass
-        .find({ classroomId }) // Busca documentos con el classroomId proporcionado
-        .populate('plannerClass') // Realiza un populate en el campo byTeacher para obtener información adicional (nombre y email)
-        .sort({ createdAt: -1 }) // Ordena por createdAt en orden descendente (del más reciente al más antiguo)
+      const resumes = await ResumeVmClass.find({ classroomId })
+        .populate('plannerClass')
+        .sort({ createdAt: -1 })
         .exec();
 
-      res.json(resumes); // Devuelve los resúmenes encontrados en formato JSON
+      res.json(resumes);
     } catch (error) {
       console.error('Error al buscar resúmenes:', error);
       res.status(500).json({ error: 'Error al buscar resúmenes' });
     }
   },
+
   getResumeById: async (req, res) => {
     let { id } = req.params;
 
@@ -298,68 +244,64 @@ const resumeVMClassController = {
         .populate('classroomId', { grade: 1, section: 1, level: 1 });
 
       if (resumeFund) {
-        // Ajustar el formato de "presentStudents" si llega como un array de strings
-        if (Array.isArray(resumeFund.presentStudents) && typeof resumeFund.presentStudents[0] === 'string') {
-          resumeFund.presentStudents = resumeFund.presentStudents.map(student => JSON.parse(student));
+        if (
+          Array.isArray(resumeFund.presentStudents) &&
+          typeof resumeFund.presentStudents[0] === 'string'
+        ) {
+          resumeFund.presentStudents = resumeFund.presentStudents.map((student) =>
+            JSON.parse(student)
+          );
         }
 
         res.status(200).json({
           response: resumeFund,
           success: true,
-          message: "Resumen VMClass encontrado",
+          message: 'Resumen VMClass encontrado',
         });
       } else {
         res.status(404).json({
-          message: "no se pudo encontrar Resumen VMClass",
+          message: 'no se pudo encontrar Resumen VMClass',
           success: false,
         });
       }
     } catch (error) {
       console.log(error);
       res.status(400).json({
-        message: "Error al realizar peticion de busqueda de busqueda",
+        message: 'Error al realizar peticion de busqueda de busqueda',
         success: false,
       });
     }
   },
+
   getResumeByTeacher: async (req, res) => {
-
-    // create get resume by teacher
-
     try {
+      const { teacherId } = req.params;
 
-      const { teacherId } = req.params
-
-      const resumes = await ResumeVmClass.find({ byTeacher: teacherId }) .sort({ createdAt: -1 })
-
+      const resumes = await ResumeVmClass.find({ byTeacher: teacherId }).sort({
+        createdAt: -1,
+      });
 
       if (resumes.length > 0) {
         res.status(200).json({
           response: resumes,
           success: true,
-          message: "Resumen VMClass encontrados"
-        })
-
+          message: 'Resumen VMClass encontrados',
+        });
       } else {
-        res.status(200).json({ message: "El profesor no ha realizado clases", success: true, response : [] })
+        res.status(200).json({
+          message: 'El profesor no ha realizado clases',
+          success: true,
+          response: [],
+        });
       }
-
     } catch (error) {
-
-      console.log(error)
+      console.log(error);
       res.status(400).json({
-        message: "Error al realizar peticion de busqueda de busqueda",
-        success: false
-      })
-
+        message: 'Error al realizar peticion de busqueda de busqueda',
+        success: false,
+      });
     }
+  },
+};
 
-
-  }
-
-
-
-
-}
-
-module.exports = resumeVMClassController
+module.exports = resumeVMClassController;

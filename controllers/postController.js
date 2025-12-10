@@ -1,662 +1,659 @@
-const Post = require('../models/post')
-const Institution = require('../models/institution')
-const Program = require('../models/program')
-const Comment = require('../models/comments')
-const { S3Client, PutObjectCommand, PutObjectRetentionCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const crypto = require('crypto')
+const Post = require('../models/post');
+const Institution = require('../models/institution');
+const Program = require('../models/program');
+const Comment = require('../models/comments');
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
 const sharp = require('sharp');
 const mongoose = require('mongoose');
 
-const bucketRegion = process.env.AWS_BUCKET_REGION
-const bucketName = process.env.AWS_BUCKET_NAME
-const publicKey = process.env.AWS_PUBLIC_KEY
-const privateKey = process.env.AWS_SECRET_KEY
+const {
+  s3Client,
+  uploadMulterFile,
+  getSignedUrlForKey,
+} = require('../utils/s3Client');
 
-const clientAWS = new S3Client({
-    region: bucketRegion,
-    credentials: {
-        accessKeyId: publicKey,
-        secretAccessKey: privateKey,
-    },
-})
+const bucketName = process.env.AWS_BUCKET_NAME;
 
-const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
-
+const quizIdentifier = () =>
+  crypto.randomBytes(32).toString('hex');
 
 const PostQueryPopulate = [
-    {
+  {
+    path: 'user',
+    select: 'name lastName role imgUrl',
+  },
+  {
+    path: 'comments',
+    select: 'user replies text',
+    populate: [
+      {
         path: 'user',
-        select: 'name lastName role imgUrl',
-    },
-    {
-        path: 'comments',
-        select: 'user replies text',
+        select: 'name lastName imgUrl role',
+      },
+      {
+        path: 'replies',
+        select: 'name lastName role imgUrl user text',
         populate: {
-            path: 'user',
-            select: 'name lastName imgUrl role',
+          path: 'user',
+          select: 'name lastName imgUrl role',
         },
-        populate: {
-            path: 'replies',
-            select: 'name lastName role imgUrl user text',
-            populate: {
-                path: 'user',
-                select: 'name lastName imgUrl role',
-            },
-        },
-    },
+      },
+    ],
+  },
 ];
 
+// helper para firmar URL de la imagen del post (imagen o video)
+async function attachSignedPostUrl(postDoc) {
+  if (!postDoc || !postDoc.postImage) return postDoc;
+
+  const plain = postDoc.toObject
+    ? postDoc.toObject()
+    : postDoc;
+
+  try {
+    plain.postImage = await getSignedUrlForKey(
+      plain.postImage
+    );
+  } catch (err) {
+    console.error(
+      'Error generando URL firmada para postImage:',
+      err
+    );
+  }
+  return plain;
+}
+
 const postController = {
-    // createPost: async (req, res) => {
-    //     try {
-    //         const { user, postImage, commentsAllow } = req.body;
-    //         const newPost = new Post({
-    //             user,
-    //             likes: [],
-    //             commentsAllow,
-    //             comments: [],
-    //         });
-
-
-    //         const imageResized = await sharp(req.file.buffer).resize({
-    //             width: 1080,
-    //             height: 1920,
-    //          }).toBuffer()
-
-    //           const fileContent = imageResized;
-    //           const extension = req.file.originalname.split('.').pop();
-    //           const fileName = `post-image-${quizIdentifier()}.${extension}`;
-
-    //           const uploadParams = {
-    //             Bucket: bucketName,
-    //             Key: fileName,
-    //             Body: imageResized,
-    //           };
-
-    //           // Subir la imagen a S3
-    //           const uploadCommand = new PutObjectCommand(uploadParams);
-    //           await clientAWS.send(uploadCommand);
-
-    //           await  newPost.postImage = filename
-
-
-    //           await newPost.save();
-
-    //         return res.status(201).json({ message: 'Post created successfully', post: newPost });
-    //     } catch (error) {
-    //         console.error(error);
-    //         return res.status(500).json({ message: 'Error creating post' });
-    //     }
-    // },
-
-    // createPost: async (req, res) => {
-    //     try {
-    //         const { user, commentsAllow, text, videoPost } = req.body;
-
-    //         if (!req.file) {
-    //             return res.status(400).json({ message: 'Sin imagen cargada' });
-    //         }
-
-    //         const fileContent = req.file.buffer;
-    //         const extension = req.file.originalname.split('.').pop();
-    //         const isVideo = extension.toLowerCase() === 'mp4';
-
-
-    //         let fileName;
-    //         let optimizedImageBuffer;
-
-
-    //         if (isVideo) {
-    //             fileName = `post-video-${quizIdentifier()}.${extension}`;
-    //         } else {
-    //             // Optimizar la imagen usando sharp
-    //             optimizedImageBuffer = await sharp(fileContent).toBuffer();
-    //             fileName = `post-image-${quizIdentifier()}.${extension}`;
-    //         }
-
-    //         const uploadParams = {
-    //             Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
-    //             Key: fileName,
-    //             Body: isVideo ? fileContent : optimizedImageBuffer,
-    //         };
-
-
-    //         // Subir la imagen a S3
-    //         const uploadCommand = new PutObjectCommand(uploadParams);
-    //         await clientAWS.send(uploadCommand);
-
-    //         const newPost = new Post({
-    //             user,
-    //             postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
-    //             likes: [],
-    //             commentsAllow,
-    //             comments: [],
-    //             text,
-    //             videoPost
-    //         });
-
-    //         await newPost.save();
-
-    //         return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
-    //     } catch (error) {
-    //         console.error(error);
-    //         return res.status(500).json({ message: 'Error creating post' });
-    //     }
-    // },
-    createPost: async (req, res) => {
-        try {
-            const { user, commentsAllow, text, videoPost, classroom, workshop } = req.body;
-
-            if (!req.file) {
-                return res.status(400).json({ message: 'Sin imagen cargada' });
-            }
-
-            const fileContent = req.file.buffer;
-            const extension = req.file.originalname.split('.').pop();
-            const isVideo = extension.toLowerCase() === 'mp4';
-
-
-            let fileName;
-            let optimizedImageBuffer;
-
-
-            // if (isVideo) {
-            //     fileName = `post-video-${quizIdentifier()}.${extension}`;
-            // } else {
-
-            //     const exif = await sharp(fileContent).metadata();
-            //     const orientation = exif && exif.exif && exif.exif.Orientation ? exif.exif.Orientation : 1;
-
-
-            //     // Si la orientación de la imagen es horizontal, rotarla 90 grados
-            //     if (orientation === 6 || orientation === 8) {
-            //         optimizedImageBuffer = await sharp(fileContent).rotate(90).toBuffer();
-            //     } else {
-            //         optimizedImageBuffer = await sharp(fileContent).toBuffer();
-            //     }
-
-            //     fileName = `post-image-${quizIdentifier()}.${extension}`;
-            // }
-
-
-            if (isVideo) {
-                fileName = `post-video-${quizIdentifier()}.${extension}`;
-            } else {
-                const exif = await sharp(fileContent).metadata();
-                console.log('Información EXIF:', exif); // Muestra la información EXIF por consola
-
-                const orientation = exif ? exif.orientation : 1;
-
-                // Si la orientación de la imagen es horizontal, rotarla 90 grados
-                if (orientation === 6 || orientation === 8) {
-                    optimizedImageBuffer = await sharp(fileContent)
-                        .rotate(90)
-                        .resize(1350, 1720)
-                        .toBuffer();
-                } else {
-                    optimizedImageBuffer = await sharp(fileContent)
-                        .resize(1350, 1720)
-                        .toBuffer();
-                }
-
-                fileName = `post-image-${quizIdentifier()}.${extension}`;
-            }
-
-            const uploadParams = {
-                Bucket: bucketName, // Reemplaza con el nombre de tu bucket en S3
-                Key: fileName,
-                Body: isVideo ? fileContent : optimizedImageBuffer,
-            };
-
-
-            // Subir la imagen a S3
-            const uploadCommand = new PutObjectCommand(uploadParams);
-            await clientAWS.send(uploadCommand);
-
-            const newPost = new Post({
-                user,
-                postImage: fileName, // Asigna el nombre del archivo a la propiedad postImage
-                likes: [],
-                commentsAllow,
-                comments: [],
-                text,
-                videoPost,
-                classroom,
-                workshop
-            });
-
-            await newPost.save();
-
-            return res.status(201).json({ message: 'Post creado correctamente', post: newPost });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error creating post' });
-        }
-    },
-
-    likePost: async (req, res) => {
-        try {
-            const { postId, userId } = req.body;
-            const post = await Post.findById(postId);
-
-            if (!post) {
-                return res.status(404).json({ message: 'Post not found' });
-            }
-
-            if (post.likes.includes(userId)) {
-                // Usuario ya dio like, entonces eliminamos el like
-                post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
-            } else {
-                // Usuario no dio like previamente, agregamos el like
-                post.likes.push(userId);
-            }
-
-            await post.save();
-            return res.status(200).json({ message: 'Like/dislike updated', post });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error updating like/dislike' });
-        }
-    },
-
-    addComment: async (req, res) => {
-        try {
-            const { postId, userId, studentId, text, parentCommentId } = req.body;
-
-            // Buscar el post
-            const post = await Post.findById(postId);
-
-            if (!post) {
-                return res.status(404).json({ message: 'Post not found' });
-            }
-
-            let newComment;
-
-            // Comprobar si se proporcionó userId o studentId y crear el comentario en consecuencia
-            if (userId) {
-                newComment = new Comment({
-                    user: userId,
-                    text,
-                });
-            } else if (studentId) {
-                newComment = new Comment({
-                    student: studentId,
-                    text,
-                });
-            } else {
-                return res.status(400).json({ message: 'Debe proporcionar userId o studentId' });
-            }
-
-            if (parentCommentId) {
-                // Este es un comentario de respuesta, lo adjuntamos al comentario padre
-                const parentComment = await Comment.findById(parentCommentId);
-                if (!parentComment) {
-                    return res.status(404).json({ message: 'Parent comment not found' });
-                }
-                parentComment.replies.push(newComment);
-                await parentComment.save();
-            } else {
-                // Este es un comentario principal del post
-                post.comments.push(newComment);
-                await newComment.save();
-                await post.save();
-            }
-
-            return res.status(201).json({ message: 'Comment added successfully', comment: newComment });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error adding comment' });
-        }
-    },
-
-    editComment: async (req, res) => {
-        try {
-            const { commentId, userId, studentId, text } = req.body;
-
-            const comment = await Comment.findById(commentId);
-
-            if (!comment) {
-                return res.status(404).json({ message: 'Comment not found' });
-            }
-
-            if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
-                // El usuario o estudiante creador del comentario puede editarlo
-
-                comment.text = text;
-                await comment.save();
-                return res.status(200).json({ message: 'Comment edited successfully', comment });
-            } else {
-                return res.status(403).json({ message: 'Permission denied' });
-            }
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error editing comment' });
-        }
-    },
-    deleteComment: async (req, res) => {
-        try {
-            const { postId, commentId } = req.body;
-
-            // Buscar el post y actualizar el array comments para eliminar el comentario
-            const updatedPost = await Post.findByIdAndUpdate(
-                postId,
-                { $pull: { comments: commentId } },
-                { new: true }
-            );
-
-            if (!updatedPost) {
-                return res.status(404).json({ message: 'Post not found' });
-            }
-
-            const comment = await Comment.findById(commentId);
-
-            if (!comment) {
-                return res.status(404).json({ message: 'Comment not found in Comment collection' });
-            }
-
-            // if (comment.user?.toString() === userId || (studentId && comment.student === studentId)) {
-            //     // El usuario creador del comentario puede borrarlo
-
-            //     // Eliminar el comentario de la colección Comment
-            //     await Comment.findByIdAndDelete(commentId);
-            // } else {
-            //     // Otros usuarios solo pueden editar su propio comentario
-            //     return res.status(403).json({ message: 'Permission denied' });
-            // }
-
-            await Comment.findByIdAndDelete(commentId);
-
-            return res.status(200).json({ message: 'Comment deleted successfully' });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error deleting comment' });
-        }
-    },
-    deletePost: async (req, res) => {
-        try {
-            const { postId } = req.params;
-
-            // Buscar el post por su _id
-            const post = await Post.findById(postId);
-
-            if (!post) {
-                return res.status(404).json({ message: 'Post not found' });
-            }
-
-            // Eliminar el archivo asociado en S3
-            const fileName = post.postImage // Dependiendo de tu modelo
-            if (fileName) {
-                const deleteParams = {
-                    Bucket: bucketName,
-                    Key: fileName,
-                };
-                const deleteCommand = new DeleteObjectCommand(deleteParams);
-                await clientAWS.send(deleteCommand);
-            }
-
-            // Eliminar el post en la base de datos
-            await Post.findByIdAndDelete(postId);
-
-            return res.status(200).json({ message: 'Post eliminado correctamente' });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error deleting post' });
-        }
-    },
-    getAllPosts: async (req, res) => {
-        try {
-            // Obtener todos los posts ordenados por fecha de creación descendente
-
-            const posts = await Post.find()
-                .sort({ createdAt: -1 })
-                .populate({
-                    path: 'user',
-                    select: 'name lastName role imgUrl',
-                })
-                .populate({
-                    path: 'comments',
-                    select: 'user replies text student',
-                    populate: [
-                        {
-                            path: 'user student',
-                            select: 'name lastName imgUrl role',
-                        },
-                        {
-                            path: 'replies',
-                            select: 'name lastName role imgUrl user text student',
-                            populate: {
-                                path: 'user student',
-                                select: 'name lastName imgUrl role',
-                            },
-                        },
-                    ],
-                })
-
-            return res.status(200).json({ response: posts, message: "Posts", success: true });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error fetching posts' });
-        }
-    },
-    editPostText: async (req, res) => {
-        try {
-            const { postId, text } = req.body;
-
-            // Buscar el post por su _id
-            const post = await Post.findById(postId);
-
-            if (!post) {
-                return res.status(404).json({ message: 'Post not found' });
-            }
-
-            // Actualizar el texto del post
-            post.text = text;
-            await post.save();
-
-            return res.status(200).json({ message: 'Post text updated successfully', post });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error updating post text' });
-        }
-    },
-    editReply: async (req, res) => {
-        try {
-            const { replyId, newText } = req.body;
-
-            // Buscar el comentario que contiene el reply
-            const parentComment = await Comment.findOne({ 'replies._id': replyId });
-
-            if (!parentComment) {
-                return res.status(404).json({ message: 'Parent comment not found' });
-            }
-
-            // Encontrar y actualizar el reply dentro del comentario
-            const reply = parentComment.replies.find(r => r._id.toString() === replyId);
-
-            if (!reply) {
-                return res.status(404).json({ message: 'Reply not found' });
-            }
-
-            reply.text = newText;
-            await parentComment.save();
-
-            return res.status(200).json({ message: 'Reply updated successfully', reply });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error updating reply' });
-        }
-    },
-    deleteReply: async (req, res) => {
-        try {
-            const { parentCommentId, replyId } = req.params;
-
-            // Buscar el comentario principal por su _id
-            const parentComment = await Comment.findById(parentCommentId);
-
-            if (!parentComment) {
-                return res.status(404).json({ message: 'Parent comment not found' });
-            }
-
-            // Encontrar el reply dentro de las respuestas del comentario principal
-            const replyToDeleteIndex = parentComment.replies.findIndex(reply => reply._id.toString() === replyId);
-
-            if (replyToDeleteIndex === -1) {
-                return res.status(404).json({ message: 'Reply not found in parent comment' });
-            }
-
-            // Eliminar el reply del comentario principal
-            parentComment.replies.splice(replyToDeleteIndex, 1);
-            await parentComment.save();
-
-            return res.status(200).json({ message: 'Reply deleted successfully' });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error deleting reply' });
-        }
-    },
-    getPostsByFilter: async (req, res) => {
-        try {
-            // Recibir el parámetro para filtrar (puede ser 'classroom' o 'workshop')
-            const filterType = req.query.filterType; // o req.params.filterType, dependiendo de cómo lo envíes
-            const filterValue = req.query.filterValue; // El valor del ID de classroom o workshop
-            const limit = parseInt(req.query.limit) || 0; // 0 significa sin límite
-            let filter = {};
-            if (filterType && filterValue) {
-                filter[filterType] = filterValue;
-            }
-            // Obtener todos los posts con el filtro aplicado, ordenados por fecha de creación descendente
-            const posts = await Post.find(filter)
-                .sort({ createdAt: -1 })
-                .limit(limit)
-                .populate({
-                    path: 'user',
-                    select: 'name lastName role imgUrl',
-                })
-                .populate({
-                    path: 'comments',
-                    select: 'user replies text student',
-                    populate: [
-                        {
-                            path: 'user student',
-                            select: 'name lastName imgUrl role',
-                        },
-                        {
-                            path: 'replies',
-                            select: 'name lastName role imgUrl user text student',
-                            populate: {
-                                path: 'user student',
-                                select: 'name lastName imgUrl role',
-                            },
-                        },
-                    ],
-                });
-            return res.status(200).json({ response: posts, message: "Posts", success: true });
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error fetching posts' });
-        }
-    },
-    getPostsByInstitucion: async (req, res) => {
-
-        const { institucionId } = req.params;
-
-        try {
-
-            // buscar la institución por su id
-            const institution = await Institution.findById(institucionId);
-            if (!institution) {
-                return res.status(404).json({ message: 'Institution not found' });
-            }
-
-            let programs = [];
-
-            //cargar los programas de la institución
-            programs = institution.programs;
-
-
-            //buscar los programas de la institución
-            const programsFound = await Program.find({ _id: { $in: programs } });
-
-            //  return  console.log(programsFound?.workshops);
-
-            //buscar los workshops de los programas
-            let workshops = [];
-            programsFound.forEach(async program => {
-                workshops.push(...program.workshops);
-            });
-
-            console.log(workshops);
-
-            //    return res.status(200).json({ response: workshops, message: "Workshops", success: true });
-
-
-            //retorna todos los posts que en su campo workshop tenga el _id de los workshops
-            const postsFound = await Post.find({ workshop: { $in: workshops } }).sort({ createdAt: -1 })
-                .populate({
-                    path: 'user',
-                    select: 'name lastName role imgUrl',
-                })
-                .populate({
-                    path: 'comments',
-                    select: 'user replies text student',
-                    populate: [
-                        {
-                            path: 'user student',
-                            select: 'name lastName imgUrl role',
-                        },
-                        {
-                            path: 'replies',
-                            select: 'name lastName role imgUrl user text student',
-                            populate: {
-                                path: 'user student',
-                                select: 'name lastName imgUrl role',
-                            },
-                        },
-                    ],
-                })
-            return res.status(200).json({ response: postsFound, message: "Posts", success: true });
-
-            //buscar los posts de los workshops
-            const posts = await Post.find()
-                .sort({ createdAt: -1 })
-                .populate({
-                    path: 'user',
-                    select: 'name lastName role imgUrl',
-                })
-                .populate({
-                    path: 'comments',
-                    select: 'user replies text student',
-                    populate: [
-                        {
-                            path: 'user student',
-                            select: 'name lastName imgUrl role',
-                        },
-                        {
-                            path: 'replies',
-                            select: 'name lastName role imgUrl user text student',
-                            populate: {
-                                path: 'user student',
-                                select: 'name lastName imgUrl role',
-                            },
-                        },
-                    ],
-                })
-
-            //filtrar los posts por los  _id de los workshops
-            const postsFiltered = posts.filter(post => workshops.includes(post.workshop));
-
-            return res.status(200).json({ response: postsFiltered, message: "Posts", success: true });
-
-
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Error fetching posts' });
+  createPost: async (req, res) => {
+    try {
+      const {
+        user,
+        commentsAllow,
+        text,
+        videoPost,
+        classroom,
+        workshop,
+      } = req.body;
+
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ message: 'Sin imagen cargada' });
+      }
+
+      const fileContent = req.file.buffer;
+      const extension = req.file.originalname
+        .split('.')
+        .pop();
+      const isVideo =
+        extension.toLowerCase() === 'mp4';
+
+      let key;
+
+      if (isVideo) {
+        // video: subimos el buffer tal cual
+        key = await uploadMulterFile(
+          req.file,
+          `post-video-${quizIdentifier()}.${extension}`
+        );
+      } else {
+        // imagen: corregimos orientación + resize con sharp
+        const exif = await sharp(fileContent).metadata();
+        console.log('Información EXIF:', exif);
+
+        const orientation = exif ? exif.orientation : 1;
+
+        let optimizedImageBuffer;
+        if (orientation === 6 || orientation === 8) {
+          optimizedImageBuffer = await sharp(fileContent)
+            .rotate(90)
+            .resize(1350, 1720)
+            .toBuffer();
+        } else {
+          optimizedImageBuffer = await sharp(fileContent)
+            .resize(1350, 1720)
+            .toBuffer();
         }
 
+        const fakeFile = {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          fieldname:
+            req.file.fieldname || 'postImage',
+          buffer: optimizedImageBuffer,
+        };
 
+        key = await uploadMulterFile(
+          fakeFile,
+          `post-image-${quizIdentifier()}.${extension}`
+        );
+      }
 
+      const newPost = new Post({
+        user,
+        postImage: key, // guardamos el key de S3
+        likes: [],
+        commentsAllow,
+        comments: [],
+        text,
+        videoPost,
+        classroom,
+        workshop,
+      });
+
+      await newPost.save();
+
+      return res.status(201).json({
+        message: 'Post creado correctamente',
+        post: newPost,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error creating post' });
     }
+  },
 
+  likePost: async (req, res) => {
+    try {
+      const { postId, userId } = req.body;
+      const post = await Post.findById(postId);
+
+      if (!post) {
+        return res
+          .status(404)
+          .json({ message: 'Post not found' });
+      }
+
+      if (post.likes.includes(userId)) {
+        post.likes = post.likes.filter(
+          id => id.toString() !== userId.toString()
+        );
+      } else {
+        post.likes.push(userId);
+      }
+
+      await post.save();
+      return res.status(200).json({
+        message: 'Like/dislike updated',
+        post,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: 'Error updating like/dislike',
+      });
+    }
+  },
+
+  addComment: async (req, res) => {
+    try {
+      const {
+        postId,
+        userId,
+        studentId,
+        text,
+        parentCommentId,
+      } = req.body;
+
+      const post = await Post.findById(postId);
+
+      if (!post) {
+        return res
+          .status(404)
+          .json({ message: 'Post not found' });
+      }
+
+      let newComment;
+
+      if (userId) {
+        newComment = new Comment({
+          user: userId,
+          text,
+        });
+      } else if (studentId) {
+        newComment = new Comment({
+          student: studentId,
+          text,
+        });
+      } else {
+        return res.status(400).json({
+          message:
+            'Debe proporcionar userId o studentId',
+        });
+      }
+
+      if (parentCommentId) {
+        const parentComment =
+          await Comment.findById(parentCommentId);
+        if (!parentComment) {
+          return res.status(404).json({
+            message: 'Parent comment not found',
+          });
+        }
+        parentComment.replies.push(newComment);
+        await parentComment.save();
+      } else {
+        post.comments.push(newComment);
+        await newComment.save();
+        await post.save();
+      }
+
+      return res.status(201).json({
+        message: 'Comment added successfully',
+        comment: newComment,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error adding comment' });
+    }
+  },
+
+  editComment: async (req, res) => {
+    try {
+      const {
+        commentId,
+        userId,
+        studentId,
+        text,
+      } = req.body;
+
+      const comment = await Comment.findById(commentId);
+
+      if (!comment) {
+        return res
+          .status(404)
+          .json({ message: 'Comment not found' });
+      }
+
+      if (
+        comment.user?.toString() === userId ||
+        (studentId &&
+          comment.student?.toString() ===
+            studentId)
+      ) {
+        comment.text = text;
+        await comment.save();
+        return res.status(200).json({
+          message: 'Comment edited successfully',
+          comment,
+        });
+      } else {
+        return res
+          .status(403)
+          .json({ message: 'Permission denied' });
+      }
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error editing comment' });
+    }
+  },
+
+  deleteComment: async (req, res) => {
+    try {
+      const { postId, commentId } = req.body;
+
+      const updatedPost =
+        await Post.findByIdAndUpdate(
+          postId,
+          { $pull: { comments: commentId } },
+          { new: true }
+        );
+
+      if (!updatedPost) {
+        return res
+          .status(404)
+          .json({ message: 'Post not found' });
+      }
+
+      const comment = await Comment.findById(commentId);
+
+      if (!comment) {
+        return res.status(404).json({
+          message:
+            'Comment not found in Comment collection',
+        });
+      }
+
+      await Comment.findByIdAndDelete(commentId);
+
+      return res.status(200).json({
+        message: 'Comment deleted successfully',
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error deleting comment' });
+    }
+  },
+
+  deletePost: async (req, res) => {
+    try {
+      const { postId } = req.params;
+
+      const post = await Post.findById(postId);
+
+      if (!post) {
+        return res
+          .status(404)
+          .json({ message: 'Post not found' });
+      }
+
+      const fileName = post.postImage;
+      if (fileName) {
+        const deleteParams = {
+          Bucket: bucketName,
+          Key: fileName,
+        };
+        const deleteCommand = new DeleteObjectCommand(
+          deleteParams
+        );
+        await s3Client.send(deleteCommand);
+      }
+
+      await Post.findByIdAndDelete(postId);
+
+      return res.status(200).json({
+        message: 'Post eliminado correctamente',
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error deleting post' });
+    }
+  },
+
+  getAllPosts: async (req, res) => {
+    try {
+      let posts = await Post.find()
+        .sort({ createdAt: -1 })
+        .populate({
+          path: 'user',
+          select: 'name lastName role imgUrl',
+        })
+        .populate({
+          path: 'comments',
+          select: 'user replies text student',
+          populate: [
+            {
+              path: 'user student',
+              select: 'name lastName imgUrl role',
+            },
+            {
+              path: 'replies',
+              select:
+                'name lastName role imgUrl user text student',
+              populate: {
+                path: 'user student',
+                select:
+                  'name lastName imgUrl role',
+              },
+            },
+          ],
+        });
+
+      // firmar URL de imagen/video del post
+      posts = await Promise.all(
+        posts.map(p => attachSignedPostUrl(p))
+      );
+
+      return res.status(200).json({
+        response: posts,
+        message: 'Posts',
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error fetching posts' });
+    }
+  },
+
+  editPostText: async (req, res) => {
+    try {
+      const { postId, text } = req.body;
+
+      const post = await Post.findById(postId);
+
+      if (!post) {
+        return res
+          .status(404)
+          .json({ message: 'Post not found' });
+      }
+
+      post.text = text;
+      await post.save();
+
+      return res.status(200).json({
+        message: 'Post text updated successfully',
+        post,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error updating post text' });
+    }
+  },
+
+  editReply: async (req, res) => {
+    try {
+      const { replyId, newText } = req.body;
+
+      const parentComment =
+        await Comment.findOne({
+          'replies._id': replyId,
+        });
+
+      if (!parentComment) {
+        return res.status(404).json({
+          message: 'Parent comment not found',
+        });
+      }
+
+      const reply = parentComment.replies.find(
+        r => r._id.toString() === replyId
+      );
+
+      if (!reply) {
+        return res
+          .status(404)
+          .json({ message: 'Reply not found' });
+      }
+
+      reply.text = newText;
+      await parentComment.save();
+
+      return res.status(200).json({
+        message: 'Reply updated successfully',
+        reply,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error updating reply' });
+    }
+  },
+
+  deleteReply: async (req, res) => {
+    try {
+      const { parentCommentId, replyId } = req.params;
+
+      const parentComment =
+        await Comment.findById(parentCommentId);
+
+      if (!parentComment) {
+        return res.status(404).json({
+          message: 'Parent comment not found',
+        });
+      }
+
+      const replyToDeleteIndex =
+        parentComment.replies.findIndex(
+          reply =>
+            reply._id.toString() === replyId
+        );
+
+      if (replyToDeleteIndex === -1) {
+        return res.status(404).json({
+          message:
+            'Reply not found in parent comment',
+        });
+      }
+
+      parentComment.replies.splice(
+        replyToDeleteIndex,
+        1
+      );
+      await parentComment.save();
+
+      return res.status(200).json({
+        message: 'Reply deleted successfully',
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error deleting reply' });
+    }
+  },
+
+  getPostsByFilter: async (req, res) => {
+    try {
+      const filterType = req.query.filterType;
+      const filterValue = req.query.filterValue;
+      const limit =
+        parseInt(req.query.limit) || 0;
+
+      let filter = {};
+      if (filterType && filterValue) {
+        filter[filterType] = filterValue;
+      }
+
+      let posts = await Post.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate({
+          path: 'user',
+          select: 'name lastName role imgUrl',
+        })
+        .populate({
+          path: 'comments',
+          select: 'user replies text student',
+          populate: [
+            {
+              path: 'user student',
+              select: 'name lastName imgUrl role',
+            },
+            {
+              path: 'replies',
+              select:
+                'name lastName role imgUrl user text student',
+              populate: {
+                path: 'user student',
+                select:
+                  'name lastName imgUrl role',
+              },
+            },
+          ],
+        });
+
+      posts = await Promise.all(
+        posts.map(p => attachSignedPostUrl(p))
+      );
+
+      return res.status(200).json({
+        response: posts,
+        message: 'Posts',
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error fetching posts' });
+    }
+  },
+
+  getPostsByInstitucion: async (req, res) => {
+    const { institucionId } = req.params;
+
+    try {
+      const institution =
+        await Institution.findById(institucionId);
+      if (!institution) {
+        return res.status(404).json({
+          message: 'Institution not found',
+        });
+      }
+
+      const programsIds = institution.programs;
+
+      const programsFound = await Program.find({
+        _id: { $in: programsIds },
+      });
+
+      let workshops = [];
+      programsFound.forEach(program => {
+        workshops.push(...program.workshops);
+      });
+
+      let postsFound = await Post.find({
+        workshop: { $in: workshops },
+      })
+        .sort({ createdAt: -1 })
+        .populate({
+          path: 'user',
+          select: 'name lastName role imgUrl',
+        })
+        .populate({
+          path: 'comments',
+          select: 'user replies text student',
+          populate: [
+            {
+              path: 'user student',
+              select:
+                'name lastName imgUrl role',
+            },
+            {
+              path: 'replies',
+              select:
+                'name lastName role imgUrl user text student',
+              populate: {
+                path: 'user student',
+                select:
+                  'name lastName imgUrl role',
+              },
+            },
+          ],
+        });
+
+      postsFound = await Promise.all(
+        postsFound.map(p => attachSignedPostUrl(p))
+      );
+
+      return res.status(200).json({
+        response: postsFound,
+        message: 'Posts',
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ message: 'Error fetching posts' });
+    }
+  },
 };
 
 module.exports = postController;
