@@ -44,5 +44,11 @@ router.get('/obtener-reserva-por-id/:id', reservasPteAltoController.obtenerReser
 // Cancelar reserva (admin)
 router.put('/cancelar-reserva/:id', reservasPteAltoController.cancelarReservaAdmin);
 
+// Obtener complejo con espacios disponibles
+router.get('/admin/complejo/:complejoId/espacios-disponibles', reservasPteAltoController.obtenerComplejoConEspaciosDisponibles);
+
+// Crear reserva interna (admin)
+router.post('/admin/crear-reserva-interna', reservasPteAltoController.crearReservaInterna);
+
 module.exports = router;
 
