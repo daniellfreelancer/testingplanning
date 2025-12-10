@@ -4,6 +4,7 @@ const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centr
 
 const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 const espaciosDeportivosPteAltoController = {
   // Crear espacio deportivo PTE Alto, agregarlo y asociarlo al complejo deportivo
@@ -40,7 +41,8 @@ const espaciosDeportivosPteAltoController = {
           const key = await uploadMulterFile(req.file);
 
           // Generamos la URL pública (si tu bucket es público)
-          const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+       //   const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+          const fileUrl = `${cloudfrontUrl}/${key}`;
 
           nuevoEspacioDeportivoPteAlto.imgUrl = fileUrl;
           await nuevoEspacioDeportivoPteAlto.save();
@@ -137,7 +139,8 @@ const espaciosDeportivosPteAltoController = {
       if (req.file) {
         try {
           const key = await uploadMulterFile(req.file);
-          const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+        //  const fileUrl = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`;
+          const fileUrl = `${cloudfrontUrl}/${key}`;
           updateData.imgUrl = fileUrl;
         } catch (uploadErr) {
           console.error('❌ Error subiendo nueva imagen a S3:', uploadErr);
