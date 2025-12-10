@@ -14,11 +14,14 @@ const reservasPteAltoSchema = new mongoose.Schema({
     estado: { type: String, enum: ['activa', 'cancelada'], default: 'activa' },
     tipoReserva: { type: String, enum: ['espacio', 'taller'], required: true },
     esReservaInterna: { type: Boolean, default: false },
+    tipoReservaInterna: { type: String, enum: ['tercero', 'convenio', 'cliente', 'arrendatario', 'mantenimiento', 'usuario'], default: 'usuario' },
+    reservadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }, // Usuario admin que crea la reserva
+    reservadoPara: { type: String }, // Descripción o nombre de para quién es la reserva (tercero, convenio, cliente, etc.)
     notas: { type: String },
     canceladoPor: { type: String, enum: ['USER', 'ADMIN', 'SYSTEM'] },
-},{
+}, {
     timestamps: true,
-    
+
 });
 
 // Índices para mejorar performance de consultas

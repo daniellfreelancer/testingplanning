@@ -8,20 +8,22 @@ const Joi = require('joi')
 const sendResetMail = require('./mailResetPassword')
 const sendWelcomeMail = require('./mailRegisterUserAdmin')
 
-const bucketRegion = process.env.AWS_BUCKET_REGION
-const bucketName = process.env.AWS_BUCKET_NAME
-const publicKey = process.env.AWS_PUBLIC_KEY
-const privateKey = process.env.AWS_SECRET_KEY
+// const bucketRegion = process.env.AWS_BUCKET_REGION
+// const bucketName = process.env.AWS_BUCKET_NAME
+// const publicKey = process.env.AWS_PUBLIC_KEY
+// const privateKey = process.env.AWS_SECRET_KEY
 
-const clientAWS = new S3Client({
-  region: bucketRegion,
-  credentials: {
-    accessKeyId: publicKey,
-    secretAccessKey: privateKey,
-  },
-})
+// const clientAWS = new S3Client({
+//   region: bucketRegion,
+//   credentials: {
+//     accessKeyId: publicKey,
+//     secretAccessKey: privateKey,
+//   },
+// })
 
-const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+// const quizIdentifier = () => crypto.randomBytes(32).toString('hex')
+
+const { uploadMulterFile, getSignedUrlForKey } = require('../utils/s3Client');
 
 
 const userLoginValidator = Joi.object({
@@ -45,8 +47,8 @@ function generateRandomPassword(length = 8) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let password = '';
   for (let i = 0; i < length; i++) {
-      const randomIndex = crypto.randomInt(0, characters.length);
-      password += characters[randomIndex];
+    const randomIndex = crypto.randomInt(0, characters.length);
+    password += characters[randomIndex];
   }
   return password;
 }
@@ -994,24 +996,29 @@ const userController = {
 
         const userForUpdate = await UserAdmin.findOneAndUpdate({ rut }, req.body)
 
+        // if (req.file) {
+        //   const fileContent = req.file.buffer;
+        //   const extension = req.file.originalname.split('.').pop();
+        //   const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+        //   const uploadParams = {
+        //     Bucket: process.env.AWS_BUCKET_NAME,
+        //     Key: fileName,
+        //     Body: fileContent,
+        //   };
+
+        //   // Subir el archivo a S3
+        //   const uploadCommand = new PutObjectCommand(uploadParams);
+        //   await clientAWS.send(uploadCommand);
+
+        //   userForUpdate.imgUrl = fileName;
+        // }
+
         if (req.file) {
-          const fileContent = req.file.buffer;
-          const extension = req.file.originalname.split('.').pop();
-          const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-
-          const uploadParams = {
-            Bucket: process.env.AWS_BUCKET_NAME,
-            Key: fileName,
-            Body: fileContent,
-          };
-
-          // Subir el archivo a S3
-          const uploadCommand = new PutObjectCommand(uploadParams);
-          await clientAWS.send(uploadCommand);
-
-          userForUpdate.imgUrl = fileName;
+          const key = await uploadMulterFile(req.file); // devuelve el nombre generado
+          userForUpdate.imgUrl = key;
         }
-        
+
         await userForUpdate.save()
 
         res.status(200).json({
@@ -1027,23 +1034,29 @@ const userController = {
       if (studentUser) {
         const studentForUpdate = await Students.findOneAndUpdate({ rut }, req.body)
 
+        // if (req.file) {
+        //   const fileContent = req.file.buffer;
+        //   const extension = req.file.originalname.split('.').pop();
+        //   const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
+
+        //   const uploadParams = {
+        //     Bucket: process.env.AWS_BUCKET_NAME,
+        //     Key: fileName,
+        //     Body: fileContent,
+        //   };
+
+        //   // Subir el archivo a S3
+        //   const uploadCommand = new PutObjectCommand(uploadParams);
+        //   await clientAWS.send(uploadCommand);
+
+        //   studentForUpdate.imgUrl = fileName;
+        // }
+
         if (req.file) {
-          const fileContent = req.file.buffer;
-          const extension = req.file.originalname.split('.').pop();
-          const fileName = `${req.file.fieldname}-${quizIdentifier()}.${extension}`;
-
-          const uploadParams = {
-            Bucket: process.env.AWS_BUCKET_NAME,
-            Key: fileName,
-            Body: fileContent,
-          };
-
-          // Subir el archivo a S3
-          const uploadCommand = new PutObjectCommand(uploadParams);
-          await clientAWS.send(uploadCommand);
-
-          studentForUpdate.imgUrl = fileName;
+          const key = await uploadMulterFile(req.file);
+          studentForUpdate.imgUrl = key;
         }
+
 
         await studentForUpdate.save()
 
@@ -1225,19 +1238,19 @@ const userController = {
       });
     }
   },
-  controlParentalActive : async (req, res) => {
+  controlParentalActive: async (req, res) => {
     const { email } = req.body;
-  
+
     if (!email) {
       return res.status(400).json({
         message: 'Correo electrónico es requerido',
         success: false
       });
     }
-  
+
     try {
       let user = await Students.findOne({ email }) || await UserAdmin.findOne({ email });
-  
+
       if (user) {
         user.controlParental = user.controlParental === null || user.controlParental === undefined ? true : !user.controlParental;
         await user.save();
@@ -1252,7 +1265,7 @@ const userController = {
           success: false
         });
       }
-  
+
     } catch (error) {
       console.error(error);
       res.status(500).json({
@@ -1261,7 +1274,7 @@ const userController = {
       });
     }
   },
-  getUserDetail : async (req, res) =>{
+  getUserDetail: async (req, res) => {
 
     const { id } = req.params;
 
@@ -1285,7 +1298,7 @@ const userController = {
           path: 'workshop',
           select: 'name grade level' // Selecciona solo los campos deseados de workshop
         });
-  
+
       if (student) {
         return res.status(200).json({
           response: student,
@@ -1293,7 +1306,7 @@ const userController = {
           message: 'Usuario encontrado'
         });
       }
-  
+
       // Intentar encontrar al usuario admin
       let user = await UserAdmin.findById(id)
         .select('name lastName email role age size gender weight imgUrl classroom program school workshop') // Selecciona solo los campos deseados
@@ -1329,7 +1342,7 @@ const userController = {
             select: 'name lastName email phone birth gender rut age' // Campos específicos de estudiantes
           }
         });
-  
+
       if (user) {
         return res.status(200).json({
           response: user,
@@ -1337,12 +1350,12 @@ const userController = {
           message: 'Usuario encontrado'
         });
       }
-  
+
       return res.status(404).json({
         message: 'No se encontró el usuario',
         success: false
       });
-  
+
     } catch (error) {
       console.error(error);
       res.status(500).json({

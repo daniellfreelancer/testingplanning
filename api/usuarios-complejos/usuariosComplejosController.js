@@ -7,16 +7,13 @@ const sendWelcomeEmail = require("../../controllers/mailRegisterPiscinaSantiago"
 const Institucion = require("../institucion/institucionModel");
 const CentroDeportivo = require("../centros-deportivos/centrosDeportivosModel");
 const sendMailUserContract = require("../mail/mailUserContract");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const UsuariosComplejos = require("./usuariosComplejos");
 const usuariosComplejosModel = require("./usuariosComplejos");
-const bucketRegion = process.env.AWS_BUCKET_REGION;
-const bucketName = process.env.AWS_BUCKET_NAME;
-const publicKey = process.env.AWS_PUBLIC_KEY;
-const privateKey = process.env.AWS_SECRET_KEY;
-const SuscripcionPlanes = require('../suscripcion-planes/suscripcionPlanes')
-const RegistroAccesos = require('../acceso-usuarios-complejos/accesoUsuariosComplejosModel');
-const { listenerCount } = require("process");
+const SuscripcionPlanes = require("../suscripcion-planes/suscripcionPlanes");
+const RegistroAccesos = require("../acceso-usuarios-complejos/accesoUsuariosComplejosModel");
+
+// 👇 NUEVO: helper centralizado S3
+const { uploadMulterFile } = require("../../utils/s3Client");
 
 function generateRandomPassword(length = 8) {
   const characters =
@@ -56,18 +53,6 @@ const queryPopulateOptions = [
       " tipotipoPlan plan tieneVariante variante valor dias horarios status",
   },
 ];
-
-
-
-const clientAWS = new S3Client({
-  region: bucketRegion,
-  credentials: {
-    accessKeyId: publicKey,
-    secretAccessKey: privateKey,
-  },
-});
-
-const quizIdentifier = () => crypto.randomBytes(32).toString("hex");
 
 const usuariosComplejosController = {
   crearUsuarioComplejo: async (req, res) => {
@@ -168,6 +153,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al crear usuario,", error: error });
     }
   },
+
   asignarAlumnosAEntrenador: async (req, res) => {
     const { entrenadorId, alumnosIds } = req.body;
     try {
@@ -184,11 +170,9 @@ const usuariosComplejosController = {
           .json({ message: "Algunos alumnos no encontrados" });
       }
 
-      //agregar los alumnos al array alumnos del entrenador
       entrenador.alumnos = [...entrenador.alumnos, ...alumnosIds];
       await entrenador.save();
 
-      //agregar el entrenador al campo entrenador de los alumnos
       alumnos.forEach(async (alumno) => {
         alumno.entrenador = entrenadorId;
         await alumno.save();
@@ -205,6 +189,7 @@ const usuariosComplejosController = {
       });
     }
   },
+
   desasignarAlumnoDeEntrenador: async (req, res) => {
     const { entrenadorId, alumnoId } = req.body;
     try {
@@ -216,13 +201,12 @@ const usuariosComplejosController = {
       if (!alumno) {
         return res.status(404).json({ message: "Alumno no encontrado" });
       }
-      //eliminar el alumno del array alumnos del entrenador
+
       entrenador.alumnos = entrenador.alumnos.filter(
         (id) => id.toString() !== alumnoId
       );
       await entrenador.save();
 
-      //eliminar el entrenador del campo entrenador del alumno
       alumno.entrenador = null;
       await alumno.save();
 
@@ -237,6 +221,7 @@ const usuariosComplejosController = {
       });
     }
   },
+
   actualizarUsuarioComplejo: async (req, res) => {
     const { id } = req.params;
 
@@ -257,6 +242,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al actualizar usuario,", error: error });
     }
   },
+
   obtenerUsuarioComplejo: async (req, res) => {
     const { id } = req.params;
 
@@ -275,6 +261,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuario,", error: error });
     }
   },
+
   eliminarUsuarioComplejo: async (req, res) => {
     const { id } = req.params;
     try {
@@ -292,6 +279,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al eliminar usuario,", error: error });
     }
   },
+
   obtenerTodosLosUsuariosComplejos: async (req, res) => {
     try {
       const users = await UsuariosComplejos.find();
@@ -305,6 +293,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios,", error: error });
     }
   },
+
   loginUsuarioComplejo: async (req, res) => {
     const { email, password } = req.body;
 
@@ -371,6 +360,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al iniciar sesión,", error: error });
     }
   },
+
   logoutUsuarioComplejo: async (req, res) => {
     const { id } = req.params;
     try {
@@ -392,6 +382,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al cerrar sesión,", error: error });
     }
   },
+
   forgotPasswordUsuarioComplejo: async (req, res) => {
     const { email } = req.body;
 
@@ -425,6 +416,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al restablecer contraseña,", error: error });
     }
   },
+
   changePasswordUsuarioComplejo: async (req, res) => {
     const { id } = req.params;
 
@@ -440,12 +432,10 @@ const usuariosComplejosController = {
       user.password = bcryptjs.hashSync(newPassword, 10);
       await user.save();
 
-
-      res
-        .status(200)
-        .json({ message: "Nueva contraseña generada correctamente.", password: newPassword });
-
-
+      res.status(200).json({
+        message: "Nueva contraseña generada correctamente.",
+        password: newPassword,
+      });
     } catch (error) {
       console.log(error);
       res
@@ -453,19 +443,18 @@ const usuariosComplejosController = {
         .json({ message: "Error al cambiar contraseña,", error: error });
     }
   },
+
   //crear usuario de piscina
   crearUsuarioComplejosPiscina: async (req, res) => {
     try {
       const { institucion } = req.params;
       const userData = req.body;
 
-      // Validar que la institución existe
       const institucionDoc = await Institucion.findById(institucion);
       if (!institucionDoc) {
         return res.status(404).json({ message: "Institución no encontrada" });
       }
 
-      // Formatear fechaNacimiento si viene en formato dd/mm/yyyy
       if (
         userData.fechaNacimiento &&
         typeof userData.fechaNacimiento === "string"
@@ -474,70 +463,58 @@ const usuariosComplejosController = {
         userData.fechaNacimiento = new Date(`${year}-${month}-${day}`);
       }
 
-      /**
-       * en espera de nueva configuracion de AWS para subir archivos
-       */
-      // if (req.files && req.files["fotoCedulaFrontal"]) {
-      //   const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-      //   const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
-      //     }-${quizIdentifier()}.png`;
+      // ⬇️ Subida de archivos de cédula/firma usando helper S3
+      if (req.files && req.files["fotoCedulaFrontal"]) {
+        try {
+          const key = await uploadMulterFile(
+            req.files["fotoCedulaFrontal"][0]
+          );
+          userData.fotoCedulaFrontal = key;
+        } catch (err) {
+          console.error("Error subiendo fotoCedulaFrontal:", err);
+          return res.status(500).json({
+            message: "Error al subir foto de cédula frontal",
+            error: err.message,
+          });
+        }
+      }
 
-      //   const uploadFirst = {
-      //     Bucket: bucketName,
-      //     Key: fileName,
-      //     Body: fileContent,
-      //   };
+      if (req.files && req.files["fotoCedulaReverso"]) {
+        try {
+          const key = await uploadMulterFile(
+            req.files["fotoCedulaReverso"][0]
+          );
+          userData.fotoCedulaReverso = key;
+        } catch (err) {
+          console.error("Error subiendo fotoCedulaReverso:", err);
+          return res.status(500).json({
+            message: "Error al subir foto de cédula reverso",
+            error: err.message,
+          });
+        }
+      }
 
-      //   const uploadCommand = new PutObjectCommand(uploadFirst);
-      //   await clientAWS.send(uploadCommand);
+      if (req.files && req.files["firma"]) {
+        try {
+          const key = await uploadMulterFile(req.files["firma"][0]);
+          userData.firma = key;
+        } catch (err) {
+          console.error("Error subiendo firma:", err);
+          return res.status(500).json({
+            message: "Error al subir firma",
+            error: err.message,
+          });
+        }
+      }
 
-      //   userData.fotoCedulaFrontal = fileName;
-      // }
-
-      // if (req.files && req.files["fotoCedulaReverso"]) {
-      //   const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-      //   const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
-      //     }-${quizIdentifier()}.png`;
-
-      //   const uploadSecond = {
-      //     Bucket: bucketName,
-      //     Key: fileName,
-      //     Body: fileContent,
-      //   };
-
-      //   const uploadCommand = new PutObjectCommand(uploadSecond);
-      //   await clientAWS.send(uploadCommand);
-
-      //   userData.fotoCedulaReverso = fileName;
-      // }
-
-      // if (req.files && req.files["firma"]) {
-      //   const fileContent = req.files["firma"][0].buffer;
-      //   const fileName = `${req.files["firma"][0].fieldname
-      //     }-${quizIdentifier()}.png`;
-
-      //   const uploadThird = {
-      //     Bucket: bucketName,
-      //     Key: fileName,
-      //     Body: fileContent,
-      //   };
-
-      //   const uploadCommand = new PutObjectCommand(uploadThird);
-      //   await clientAWS.send(uploadCommand);
-
-      //   userData.firma = fileName;
-      // }
-
-      // Crear usuario con los datos del body y valores por defecto
       const newUser = new UsuariosComplejos({
         ...userData,
-        institucion: [institucion], // Convertir a array según el modelo
+        institucion: [institucion],
         status: false,
       });
 
       await newUser.save();
 
-      // Agregar usuario al array usuarios de la institucion
       institucionDoc.usuarios.push(newUser._id);
       await institucionDoc.save();
 
@@ -554,39 +531,46 @@ const usuariosComplejosController = {
       });
     }
   },
+
   //obtener usuario de piscina por rut
   obtenerUsuarioComplejoPiscina: async (req, res) => {
     const { doc } = req.params;
     try {
-      // Buscar un usuario cuyo rut comience con el doc recibido (sin dígito verificador)
-      // La regex ahora acepta tanto dígitos (0-9) como la letra 'K' (mayúscula o minúscula) como dígito verificador
-      // También ignora la comilla simple (') que agrega el lector QR cuando el dígito es 'K'
-
-
-      // buscar la cantidad de
       const user = await UsuariosComplejos.findOne({
-        rut: { $regex: `^${doc}[0-9Kk]$`, $options: "i" }, // doc seguido de 1 dígito numérico, 'K'/'k', o comilla simple
+        rut: { $regex: `^${doc}[0-9Kk]$`, $options: "i" },
       });
 
-      //buscar suscripciones activas del usuario, que fechaFin se mayor o igual al dia de hoy en hora 00:00:00
       const fechaFin = new Date();
       fechaFin.setDate(fechaFin.getDate());
       fechaFin.setHours(0, 0, 0, 0);
 
-      //si la suscripcion es de planId?.tipo = nadoLibre, y el campo horasDisponibles es 0, no se debe mostrar
       const suscripcionesActivas = await SuscripcionPlanes.find({
         usuario: user?._id,
         fechaFin: { $gte: fechaFin },
       })
-        .populate('planId', { 'nombrePlan': 1, 'tipo': 1, 'tipoPlan': 1, 'valor': 1 })
-        .populate('varianteId', { 'horasDisponibles': 1, 'dia': 1, 'horario': 1 });
+        .populate("planId", {
+          nombrePlan: 1,
+          tipo: 1,
+          tipoPlan: 1,
+          valor: 1,
+        })
+        .populate("varianteId", {
+          horasDisponibles: 1,
+          dia: 1,
+          horario: 1,
+        });
 
-      const suscripcionesActivasFiltradas = suscripcionesActivas.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0) {
-          return false;
+      const suscripcionesActivasFiltradas = suscripcionesActivas.filter(
+        (suscripcion) => {
+          if (
+            suscripcion.planId?.tipo === "nadoLibre" &&
+            suscripcion.horasDisponibles === 0
+          ) {
+            return false;
+          }
+          return true;
         }
-        return true;
-      });
+      );
 
       if (!user) {
         return res
@@ -601,8 +585,6 @@ const usuariosComplejosController = {
           nombre: user.nombre,
           apellido: user.apellido,
           rut: user.rut,
-          // email: user.email,
-          // telefono: user.telefono,
           rol: user.rol,
           tipoPlan: user.tipoPlan,
           tipoCurso: user.tipoCurso,
@@ -624,11 +606,11 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuario de piscina", error });
     }
   },
+
   //obtener todos los usuarios de piscina por institucion
   obtenerTodosLosUsuariosComplejosPiscina: async (req, res) => {
     const { institucion } = req.params;
     try {
-      //unicamente traer los usuarios que tengan el rol = usuario
       const users = await UsuariosComplejos.find({
         institucion,
         rol: "usuario",
@@ -644,13 +626,12 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
-  //obtener todos los usuarios de piscina que tengan el rol = usuario y que tengan tipoPlanGym
+
   obtenerTodosLosUsuariosComplejosPiscinaPorTipoPlanGym: async (req, res) => {
     const { institucion } = req.params;
     try {
       const users = await UsuariosComplejos.find({
         institucion,
-        //   rol: "usuario",
         tipoPlanGym: { $in: ["Plan full", "Plan basico", "Plan básico"] },
       });
       res.status(200).json({
@@ -665,8 +646,11 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
-  //obtener todos los usuarios de piscina que tengan el rol = usuario y que tengan arrendatario = true
-  obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario: async (req, res) => {
+
+  obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario: async (
+    req,
+    res
+  ) => {
     const { institucion } = req.params;
     try {
       const users = await UsuariosComplejos.find({
@@ -685,7 +669,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
-  //obtener todos los usuarios de piscina por centro deportivo
+
   obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo: async (
     req,
     res
@@ -704,7 +688,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
-  //obtener todos los usuarios de piscina por espacio deportivo
+
   obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo: async (
     req,
     res
@@ -723,16 +707,14 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
+
   //actualizar usuario de piscina
   actualizarUsuarioComplejoPiscina: async (req, res) => {
     const { id } = req.params;
-    //   const clientId = req.headers["x-client-id"];
-    //  const UsuariosComplejos = await usuariosComplejosModel(clientId);
+
     try {
-      // Preparar datos de actualización
       const updateData = { ...req.body };
 
-      // Procesar campos JSON que vienen como strings
       if (
         updateData.contactoEmergencia &&
         typeof updateData.contactoEmergencia === "string"
@@ -745,42 +727,49 @@ const usuariosComplejosController = {
         updateData.tutores = JSON.parse(updateData.tutores);
       }
 
-      /**
-       * en espera de nueva configuracion de AWS para subir archivos
-       */
-      // if (req.files && req.files["fotoCedulaFrontal"]) {
-      //   const fileContent = req.files["fotoCedulaFrontal"][0].buffer;
-      //   const fileName = `${req.files["fotoCedulaFrontal"][0].fieldname
-      //     }-${quizIdentifier()}.png`;
+      // ⬇️ Subida de archivos usando helper S3
+      if (req.files && req.files["fotoCedulaFrontal"]) {
+        try {
+          const key = await uploadMulterFile(
+            req.files["fotoCedulaFrontal"][0]
+          );
+          updateData.fotoCedulaFrontal = key;
+        } catch (err) {
+          console.error("Error subiendo fotoCedulaFrontal:", err);
+          return res.status(500).json({
+            message: "Error al subir foto de cédula frontal",
+            error: err.message,
+          });
+        }
+      }
 
-      //   const uploadParams = {
-      //     Bucket: bucketName,
-      //     Key: fileName,
-      //     Body: fileContent,
-      //   };
+      if (req.files && req.files["fotoCedulaReverso"]) {
+        try {
+          const key = await uploadMulterFile(
+            req.files["fotoCedulaReverso"][0]
+          );
+          updateData.fotoCedulaReverso = key;
+        } catch (err) {
+          console.error("Error subiendo fotoCedulaReverso:", err);
+          return res.status(500).json({
+            message: "Error al subir foto de cédula reverso",
+            error: err.message,
+          });
+        }
+      }
 
-      //   const uploadCommand = new PutObjectCommand(uploadParams);
-      //   await clientAWS.send(uploadCommand);
-
-      //   updateData.fotoCedulaFrontal = fileName;
-      // }
-
-      // if (req.files && req.files["fotoCedulaReverso"]) {
-      //   const fileContent = req.files["fotoCedulaReverso"][0].buffer;
-      //   const fileName = `${req.files["fotoCedulaReverso"][0].fieldname
-      //     }-${quizIdentifier()}.png`;
-
-      //   const uploadParams = {
-      //     Bucket: bucketName,
-      //     Key: fileName,
-      //     Body: fileContent,
-      //   };
-
-      //   const uploadCommand = new PutObjectCommand(uploadParams);
-      //   await clientAWS.send(uploadCommand);
-
-      //   updateData.fotoCedulaReverso = fileName;
-      // }
+      if (req.files && req.files["firma"]) {
+        try {
+          const key = await uploadMulterFile(req.files["firma"][0]);
+          updateData.firma = key;
+        } catch (err) {
+          console.error("Error subiendo firma:", err);
+          return res.status(500).json({
+            message: "Error al subir firma",
+            error: err.message,
+          });
+        }
+      }
 
       const user = await UsuariosComplejos.findByIdAndUpdate(id, updateData, {
         new: true,
@@ -796,22 +785,16 @@ const usuariosComplejosController = {
         .json({ message: "Error al actualizar usuario de piscina", error });
     }
   },
+
   //eliminar usuario de piscina
   eliminarUsuarioComplejoPiscina: async (req, res) => {
     const { id } = req.params;
     try {
-      /**
-       * 1. eliminar el usuario de la institucion
-       * 2. eliminar el usuario de la base de datos
-       */
-
-      //primero buscamos el usuario en la base de datos
       const user = await UsuariosComplejos.findById(id);
       if (!user) {
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
 
-      //luego eliminamos el usuario de la institucion
       const institucion = await Institucion.findById(user.institucion);
       if (!institucion) {
         return res.status(404).json({ message: "Institución no encontrada" });
@@ -821,12 +804,12 @@ const usuariosComplejosController = {
       );
       await institucion.save();
 
-      //luego eliminamos el usuario de la base de datos
       await UsuariosComplejos.findByIdAndDelete(id);
 
-      res
-        .status(200)
-        .json({ message: "Usuario de piscina eliminado correctamente", user });
+      res.status(200).json({
+        message: "Usuario de piscina eliminado correctamente",
+        user,
+      });
     } catch (error) {
       console.log(error);
       res
@@ -834,7 +817,7 @@ const usuariosComplejosController = {
         .json({ message: "Error al eliminar usuario de piscina", error });
     }
   },
-  //traer todos los usuarios por Id de institucion
+
   obtenerTodosLosUsuariosComplejosPiscinaPorInstitucion: async (req, res) => {
     const { institucion } = req.params;
     try {
@@ -850,9 +833,9 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuarios de piscina", error });
     }
   },
+
   obtenerUsuarioPiscinaPorRut: async (req, res) => {
     try {
-      const clientId = req.headers["x-client-id"];
       const { rut } = req.params;
 
       if (!rut) {
@@ -861,10 +844,6 @@ const usuariosComplejosController = {
         });
       }
 
-      // Obtener el modelo con la conexión específica del cliente
-      //const UsuariosPiscina = await usuariosComplejosModel(clientId);
-
-      // Buscar usuario por RUT
       const user = await Usuarios.findOne({ rut });
 
       if (!user) {
@@ -877,23 +856,6 @@ const usuariosComplejosController = {
         success: true,
         message: "Usuario encontrado correctamente",
         user: user,
-        // user: {
-        //   _id: user._id,
-        //   nombre: user.nombre,
-        //   apellido: user.apellido,
-        //   rut: user.rut,
-        //   email: user.email,
-        //   telefono: user.telefono,
-        //   rol: user.rol,
-        //   status: user.status,
-        //   tipoPlan: user.tipoPlan,
-        //   tipoCurso: user.tipoCurso,
-        //   nivelCurso: user.nivelCurso,
-        //   tipoContratacion: user.tipoContratacion,
-        //   arrendatario: user.arrendatario,
-        //   institucion: user.institucion,
-        //   // Agrega más campos según necesites
-        // },
       });
     } catch (error) {
       console.error("Error en obtenerUsuarioPiscinaPorRut:", error);
@@ -904,6 +866,7 @@ const usuariosComplejosController = {
       });
     }
   },
+
   enviarCorreoContratacion: async (req, res) => {
     const { rut } = req.params;
     try {
@@ -913,9 +876,10 @@ const usuariosComplejosController = {
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
       await sendMailUserContract(user);
-      res
-        .status(200)
-        .json({ message: "Usuario de piscina encontrado correctamente", user });
+      res.status(200).json({
+        message: "Usuario de piscina encontrado correctamente",
+        user,
+      });
     } catch (error) {
       console.log(error);
       res
@@ -923,21 +887,16 @@ const usuariosComplejosController = {
         .json({ message: "Error al obtener usuario de piscina", error });
     }
   },
-  encontrarUsuarioPiscinaConMismoRut: async (req, res) => {
-    const clientId = req.headers["x-client-id"]; // Puede ser null
-    // const UsuariosComplejos = await Usuarios(clientId);
 
+  encontrarUsuarioPiscinaConMismoRut: async (req, res) => {
     try {
-      // Usar agregación para encontrar RUTs duplicados
       const rutDuplicados = await UsuariosComplejos.aggregate([
         {
-          // Filtrar documentos que tengan RUT y no sean null/undefined
           $match: {
             rut: { $exists: true, $ne: null, $ne: "" },
           },
         },
         {
-          // Agrupar por RUT y contar las ocurrencias
           $group: {
             _id: "$rut",
             count: { $sum: 1 },
@@ -961,18 +920,15 @@ const usuariosComplejosController = {
           },
         },
         {
-          // Filtrar solo los RUTs que aparecen más de una vez
           $match: {
             count: { $gt: 1 },
           },
         },
         {
-          // Ordenar por cantidad de ocurrencias (mayor a menor)
           $sort: { count: -1 },
         },
       ]);
 
-      // Formatear la respuesta
       const resultado = {
         totalRutsDuplicados: rutDuplicados.length,
         rutsDuplicados: rutDuplicados.map((item) => ({
@@ -994,58 +950,45 @@ const usuariosComplejosController = {
       });
     }
   },
-  //obtener todos los usuarios de piscina por institucion con paginación
+
   obtenerTodosLosUsuariosComplejosPiscinaPaginado: async (req, res) => {
     const { institucion } = req.params;
-    const { limite = 50, pagina = 1, busqueda = '' } = req.query;
+    const { limite = 50, pagina = 1, busqueda = "" } = req.query;
 
     try {
-      // Validar parámetros
       const limiteNum = parseInt(limite);
       const paginaNum = parseInt(pagina);
 
-      // if (limiteNum <= 0 || limiteNum > 200) {
-      //   return res.status(400).json({
-      //     message: "El límite debe estar entre 1 y 200 usuarios"
-      //   });
-      // }
-
       if (paginaNum <= 0) {
         return res.status(400).json({
-          message: "La página debe ser mayor a 0"
+          message: "La página debe ser mayor a 0",
         });
       }
 
-      // Calcular skip para paginación
       const skip = (paginaNum - 1) * limiteNum;
 
-      // Construir filtro de búsqueda
       let filtro = {
         institucion,
-        rol: "usuario"
+        rol: "usuario",
       };
 
-      // Agregar filtro de búsqueda si se proporciona
-      if (busqueda && busqueda.trim() !== '') {
+      if (busqueda && busqueda.trim() !== "") {
         filtro.$or = [
-          { nombre: { $regex: busqueda, $options: 'i' } },
-          { apellido: { $regex: busqueda, $options: 'i' } },
-          { email: { $regex: busqueda, $options: 'i' } },
-          { rut: { $regex: busqueda, $options: 'i' } }
+          { nombre: { $regex: busqueda, $options: "i" } },
+          { apellido: { $regex: busqueda, $options: "i" } },
+          { email: { $regex: busqueda, $options: "i" } },
+          { rut: { $regex: busqueda, $options: "i" } },
         ];
       }
 
-      // Obtener total de usuarios para calcular páginas totales
       const totalUsuarios = await UsuariosComplejos.countDocuments(filtro);
 
-      // Obtener usuarios con paginación
       const users = await UsuariosComplejos.find(filtro)
         .populate(queryPopulateOptions)
         .skip(skip)
         .limit(limiteNum)
-        .sort({ createdAt: -1 }); // Ordenar por fecha de creación (más recientes primero)
+        .sort({ createdAt: -1 });
 
-      // Calcular información de paginación
       const paginasTotales = Math.ceil(totalUsuarios / limiteNum);
       const tieneSiguientePagina = paginaNum < paginasTotales;
       const tienePaginaAnterior = paginaNum > 1;
@@ -1060,58 +1003,79 @@ const usuariosComplejosController = {
           limitePorPagina: limiteNum,
           tieneSiguientePagina,
           tienePaginaAnterior,
-          usuariosEnPaginaActual: users.length
+          usuariosEnPaginaActual: users.length,
         },
-        busqueda: busqueda || null
+        busqueda: busqueda || null,
       });
     } catch (error) {
       console.log(error);
       res.status(500).json({
         message: "Error al obtener usuarios de piscina",
-        error: error.message
+        error: error.message,
       });
     }
   },
-  //actualizar status arrendatario
+
   actualizarStatusArrendatario: async (req, res) => {
     const { id } = req.params;
-    const { statusArrendatario, fechaInicioArrendatario, } = req.body;
+    const { statusArrendatario, fechaInicioArrendatario } = req.body;
 
     try {
-      const user = await UsuariosComplejos.findByIdAndUpdate(id, { statusArrendatario, fechaInicioArrendatario, status: true }, { new: true });
+      const user = await UsuariosComplejos.findByIdAndUpdate(
+        id,
+        { statusArrendatario, fechaInicioArrendatario, status: true },
+        { new: true }
+      );
 
-      res.status(200).json({ message: "Status arrendatario actualizado correctamente", user });
-
+      res.status(200).json({
+        message: "Status arrendatario actualizado correctamente",
+        user,
+      });
     } catch (error) {
       console.log(error);
-      res.status(500).json({ message: "Error al actualizar status arrendatario", error });
+      res.status(500).json({
+        message: "Error al actualizar status arrendatario",
+        error,
+      });
     }
-
   },
+
   buscarUsuarioPorPasaporte: async (req, res) => {
     const { pasaporte } = req.params;
     try {
       const user = await UsuariosComplejos.findOne({ rut: pasaporte });
 
-      //buscar suscripciones activas del usuario, que fechaFin se mayor o igual al dia de hoy en hora 00:00:00
       const fechaFin = new Date();
       fechaFin.setDate(fechaFin.getDate());
       fechaFin.setHours(0, 0, 0, 0);
 
-      //si la suscripcion es de planId?.tipo = nadoLibre, y el campo horasDisponibles es 0, no se debe mostrar
       const suscripcionesActivas = await SuscripcionPlanes.find({
         usuario: user?._id,
         fechaFin: { $gte: fechaFin },
       })
-        .populate('planId', { 'nombrePlan': 1, 'tipo': 1, 'tipoPlan': 1, 'valor': 1 })
-        .populate('varianteId', { 'horasDisponibles': 1, 'dia': 1, 'horario': 1 });
+        .populate("planId", {
+          nombrePlan: 1,
+          tipo: 1,
+          tipoPlan: 1,
+          valor: 1,
+        })
+        .populate("varianteId", {
+          horasDisponibles: 1,
+          dia: 1,
+          horario: 1,
+        });
 
-      const suscripcionesActivasFiltradas = suscripcionesActivas.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0) {
-          return false;
+      const suscripcionesActivasFiltradas = suscripcionesActivas.filter(
+        (suscripcion) => {
+          if (
+            suscripcion.planId?.tipo === "nadoLibre" &&
+            suscripcion.horasDisponibles === 0
+          ) {
+            return false;
+          }
+          return true;
         }
-        return true;
-      });
+      );
 
       if (!user) {
         return res
@@ -1140,55 +1104,63 @@ const usuariosComplejosController = {
           suscripcionesActivas: suscripcionesActivasFiltradas,
         },
       });
-
-
     } catch (error) {
       console.log(error);
-      res.status(500).json({ message: "Error al buscar usuario por pasaporte", error });
+      res.status(500).json({
+        message: "Error al buscar usuario por pasaporte",
+        error,
+      });
     }
   },
-  //enviar correo de bienvenida a usuario de piscina
+
   enviarCorreoBienvenidaUsuarioPiscina: async (req, res) => {
     const { email, password, name } = req.body;
     try {
       await sendWelcomeEmail(email, password, name);
-      res.status(200).json({ message: "Correo de bienvenida enviado correctamente" });
+      res.status(200).json({
+        message: "Correo de bienvenida enviado correctamente",
+      });
     } catch (error) {
       console.log(error);
-      res.status(500).json({ message: "Error al enviar correo de bienvenida a usuario de piscina", error });
+      res.status(500).json({
+        message: "Error al enviar correo de bienvenida a usuario de piscina",
+        error,
+      });
     }
   },
-  //aqui va la peticion para stats de usuarios piscina
-  statsUsuariosPiscina: async (req, res) => {
 
+  statsUsuariosPiscina: async (req, res) => {
     const { institucionId } = req.params;
 
     try {
-
       const institucion = await Institucion.findById(institucionId);
       if (!institucion) {
         return res.status(404).json({ message: "Institución no encontrada" });
       }
 
-      //contabilizar la cantidad de usuarios colaboradores tienen rol EMPLOYED
-      const cantidadUsuariosColaboradores = await UsuariosComplejos.countDocuments({ institucion: institucionId, rol: 'EMPLOYED' });
+      const cantidadUsuariosColaboradores =
+        await UsuariosComplejos.countDocuments({
+          institucion: institucionId,
+          rol: "EMPLOYED",
+        });
 
-      //Contabilizar la cantidad de usuarios colaboradores que tienen rol usuario
-      const cantidadUsuariosPiscina = await UsuariosComplejos.countDocuments({ institucion: institucionId, rol: 'usuario' });
-
-      //contabilizar la cantidad de usuarios con tipoPlanGym = Plan full, Plan basico, Plan básico
-      const cantidadUsuariosConPlanGym = await UsuariosComplejos.countDocuments({
+      const cantidadUsuariosPiscina = await UsuariosComplejos.countDocuments({
         institucion: institucionId,
-        tipoPlanGym: { $in: ['Plan full', 'Plan basico', 'Plan básico'] }
+        rol: "usuario",
       });
 
-      //contabilizar la cantidad de usuarios con statusArrendatario = true
-      const cantidadUsuariosConStatusArrendatario = await UsuariosComplejos.countDocuments({
-        institucion: institucionId,
-        statusArrendatario: true
-      });
+      const cantidadUsuariosConPlanGym =
+        await UsuariosComplejos.countDocuments({
+          institucion: institucionId,
+          tipoPlanGym: { $in: ["Plan full", "Plan basico", "Plan básico"] },
+        });
 
-      //contabilizar la cantidad de accesos de usuarios piscina en el dia de hoy
+      const cantidadUsuariosConStatusArrendatario =
+        await UsuariosComplejos.countDocuments({
+          institucion: institucionId,
+          statusArrendatario: true,
+        });
+
       const inicioDia = new Date();
       inicioDia.setHours(0, 0, 0, 0);
 
@@ -1197,9 +1169,8 @@ const usuariosComplejosController = {
 
       const cantidadAccesosHoy = await RegistroAccesos.countDocuments({
         institucion: institucionId,
-        createdAt: { $gte: inicioDia, $lte: finDia }
+        createdAt: { $gte: inicioDia, $lte: finDia },
       });
-
 
       res.status(200).json({
         message: "Stats de usuarios de piscina obtenidos correctamente",
@@ -1209,59 +1180,55 @@ const usuariosComplejosController = {
           cantidadUsuariosConPlanGym,
           cantidadUsuariosConStatusArrendatario,
           cantidadAccesosHoy,
-          cantidadUsuariosNatacion: cantidadUsuariosPiscina - cantidadUsuariosConPlanGym - cantidadUsuariosConStatusArrendatario
-        }
+          cantidadUsuariosNatacion:
+            cantidadUsuariosPiscina -
+            cantidadUsuariosConPlanGym -
+            cantidadUsuariosConStatusArrendatario,
+        },
       });
-
-
     } catch (error) {
-
       console.log(error);
-      res.status(500).json({ message: "Error al obtener stats de usuarios de piscina", error });// Error al obtener stats de usuarios de piscina
-
+      res.status(500).json({
+        message: "Error al obtener stats de usuarios de piscina",
+        error,
+      });
     }
-
-
   },
-  //obtener todos los usuarios de piscina por institucion
+
   obtenerUsuariosPiscinaNatacion: async (req, res) => {
     const { institucion } = req.params;
     const startTime = Date.now();
 
     try {
-      // Validación de entrada
       if (!institucion) {
         return res.status(400).json({
           message: "ID de institución es requerido",
-          success: false
+          success: false,
         });
       }
 
-      // Optimización 1: Usar select() para traer solo los campos necesarios
-      // Optimización 2: Usar lean() para obtener objetos planos (más rápido)
-      // Optimización 3: Aplicar filtros directamente en la consulta MongoDB
       const users = await UsuariosComplejos.find({
         institucion,
         rol: "usuario",
-        // Filtro optimizado: excluir arrendatarios sin planes directamente en la DB
         $or: [
-          { arrendatario: { $ne: true } }, // No es arrendatario
+          { arrendatario: { $ne: true } },
           {
             arrendatario: true,
             $or: [
               { tipoPlan: { $exists: true, $ne: null, $ne: "" } },
               { tipoPlanGym: { $exists: true, $ne: null, $ne: "" } },
               { tipoContratacion: { $exists: true, $ne: null, $ne: "" } },
-              { planCurso: { $exists: true, $ne: null } }
-            ]
-          }
-        ]
+              { planCurso: { $exists: true, $ne: null } },
+            ],
+          },
+        ],
       })
-        .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario correo email fechaRegistro telefono direccion numeroDireccion')
-        .lean() // Objetos planos, más rápido
+        .select(
+          "_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario correo email fechaRegistro telefono direccion numeroDireccion"
+        )
+        .lean()
         .exec();
 
-      // Optimización 4: Procesamiento más eficiente sin map innecesario
       const usersFiltered = users.map((user) => ({
         _id: user._id,
         nombre: user.nombre,
@@ -1278,7 +1245,9 @@ const usuariosComplejosController = {
         tipoContratacion: user.tipoContratacion,
         correo: user.correo,
         email: user.email,
-        fechaRegistro: user.fechaRegistro ? user.fechaRegistro.toISOString() : null,
+        fechaRegistro: user.fechaRegistro
+          ? user.fechaRegistro.toISOString()
+          : null,
         telefono: user.telefono,
         direccion: user.direccion,
         numeroDireccion: user.numeroDireccion,
@@ -1286,8 +1255,9 @@ const usuariosComplejosController = {
 
       const responseTime = Date.now() - startTime;
 
-      // Log de performance para monitoreo
-      console.log(`[PERFORMANCE] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Usuarios: ${usersFiltered.length}, Tiempo: ${responseTime}ms`);
+      console.log(
+        `[PERFORMANCE] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Usuarios: ${usersFiltered.length}, Tiempo: ${responseTime}ms`
+      );
 
       res.status(200).json({
         message: "Usuarios de piscina encontrados correctamente",
@@ -1295,42 +1265,46 @@ const usuariosComplejosController = {
         meta: {
           total: usersFiltered.length,
           responseTime: `${responseTime}ms`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         },
-        success: true
+        success: true,
       });
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      console.error(`[ERROR] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Tiempo: ${responseTime}ms`, error);
+      console.error(
+        `[ERROR] obtenerUsuariosPiscinaNatacion - Institución: ${institucion}, Tiempo: ${responseTime}ms`,
+        error
+      );
 
       res.status(500).json({
         message: "Error al obtener usuarios de piscina",
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Error interno del servidor",
         success: false,
-        responseTime: `${responseTime}ms`
+        responseTime: `${responseTime}ms`,
       });
     }
   },
 
   obtenerUsuariosPiscinaNatacionPaginado: async (req, res) => {
     const { institucion } = req.params;
-    const { page = 1, limit = 50, search = '' } = req.query;
+    const { page = 1, limit = 50, search = "" } = req.query;
     const startTime = Date.now();
 
     try {
-      // Validación de entrada
       if (!institucion) {
         return res.status(400).json({
           message: "ID de institución es requerido",
-          success: false
+          success: false,
         });
       }
 
       const pageNum = parseInt(page);
-      const limitNum = Math.min(parseInt(limit), 100); // Máximo 100 por página
+      const limitNum = Math.min(parseInt(limit), 100);
       const skip = (pageNum - 1) * limitNum;
 
-      // Construir el filtro base
       let baseFilter = {
         institucion,
         rol: "usuario",
@@ -1342,59 +1316,53 @@ const usuariosComplejosController = {
               { tipoPlan: { $exists: true, $ne: null, $ne: "" } },
               { tipoPlanGym: { $exists: true, $ne: null, $ne: "" } },
               { tipoContratacion: { $exists: true, $ne: null, $ne: "" } },
-              { planCurso: { $exists: true, $ne: null } }
-            ]
-          }
-        ]
+              { planCurso: { $exists: true, $ne: null } },
+            ],
+          },
+        ],
       };
 
-      // Construir filtros de búsqueda
       let searchFilter = {};
       if (search && search.trim()) {
-        const searchTerms = search.trim().split(' ').filter(term => term.length > 0);
+        const searchTerms = search
+          .trim()
+          .split(" ")
+          .filter((term) => term.length > 0);
 
         if (searchTerms.length > 0) {
-          // Crear expresiones regulares para cada término de búsqueda
-          const searchQueries = searchTerms.map(term => ({
+          const searchQueries = searchTerms.map((term) => ({
             $or: [
-              { nombre: new RegExp(term, 'i') },
-              { apellido: new RegExp(term, 'i') },
-              { rut: new RegExp(term, 'i') },
-              // Búsqueda combinada de nombre y apellido
+              { nombre: new RegExp(term, "i") },
+              { apellido: new RegExp(term, "i") },
+              { rut: new RegExp(term, "i") },
               {
                 $and: [
-                  { nombre: new RegExp(term, 'i') },
-                  { apellido: new RegExp(term, 'i') }
-                ]
-              }
-            ]
+                  { nombre: new RegExp(term, "i") },
+                  { apellido: new RegExp(term, "i") },
+                ],
+              },
+            ],
           }));
 
-          // Combinar todos los términos de búsqueda con AND
           searchFilter = { $and: searchQueries };
         }
       }
 
-      // Combinar filtros
       const finalFilter = {
         ...baseFilter,
-        ...(Object.keys(searchFilter).length > 0 ? searchFilter : {})
+        ...(Object.keys(searchFilter).length > 0 ? searchFilter : {}),
       };
 
-      // Consulta optimizada con paginación
       const [users, totalCount] = await Promise.all([
         UsuariosComplejos.find(finalFilter)
-          // .select('_id nombre apellido rut tipoRut status evaluado tipoPlan tipoPlanGym nivelCurso nombreArrendatario statusArrendatario tipoContratacion planCurso arrendatario email')
           .lean()
           .sort({ nombre: 1, apellido: 1 })
-          .skip(search ? 0 : skip) // Si hay búsqueda, no aplicamos skip
-          .limit(search ? 0 : limitNum) // Si hay búsqueda, no aplicamos límite
+          .skip(search ? 0 : skip)
+          .limit(search ? 0 : limitNum)
           .exec(),
-
-        UsuariosComplejos.countDocuments(finalFilter)
+        UsuariosComplejos.countDocuments(finalFilter),
       ]);
 
-      // Si hay término de búsqueda, aplicamos la paginación en memoria
       let paginatedUsers = users;
       let effectiveTotalCount = totalCount;
 
@@ -1408,8 +1376,11 @@ const usuariosComplejosController = {
       const totalPages = Math.ceil(effectiveTotalCount / limitNum);
       const responseTime = Date.now() - startTime;
 
-      // Log de performance
-      console.log(`[PERFORMANCE] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Página: ${pageNum}, Usuarios: ${paginatedUsers.length}/${effectiveTotalCount}, Tiempo: ${responseTime}ms, Búsqueda: ${search || 'ninguna'}`);
+      console.log(
+        `[PERFORMANCE] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Página: ${pageNum}, Usuarios: ${paginatedUsers.length}/${effectiveTotalCount}, Tiempo: ${responseTime}ms, Búsqueda: ${
+          search || "ninguna"
+        }`
+      );
 
       res.status(200).json({
         message: "Usuarios de piscina encontrados correctamente",
@@ -1420,27 +1391,34 @@ const usuariosComplejosController = {
           totalCount: effectiveTotalCount,
           limit: limitNum,
           hasNext: pageNum < totalPages,
-          hasPrev: pageNum > 1
+          hasPrev: pageNum > 1,
         },
         meta: {
           responseTime: `${responseTime}ms`,
           timestamp: new Date().toISOString(),
-          searchTerm: search || null
+          searchTerm: search || null,
         },
-        success: true
+        success: true,
       });
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      console.error(`[ERROR] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Tiempo: ${responseTime}ms`, error);
+      console.error(
+        `[ERROR] obtenerUsuariosPiscinaNatacionPaginado - Institución: ${institucion}, Tiempo: ${responseTime}ms`,
+        error
+      );
 
       res.status(500).json({
         message: "Error al obtener usuarios de piscina",
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor',
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Error interno del servidor",
         success: false,
-        responseTime: `${responseTime}ms`
+        responseTime: `${responseTime}ms`,
       });
     }
   },
+
   obtenerUsuarioPorId: async (req, res) => {
     const { id } = req.params;
     try {
@@ -1448,30 +1426,30 @@ const usuariosComplejosController = {
       if (!user) {
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
-      res.status(200).json({ message: "Usuario encontrado correctamente", user });
+      res
+        .status(200)
+        .json({ message: "Usuario encontrado correctamente", user });
     } catch (error) {
       console.log(error);
-      res.status(500).json({ message: "Error al obtener usuario por id", error });
+      res
+        .status(500)
+        .json({ message: "Error al obtener usuario por id", error });
     }
   },
-  crearUsuarioPiscinaArrendatario: async (req, res) => {
 
+  crearUsuarioPiscinaArrendatario: async (req, res) => {
     const { institucion } = req.params;
     const userData = req.body;
 
     try {
-      //validar que la institucion exista
       const institucionDoc = await Institucion.findById(institucion);
       if (!institucionDoc) {
         return res.status(404).json({ message: "Institución no encontrada" });
       }
 
-      //primero validar que el usuario no exista
       const user = await UsuariosComplejos.findOne({ rut: userData.rut });
 
       if (!user) {
-
-        //si el usuario no existe, crear el usuario con los datos del body
         const newUser = new UsuariosComplejos({
           ...userData,
           institucion: institucionDoc._id,
@@ -1488,14 +1466,13 @@ const usuariosComplejosController = {
         });
         await newUser.save();
 
-        //agregar el usuario al array usuarios de la institucion
         institucionDoc.usuarios.push(newUser._id);
         await institucionDoc.save();
 
-        return res.status(200).json({ message: "Usuario creado correctamente" });
-
+        return res
+          .status(200)
+          .json({ message: "Usuario creado correctamente" });
       } else {
-        //si el usuario existe, actualizar el campo arrendatario = true
         user.statusArrendatario = true;
         user.fechaInicioArrendatario = new Date();
         user.fechaRegistro = new Date();
@@ -1503,20 +1480,23 @@ const usuariosComplejosController = {
         user.arrendatario = true;
         await user.save();
 
-        return res.status(200).json({ message: "Usuario actualizado correctamente" });
+        return res
+          .status(200)
+          .json({ message: "Usuario actualizado correctamente" });
       }
     } catch (error) {
       console.log(error);
-      res.status(500).json({ message: "Error al crear usuario de piscina arrendatario", error });
+      res.status(500).json({
+        message: "Error al crear usuario de piscina arrendatario",
+        error,
+      });
     }
-
   },
 
   obtenerUsuarioSuscripcionFiltrado: async (req, res) => {
     try {
       const { institucion } = req.params;
 
-      //busca las suscripciones de la institucion
       const suscripciones = await SuscripcionPlanes.find({
         institucion,
         status: true,
@@ -1529,187 +1509,202 @@ const usuariosComplejosController = {
         .populate({
           path: "planId",
           select: "tipo",
-        })
+        });
 
       let fechaFinNL = new Date();
-      fechaFinNL.setDate(fechaFinNL.getDate() );
+      fechaFinNL.setDate(fechaFinNL.getDate());
       fechaFinNL.setHours(22, 0, 0, 0);
 
-
-
-      // retornar un array de suscripciones que fechaFin sea menor a la fechaFinNL y el planId?.tipo sea nadoLibre y el campo horasDisponibles sea 0
       let nadoLibreExpiradosCero = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles === 0 && suscripcion.fechaFin < fechaFinNL) {
+        if (
+          suscripcion.planId?.tipo === "nadoLibre" &&
+          suscripcion.horasDisponibles === 0 &&
+          suscripcion.fechaFin < fechaFinNL
+        ) {
           return true;
         }
         return false;
       });
 
-      // retornar un array de suscripciones que fechaFin sea menor a la fechaFinNL y el planId?.tipo sea nadoLibre y el campo horasDisponibles sea mayor a 0
       let nadoLibreExpiradosMayorCero = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles > 0 && suscripcion.fechaFin < fechaFinNL) {
+        if (
+          suscripcion.planId?.tipo === "nadoLibre" &&
+          suscripcion.horasDisponibles > 0 &&
+          suscripcion.fechaFin < fechaFinNL
+        ) {
           return true;
         }
         return false;
       });
 
-      //_id de usuarios con suscripciones expiradas en nado libre con horas disponibles mayor a 0
-      let usuariosNadoLibreExpiradosMayorCero = nadoLibreExpiradosMayorCero.map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
+      let usuariosNadoLibreExpiradosMayorCero =
+        nadoLibreExpiradosMayorCero.map((suscripcion) => {
+          return {
+            _id: suscripcion.usuario?._id,
+            rut: suscripcion.usuario?.rut,
+          };
+        });
 
+      let usuariosNadoLibreExpiradosCero = nadoLibreExpiradosCero.map(
+        (suscripcion) => {
+          return {
+            _id: suscripcion.usuario?._id,
+            rut: suscripcion.usuario?.rut,
+          };
+        }
+      );
 
-      //_id de usuarios con suscripciones expiradas en nado libre con horas disponibles 0
-      let usuariosNadoLibreExpiradosCero = nadoLibreExpiradosCero.map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
-
-
-
-            // retornar un array de suscripciones de planId?.tipo sea igual a gimnasio y fechaFin sea menor a la fechaFinNL
-            let suscripcionesGimnasio = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "gimnasio" && suscripcion.fechaFin < fechaFinNL) {
+      let suscripcionesGimnasio = suscripciones.filter((suscripcion) => {
+        if (
+          suscripcion.planId?.tipo === "gimnasio" &&
+          suscripcion.fechaFin < fechaFinNL
+        ) {
           return true;
         }
         return false;
       });
 
+      let usuariosSuscripcionesGimnasioExpirados = suscripcionesGimnasio.map(
+        (suscripcion) => {
+          return {
+            _id: suscripcion.usuario?._id,
+            rut: suscripcion.usuario?.rut,
+          };
+        }
+      );
 
-      // _id y rut de usuarios con suscripciones de gimasios expirados
-      let usuariosSuscripcionesGimnasioExpirados = suscripcionesGimnasio.map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
-
-      // retornar un array de suscripciones de planId?.tipo sea igual a curso y fechaFin sea menor a la fechaFinNL
       let suscripcionesCurso = suscripciones.filter((suscripcion) => {
-
-        //normalizar la fechaFin
         let fechaFin = new Date(suscripcion.fechaFin);
         fechaFin.setHours(22, 0, 0, 0);
 
-        if (suscripcion.planId?.tipo === "curso" && fechaFin <= fechaFinNL) {
+        if (
+          suscripcion.planId?.tipo === "curso" &&
+          fechaFin <= fechaFinNL
+        ) {
           return true;
         }
         return false;
       });
 
-      // _id de usuarios con suscripciones de cursos expirados
-      let usuariosSuscripcionesCursoExpirados = suscripcionesCurso.map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
+      let usuariosSuscripcionesCursoExpirados = suscripcionesCurso.map(
+        (suscripcion) => {
+          return {
+            _id: suscripcion.usuario?._id,
+            rut: suscripcion.usuario?.rut,
+          };
+        }
+      );
 
-
-      // _id de usuarios con ExpiradosCero y ExpiradosMayorCero y suscripciones de gimasios expirados
-      let usuariosExpirados = [...usuariosNadoLibreExpiradosCero, ...usuariosNadoLibreExpiradosMayorCero, ...usuariosSuscripcionesGimnasioExpirados, ...usuariosSuscripcionesCursoExpirados];
+      let usuariosExpirados = [
+        ...usuariosNadoLibreExpiradosCero,
+        ...usuariosNadoLibreExpiradosMayorCero,
+        ...usuariosSuscripcionesGimnasioExpirados,
+        ...usuariosSuscripcionesCursoExpirados,
+      ];
       let cantidadUsuariosExpirados = usuariosExpirados.length;
 
-
-      //Usuarios con suscripciones expiradas y agotadas
-      usuariosExpirados = usuariosExpirados.filter((usuario, index, self) =>
-        self.indexOf(usuario) === index
+      usuariosExpirados = usuariosExpirados.filter(
+        (usuario, index, self) => self.indexOf(usuario) === index
       );
       cantidadUsuariosExpirados = usuariosExpirados.length;
-      
-      /**
-       * suscripciones activas
-       */
-      // fecha de expiracion del 6 de diciembre
+
       let expiracionDiciembre = new Date();
       expiracionDiciembre.setDate(25);
       expiracionDiciembre.setMonth(11);
       expiracionDiciembre.setHours(0, 0, 0, 0);
 
-
-      // fecha inicio de contratos del 25 de octubre
       let inicioContratosNoviembre = new Date();
       inicioContratosNoviembre.setDate(25);
       inicioContratosNoviembre.setMonth(9);
       inicioContratosNoviembre.setHours(0, 0, 0, 0);
-      // retornar un array de suscripciones de planId?.tipo sea igual a gimnasio y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
+
       let suscripcionesGimnasioActivas = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "gimnasio" && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
+        if (
+          suscripcion.planId?.tipo === "gimnasio" &&
+          suscripcion.fechaFin <= expiracionDiciembre &&
+          suscripcion.fechaInicio >= inicioContratosNoviembre
+        ) {
           return true;
         }
         return false;
       });
 
+      let usuariosSuscripcionesGimnasioActivas =
+        suscripcionesGimnasioActivas.map((suscripcion) => {
+          return {
+            _id: suscripcion.usuario?._id,
+            rut: suscripcion.usuario?.rut,
+          };
+        });
 
-      // _id y rut de usuarios con suscripciones de gimasios activas
-      let usuariosSuscripcionesGimnasioActivas = suscripcionesGimnasioActivas.map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
-
-      // retonar un array de usuarios con suscripciones de nado libre con horas disponibles mayor a 0 y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
-
-      let usuariosSuscripcionesNLActivas = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "nadoLibre" && suscripcion.horasDisponibles > 0 && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
-          return true;
+      let usuariosSuscripcionesNLActivas = suscripciones.filter(
+        (suscripcion) => {
+          if (
+            suscripcion.planId?.tipo === "nadoLibre" &&
+            suscripcion.horasDisponibles > 0 &&
+            suscripcion.fechaFin <= expiracionDiciembre &&
+            suscripcion.fechaInicio >= inicioContratosNoviembre
+          ) {
+            return true;
+          }
+          return false;
         }
-        return false;
-      });
+      );
 
-      // _id y rut de usuarios con suscripciones de nado libre con horas disponibles mayor a 0 y fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre, evitar duplicados
-      let usuariosSuscripcionesNLActivasRut = usuariosSuscripcionesNLActivas.filter((usuario, index, self) =>
-        self.indexOf(usuario) === index
-      ).map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
+      let usuariosSuscripcionesNLActivasRut =
+        usuariosSuscripcionesNLActivas
+          .filter(
+            (usuario, index, self) => self.indexOf(usuario) === index
+          )
+          .map((suscripcion) => {
+            return {
+              _id: suscripcion.usuario?._id,
+              rut: suscripcion.usuario?.rut,
+            };
+          });
 
-      // retornar un array de usuarios con suscripciones de cursos con fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre
-      let usuariosSuscripcionesCursosActivas = suscripciones.filter((suscripcion) => {
-        if (suscripcion.planId?.tipo === "curso" && suscripcion.fechaFin <= expiracionDiciembre && suscripcion.fechaInicio >= inicioContratosNoviembre) {
-          return true;
+      let usuariosSuscripcionesCursosActivas = suscripciones.filter(
+        (suscripcion) => {
+          if (
+            suscripcion.planId?.tipo === "curso" &&
+            suscripcion.fechaFin <= expiracionDiciembre &&
+            suscripcion.fechaInicio >= inicioContratosNoviembre
+          ) {
+            return true;
+          }
+          return false;
         }
-        return false;
-      });
-      
-      // _id y rut de usuarios con suscripciones de cursos con fechaFin sea menor o igual a la fecha de expiracion del 6 de diciembre y fechaInicio sea mayor o igual a la fecha de inicio de contratos del 25 de octubre, evitar duplicados
-      let usuariosSuscripcionesCursosActivasRut = usuariosSuscripcionesCursosActivas.filter((usuario, index, self) =>
-        self.indexOf(usuario) === index
-      ).map((suscripcion) => {
-        return {
-          _id: suscripcion.usuario?._id,
-          rut: suscripcion.usuario?.rut,
-        };
-      });
+      );
 
+      let usuariosSuscripcionesCursosActivasRut =
+        usuariosSuscripcionesCursosActivas
+          .filter(
+            (usuario, index, self) => self.indexOf(usuario) === index
+          )
+          .map((suscripcion) => {
+            return {
+              _id: suscripcion.usuario?._id,
+              rut: suscripcion.usuario?.rut,
+            };
+          });
 
-      // Usuarios con suscripciones activas
-      let usuariosSuscripcionesActivas = [...usuariosSuscripcionesGimnasioActivas, ...usuariosSuscripcionesNLActivasRut, ...usuariosSuscripcionesCursosActivasRut];
+      let usuariosSuscripcionesActivas = [
+        ...usuariosSuscripcionesGimnasioActivas,
+        ...usuariosSuscripcionesNLActivasRut,
+        ...usuariosSuscripcionesCursosActivasRut,
+      ];
 
-
-      //Retornar un array de usuarios, comparando el array de usuariosExpirados con el array de usuariosSuscripcionesActivas y  retonar un array de usuarios que no tengan suscripciones activas 
-
-
-      // conparar _id de usuariosExpirados con _id de usuariosSuscripcionesActivas
-      let usuariosParaEliminar = usuariosExpirados.filter(usuario => !usuariosSuscripcionesActivas.some(s => s._id === usuario._id));
+      let usuariosParaEliminar = usuariosExpirados.filter(
+        (usuario) =>
+          !usuariosSuscripcionesActivas.some((s) => s._id === usuario._id)
+      );
       let cantidadUsuariosParaEliminar = usuariosParaEliminar.length;
 
       return res.status(200).json({
         messageUno: "Usuarios Suscripciones Activas",
         usuariosParaEliminar: usuariosParaEliminar,
         cantidadUsuariosParaEliminar: cantidadUsuariosParaEliminar,
-
       });
-
     } catch (error) {
       console.error(error);
       return res.status(500).json({
@@ -1719,12 +1714,12 @@ const usuariosComplejosController = {
       });
     }
   },
+
   obtenerTodosLosNombresArrendatarios: async (req, res) => {
     try {
-      const arrendatarios = await UsuariosComplejos.find({ arrendatario: true }).select("nombreArrendatario");
-
-
-      //eliminar duplicados
+      const arrendatarios = await UsuariosComplejos.find({
+        arrendatario: true,
+      }).select("nombreArrendatario");
 
       let nombresExternos = arrendatarios.map((arrendatario) => {
         return {
@@ -1733,20 +1728,21 @@ const usuariosComplejosController = {
         };
       });
 
-      // eliminar duplicados si campo nombre es igual y diferentes a null o string vacio
-      nombresExternos = nombresExternos.filter((nombre, index, self) =>
-        self.findIndex(n => n.nombre === nombre.nombre && n.nombre !== null && n.nombre !== "") === index
+      nombresExternos = nombresExternos.filter(
+        (nombre, index, self) =>
+          self.findIndex(
+            (n) =>
+              n.nombre === nombre.nombre &&
+              n.nombre !== null &&
+              n.nombre !== ""
+          ) === index
       );
-
-
 
       return res.status(200).json({
         message: "Nombres de arrendatarios encontrados correctamente",
         nombresExternos: nombresExternos,
-
       });
-    }
-    catch (error) {
+    } catch (error) {
       console.error(error);
       return res.status(500).json({
         message: "Error al obtener nombres de arrendatarios",
@@ -1755,8 +1751,6 @@ const usuariosComplejosController = {
       });
     }
   },
-
-
 };
 
 module.exports = usuariosComplejosController;
