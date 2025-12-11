@@ -2,6 +2,7 @@ const ReservasPteAlto = require('./reservasPteAlto');
 const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
 const TalleresDeportivosPteAlto = require('../talleres-deportivos/talleresDeportivosPteAlto');
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
+const sendEmailReservaPteAlto = require('../email-pte-alto/emailReservaPteAlto');
 
 // ============================================
 // FUNCIONES HELPER
@@ -451,6 +452,22 @@ const reservasPteAltoController = {
             await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
             console.log('Reserva creada exitosamente:', nuevaReserva);
 
+            // Enviar email de confirmación de reserva
+            try {
+                if (nuevaReserva.usuario && nuevaReserva.usuario.email) {
+                    const nombreUsuario = nuevaReserva.usuario.nombre 
+                        ? `${nuevaReserva.usuario.nombre} ${nuevaReserva.usuario.apellido || ''}`.trim()
+                        : 'Usuario';
+                    await sendEmailReservaPteAlto(
+                        nuevaReserva.usuario.email,
+                        nombreUsuario,
+                        nuevaReserva
+                    );
+                }
+            } catch (emailError) {
+                console.error('Error al enviar email de reserva (no crítico):', emailError);
+                // No falla la creación de la reserva si el email falla
+            }
 
             res.status(201).json({
                 success: true,
@@ -580,13 +597,30 @@ const reservasPteAltoController = {
             if (!tallerDoc.usuarios) {
                 tallerDoc.usuarios = [];
             }
-            tallerDoc.usuarios.push(usuarioId);
+            tallerDoc.usuarios.push(usuarioEncontrado._id);
             await tallerDoc.save();
 
             // Populate para respuesta
             await nuevaReserva.populate('usuario', 'nombre apellido email');
             await nuevaReserva.populate('taller', 'nombre fechaInicio fechaFin');
             await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
+
+            // Enviar email de confirmación de reserva
+            try {
+                if (nuevaReserva.usuario && nuevaReserva.usuario.email) {
+                    const nombreUsuario = nuevaReserva.usuario.nombre 
+                        ? `${nuevaReserva.usuario.nombre} ${nuevaReserva.usuario.apellido || ''}`.trim()
+                        : 'Usuario';
+                    await sendEmailReservaPteAlto(
+                        nuevaReserva.usuario.email,
+                        nombreUsuario,
+                        nuevaReserva
+                    );
+                }
+            } catch (emailError) {
+                console.error('Error al enviar email de reserva (no crítico):', emailError);
+                // No falla la inscripción si el email falla
+            }
 
             res.status(201).json({
                 success: true,
@@ -1086,6 +1120,7 @@ const reservasPteAltoController = {
                 tipoReservaInterna,
                 reservadoPor,
                 reservadoPara,
+                usuario, // Campo usuario cuando tipoReservaInterna es 'usuario'
                 notas
             } = req.body;
 
@@ -1112,6 +1147,26 @@ const reservasPteAltoController = {
                     success: false,
                     message: `tipoReservaInterna debe ser uno de: ${tiposValidos.join(', ')}`
                 });
+            }
+
+            // Si es tipo 'usuario', validar que se proporcione el campo usuario
+            if (tipoReservaInterna === 'usuario' && !usuario) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El campo 'usuario' es requerido cuando tipoReservaInterna es 'usuario'"
+                });
+            }
+
+            // Si se proporciona usuario, verificar que existe
+            let usuarioEncontrado = null;
+            if (usuario) {
+                usuarioEncontrado = await UsuariosPteAlto.findById(usuario);
+                if (!usuarioEncontrado) {
+                    return res.status(404).json({
+                        success: false,
+                        message: "Usuario no encontrado"
+                    });
+                }
             }
 
             // Verificar que el usuario admin existe
@@ -1183,12 +1238,18 @@ const reservasPteAltoController = {
                     tipoReservaInterna: tipoReservaInterna,
                     reservadoPor: reservadoPor,
                     reservadoPara: reservadoPara,
+                    usuario: usuario || null, // Agregar usuario si está presente
                     notas: notas || null
                 });
 
                 await nuevaReserva.save();
                 await nuevaReserva.populate('espacioDeportivo', 'nombre deporte');
                 await nuevaReserva.populate('reservadoPor', 'nombre apellido email');
+                
+                // Si es tipo 'usuario' y tiene usuario, populate usuario para el email
+                if (tipoReservaInterna === 'usuario' && usuario) {
+                    await nuevaReserva.populate('usuario', 'nombre apellido email');
+                }
 
                 reservasCreadas.push(nuevaReserva);
             }
@@ -1199,6 +1260,27 @@ const reservasPteAltoController = {
                     message: "No se pudo crear ninguna reserva",
                     errores
                 });
+            }
+
+            // Enviar emails de confirmación para reservas tipo 'usuario' con usuario
+            if (tipoReservaInterna === 'usuario' && usuario) {
+                for (const reserva of reservasCreadas) {
+                    try {
+                        if (reserva.usuario && reserva.usuario.email) {
+                            const nombreUsuario = reserva.usuario.nombre 
+                                ? `${reserva.usuario.nombre} ${reserva.usuario.apellido || ''}`.trim()
+                                : 'Usuario';
+                            await sendEmailReservaPteAlto(
+                                reserva.usuario.email,
+                                nombreUsuario,
+                                reserva
+                            );
+                        }
+                    } catch (emailError) {
+                        console.error('Error al enviar email de reserva (no crítico):', emailError);
+                        // No falla la creación si el email falla
+                    }
+                }
             }
 
             res.status(201).json({
@@ -1218,6 +1300,25 @@ const reservasPteAltoController = {
                 message: "Error al crear la reserva interna",
                 error: error.message
             });
+        }
+    },
+    validarReserva: async (req, res) => {
+        try {
+            const { idReserva } = req.params;
+            const reserva = await ReservasPteAlto.findById(idReserva);
+            if (!reserva) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Reserva no encontrada"
+                });
+            }
+            res.status(200).json({
+                success: true,
+                message: "Reserva validada correctamente",
+                reserva: reserva
+            });
+        } catch (error) {
+            console.log(error);
         }
     }
 };
