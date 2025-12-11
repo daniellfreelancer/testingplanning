@@ -816,6 +816,11 @@ const reservasPteAltoController = {
                     select: 'nombre fechaInicio fechaFin',
                     model: TalleresDeportivosPteAlto
                 })
+                .populate({
+                    path:'reservadoPor',
+                    select: 'nombre apellido email',
+                    model: UsuariosPteAlto
+                })
                 .sort({ fechaInicio: -1 });
 
             res.status(200).json({
