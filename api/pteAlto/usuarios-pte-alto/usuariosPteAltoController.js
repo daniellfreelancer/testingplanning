@@ -441,6 +441,26 @@ const usuariosPteAltoController = {
       });
     }
   },
+  obtenerUsuariosInternosPteAlto: async (req, res) => {
+
+    try {
+
+      // obtener los usuarios con rol ADMIN, EMPLOYED, TRAINER
+      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'EMPLOYED', 'TRAINER'] } });
+      res.status(200).json({
+        message: "Usuarios internos PTE Alto encontrados correctamente",
+        response: usuariosInternosPteAlto,
+        success: true,
+      });
+      
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener usuarios internos PTE Alto",
+        error: error.message,
+      });
+    }
+  }
 };
 
 module.exports = usuariosPteAltoController;

@@ -50,5 +50,7 @@ router.get('/admin/complejo/:complejoId/espacios-disponibles', reservasPteAltoCo
 // Crear reserva interna (admin)
 router.post('/admin/crear-reserva-interna', reservasPteAltoController.crearReservaInterna);
 
+// Validar reserva
+router.get('/validar-reserva/:idReserva', reservasPteAltoController.validarReserva);
 module.exports = router;
 
