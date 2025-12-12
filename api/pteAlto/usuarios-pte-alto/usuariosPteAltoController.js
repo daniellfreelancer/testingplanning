@@ -118,11 +118,11 @@ const usuariosPteAltoController = {
       await nuevoUsuarioPteAlto.save();
 
       // ENVIAR EMAIL DE BIENVENIDA
-      await sendWelcomeMailPteAlto(
-        nuevoUsuarioPteAlto.email,
-        password,
-        nuevoUsuarioPteAlto.nombre
-      );
+      // await sendWelcomeMailPteAlto(
+      //   nuevoUsuarioPteAlto.email,
+      //   password,
+      //   nuevoUsuarioPteAlto.nombre
+      // );
 
       res.status(201).json({
         message: "Usuario PTE Alto creado correctamente",
