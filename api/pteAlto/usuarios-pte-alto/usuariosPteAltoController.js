@@ -337,6 +337,59 @@ const usuariosPteAltoController = {
     }
   },
 
+  actualizarCertificadoDomicilioPteAlto: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // validar existencia de usuario
+      const usuarioPteAlto = await UsuariosPteAlto.findById(id);
+      if (!usuarioPteAlto) {
+        return res
+          .status(404)
+          .json({ message: "Usuario PTE Alto no encontrado" });
+      }
+
+      // validar archivo
+      if (!req.file) {
+        return res.status(400).json({
+          message: "No se adjuntó ningún archivo de certificado de domicilio",
+        });
+      }
+
+      // subir nuevo certificado a S3
+      let key;
+      try {
+        key = await uploadMulterFile(req.file);
+      } catch (err) {
+        console.error("Error subiendo certificado a S3:", err);
+        return res.status(500).json({
+          message: "Error al subir el certificado de domicilio",
+          error: err.message,
+        });
+      }
+
+      // actualizar campo en el usuario
+      usuarioPteAlto.certificadoDomicilio = key;
+      await usuarioPteAlto.save();
+
+      return res.status(200).json({
+        message: "Certificado de domicilio actualizado correctamente",
+        response: {
+          _id: usuarioPteAlto._id,
+          certificadoDomicilio: usuarioPteAlto.certificadoDomicilio,
+        },
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al actualizar certificado de domicilio",
+        error: error.message,
+      });
+    }
+  },
+
+
   validarUsuarioPteAlto: async (req, res) => {
     try {
       const { id } = req.params;
@@ -452,7 +505,7 @@ const usuariosPteAltoController = {
         response: usuariosInternosPteAlto,
         success: true,
       });
-      
+
     } catch (error) {
       console.log(error);
       res.status(500).json({
