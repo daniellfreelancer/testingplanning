@@ -7,6 +7,87 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 /**
+ * Genera sesiones individuales para el taller basado en días, horarios y rango de fechas
+ * @param {Object} taller - El taller con fechaInicio, fechaFin, dias, horaInicio, horaFin
+ * @returns {Array} Array de sesiones generadas
+ */
+const generarSesionesTaller = (taller) => {
+  try {
+    console.log('🔵 === GENERANDO SESIONES DEL TALLER ===');
+
+    if (!taller.fechaInicio || !taller.fechaFin || !taller.dias || !taller.horaInicio || !taller.horaFin) {
+      console.log('⚠️ Taller sin datos suficientes para generar sesiones');
+      return [];
+    }
+
+    const sesiones = [];
+    const diasTaller = Array.isArray(taller.dias) ? taller.dias : [];
+    const horariosInicio = Array.isArray(taller.horaInicio) ? taller.horaInicio : [];
+    const horariosFin = Array.isArray(taller.horaFin) ? taller.horaFin : [];
+
+    // Mapear días en español a números
+    const diasMap = {
+      'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3,
+      'miercoles': 3, 'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
+    };
+
+    const nombresDias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+    const diasNumeros = diasTaller
+      .map(dia => typeof dia === 'number' ? dia : diasMap[dia.toLowerCase()])
+      .filter(num => num !== undefined);
+
+    if (diasNumeros.length === 0 || horariosInicio.length === 0) {
+      console.log('⚠️ No hay días u horarios válidos');
+      return [];
+    }
+
+    // Iterar desde fechaInicio hasta fechaFin
+    const fechaActual = new Date(taller.fechaInicio);
+    const fechaFinal = new Date(taller.fechaFin);
+
+    console.log(`📅 Generando sesiones desde ${fechaActual.toISOString()} hasta ${fechaFinal.toISOString()}`);
+
+    while (fechaActual <= fechaFinal) {
+      const diaSemana = fechaActual.getDay();
+
+      // Si el día actual coincide con uno de los días del taller
+      if (diasNumeros.includes(diaSemana)) {
+        // Crear una sesión por cada horario
+        horariosInicio.forEach((horaInicio, idx) => {
+          const horaFin = horariosFin[idx] || horariosFin[0];
+
+          const fechaSesion = new Date(fechaActual);
+          fechaSesion.setHours(0, 0, 0, 0);
+
+          const sesion = {
+            fecha: fechaSesion,
+            horaInicio: horaInicio,
+            horaFin: horaFin,
+            dia: nombresDias[diaSemana],
+            usuariosInscritos: [],
+            capacidad: taller.capacidad || 20,
+            estado: 'activa',
+            notas: ''
+          };
+
+          sesiones.push(sesion);
+        });
+      }
+
+      // Avanzar al siguiente día
+      fechaActual.setDate(fechaActual.getDate() + 1);
+    }
+
+    console.log(`✅ ${sesiones.length} sesiones generadas`);
+    return sesiones;
+  } catch (error) {
+    console.error('❌ Error al generar sesiones:', error);
+    return [];
+  }
+};
+
+/**
  * Crea reservas internas para bloquear el espacio deportivo en los días y horarios del taller
  * @param {Object} taller - El taller creado
  * @param {String} adminId - ID del admin que crea el taller
@@ -222,7 +303,11 @@ const talleresDeportivosPteAltoController = {
         console.log('⚠️ No se recibieron archivos en req.files');
       }
 
-      // Guardar taller primero
+      // Generar sesiones automáticamente antes de guardar
+      const sesionesGeneradas = generarSesionesTaller(nuevoTallerDeportivoPteAlto);
+      nuevoTallerDeportivoPteAlto.sesiones = sesionesGeneradas;
+
+      // Guardar taller con sesiones
       await nuevoTallerDeportivoPteAlto.save();
 
       // Si viene espacioDeportivo por query, se asocia
@@ -484,6 +569,270 @@ const talleresDeportivosPteAltoController = {
       console.log(error);
       res.status(500).json({
         message: 'Error al eliminar el taller deportivo PTE Alto',
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
+  // ============================================
+  // GESTIÓN DE SESIONES DE TALLERES
+  // ============================================
+
+  /**
+   * Obtener todas las sesiones de un taller con información de cupos disponibles
+   */
+  obtenerSesionesTaller: async (req, res) => {
+    try {
+      const { tallerId } = req.params;
+
+      const taller = await TalleresDeportivos.findById(tallerId)
+        .populate('sesiones.usuariosInscritos', 'nombre apellido email')
+        .populate('espacioDeportivo', 'nombre deporte');
+
+      if (!taller) {
+        return res.status(404).json({
+          message: 'Taller no encontrado',
+          success: false,
+        });
+      }
+
+      // Formatear sesiones con información de cupos
+      const sesionesFormateadas = taller.sesiones.map(sesion => {
+        const capacidadSesion = sesion.capacidad || taller.capacidad || 20;
+        const usuariosInscritos = sesion.usuariosInscritos?.length || 0;
+        const cuposDisponibles = capacidadSesion - usuariosInscritos;
+
+        return {
+          _id: sesion._id,
+          fecha: sesion.fecha,
+          horaInicio: sesion.horaInicio,
+          horaFin: sesion.horaFin,
+          dia: sesion.dia,
+          capacidad: capacidadSesion,
+          usuariosInscritos: usuariosInscritos,
+          cuposDisponibles: cuposDisponibles,
+          estado: sesion.estado,
+          notas: sesion.notas,
+          usuariosDetalle: sesion.usuariosInscritos || []
+        };
+      });
+
+      res.status(200).json({
+        message: 'Sesiones del taller obtenidas correctamente',
+        taller: {
+          _id: taller._id,
+          nombre: taller.nombre,
+          descripcion: taller.descripcion,
+          espacioDeportivo: taller.espacioDeportivo,
+          capacidadGeneral: taller.capacidad,
+          valor: taller.valor,
+          pago: taller.pago
+        },
+        sesiones: sesionesFormateadas,
+        totalSesiones: sesionesFormateadas.length,
+        success: true,
+      });
+    } catch (error) {
+      console.error('Error al obtener sesiones del taller:', error);
+      res.status(500).json({
+        message: 'Error al obtener las sesiones del taller',
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
+  /**
+   * Inscribir un usuario a una sesión específica del taller
+   */
+  inscribirUsuarioASesion: async (req, res) => {
+    try {
+      const { tallerId, sesionId } = req.params;
+      const { usuarioId } = req.body;
+
+      if (!usuarioId) {
+        return res.status(400).json({
+          message: 'El ID del usuario es requerido',
+          success: false,
+        });
+      }
+
+      const taller = await TalleresDeportivos.findById(tallerId);
+      if (!taller) {
+        return res.status(404).json({
+          message: 'Taller no encontrado',
+          success: false,
+        });
+      }
+
+      const sesion = taller.sesiones.id(sesionId);
+      if (!sesion) {
+        return res.status(404).json({
+          message: 'Sesión no encontrada',
+          success: false,
+        });
+      }
+
+      // Verificar que la sesión esté activa
+      if (sesion.estado !== 'activa') {
+        return res.status(400).json({
+          message: `No se puede inscribir a una sesión ${sesion.estado}`,
+          success: false,
+        });
+      }
+
+      // Verificar si el usuario ya está inscrito
+      const yaInscrito = sesion.usuariosInscritos.some(
+        id => id.toString() === usuarioId.toString()
+      );
+
+      if (yaInscrito) {
+        return res.status(400).json({
+          message: 'El usuario ya está inscrito en esta sesión',
+          success: false,
+        });
+      }
+
+      // Verificar cupos disponibles
+      const capacidadSesion = sesion.capacidad || taller.capacidad || 20;
+      const usuariosActuales = sesion.usuariosInscritos.length;
+
+      if (usuariosActuales >= capacidadSesion) {
+        return res.status(400).json({
+          message: 'No hay cupos disponibles en esta sesión',
+          cuposDisponibles: 0,
+          success: false,
+        });
+      }
+
+      // Inscribir usuario a la sesión
+      sesion.usuariosInscritos.push(usuarioId);
+
+      // También agregar al array general del taller si no está
+      if (!taller.usuarios.some(id => id.toString() === usuarioId.toString())) {
+        taller.usuarios.push(usuarioId);
+      }
+
+      await taller.save();
+
+      // Populate para la respuesta
+      await taller.populate('sesiones.usuariosInscritos', 'nombre apellido email');
+
+      const sesionActualizada = taller.sesiones.id(sesionId);
+      const cuposDisponibles = capacidadSesion - sesionActualizada.usuariosInscritos.length;
+
+      res.status(200).json({
+        message: 'Usuario inscrito correctamente a la sesión',
+        sesion: {
+          _id: sesionActualizada._id,
+          fecha: sesionActualizada.fecha,
+          horaInicio: sesionActualizada.horaInicio,
+          horaFin: sesionActualizada.horaFin,
+          dia: sesionActualizada.dia,
+          capacidad: capacidadSesion,
+          usuariosInscritos: sesionActualizada.usuariosInscritos.length,
+          cuposDisponibles: cuposDisponibles,
+          estado: sesionActualizada.estado
+        },
+        success: true,
+      });
+    } catch (error) {
+      console.error('Error al inscribir usuario a sesión:', error);
+      res.status(500).json({
+        message: 'Error al inscribir al usuario en la sesión',
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
+  /**
+   * Desinscribir un usuario de una sesión específica del taller
+   */
+  desinscribirUsuarioDeSesion: async (req, res) => {
+    try {
+      const { tallerId, sesionId } = req.params;
+      const { usuarioId } = req.body;
+
+      if (!usuarioId) {
+        return res.status(400).json({
+          message: 'El ID del usuario es requerido',
+          success: false,
+        });
+      }
+
+      const taller = await TalleresDeportivos.findById(tallerId);
+      if (!taller) {
+        return res.status(404).json({
+          message: 'Taller no encontrado',
+          success: false,
+        });
+      }
+
+      const sesion = taller.sesiones.id(sesionId);
+      if (!sesion) {
+        return res.status(404).json({
+          message: 'Sesión no encontrada',
+          success: false,
+        });
+      }
+
+      // Verificar si el usuario está inscrito
+      const indiceUsuario = sesion.usuariosInscritos.findIndex(
+        id => id.toString() === usuarioId.toString()
+      );
+
+      if (indiceUsuario === -1) {
+        return res.status(400).json({
+          message: 'El usuario no está inscrito en esta sesión',
+          success: false,
+        });
+      }
+
+      // Remover usuario de la sesión
+      sesion.usuariosInscritos.splice(indiceUsuario, 1);
+
+      // Verificar si el usuario está en otras sesiones antes de removerlo del array general
+      const enOtrasSesiones = taller.sesiones.some(s =>
+        s._id.toString() !== sesionId.toString() &&
+        s.usuariosInscritos.some(id => id.toString() === usuarioId.toString())
+      );
+
+      // Si no está en otras sesiones, removerlo del array general
+      if (!enOtrasSesiones) {
+        const indiceGeneral = taller.usuarios.findIndex(
+          id => id.toString() === usuarioId.toString()
+        );
+        if (indiceGeneral !== -1) {
+          taller.usuarios.splice(indiceGeneral, 1);
+        }
+      }
+
+      await taller.save();
+
+      const capacidadSesion = sesion.capacidad || taller.capacidad || 20;
+      const cuposDisponibles = capacidadSesion - sesion.usuariosInscritos.length;
+
+      res.status(200).json({
+        message: 'Usuario desinscrito correctamente de la sesión',
+        sesion: {
+          _id: sesion._id,
+          fecha: sesion.fecha,
+          horaInicio: sesion.horaInicio,
+          horaFin: sesion.horaFin,
+          dia: sesion.dia,
+          capacidad: capacidadSesion,
+          usuariosInscritos: sesion.usuariosInscritos.length,
+          cuposDisponibles: cuposDisponibles,
+          estado: sesion.estado
+        },
+        success: true,
+      });
+    } catch (error) {
+      console.error('Error al desinscribir usuario de sesión:', error);
+      res.status(500).json({
+        message: 'Error al desinscribir al usuario de la sesión',
         error: error.message,
         success: false,
       });
