@@ -39,7 +39,7 @@ const complejosDeportivosPteAltoController = {
                 .populate({
                     path: 'espaciosDeportivos',
                     model: EspaciosDeportivosPteAlto,
-                    match: { status: { $in: ['activo', 'interno'] } }
+                 //   match: { status: { $in: ['activo', 'interno'] } }
                 });
             
             res.status(200).json({ 
