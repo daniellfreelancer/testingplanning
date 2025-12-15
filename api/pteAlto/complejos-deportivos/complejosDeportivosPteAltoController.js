@@ -1,7 +1,9 @@
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
 const ComplejosDeportivosPteAlto = require('./complejosDeportivosPteAlto');
 const Institucion = require('../../institucion/institucionModel');
+const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 const complejosDeportivosPteAltoController = {
 
     //crear complejo deportivo PTE Alto y agregarlo a la institucion
@@ -17,6 +19,15 @@ const complejosDeportivosPteAltoController = {
                 ...req.body,
             });
            
+            if (req.file) {
+                try {
+                    const key = await uploadMulterFile(req.file);
+                    const fileUrl = `${cloudfrontUrl}/${key}`;
+                    nuevoComplejoDeportivoPteAlto.imgUrl = fileUrl;
+                } catch (error) {
+                    console.log(error);
+                }
+            }
             institucionDoc.complejosPteAlto.push(nuevoComplejoDeportivoPteAlto._id);
             await institucionDoc.save();
            
@@ -88,6 +99,16 @@ const complejosDeportivosPteAltoController = {
             const { id } = req.params;
             const { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin } = req.body;
             const complejoDeportivoPteAlto = await ComplejosDeportivosPteAlto.findByIdAndUpdate(id, { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin }, { new: true });
+            if (req.file) {
+                try {
+                    const key = await uploadMulterFile(req.file);
+                    const fileUrl = `${cloudfrontUrl}/${key}`;
+                    complejoDeportivoPteAlto.imgUrl = fileUrl;
+                } catch (error) {
+                    console.log(error);
+                }
+            }
+            await complejoDeportivoPteAlto.save();
             res.status(200).json({ 
                 message: "Complejo deportivo PTE Alto actualizado correctamente", 
                 response: complejoDeportivoPteAlto,

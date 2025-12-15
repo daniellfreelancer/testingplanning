@@ -83,6 +83,7 @@ const espaciosDeportivosPteAlto = require('./api/pteAlto/espacios-deportivos/esp
 const talleresDeportivosPteAlto = require('./api/pteAlto/talleres-deportivos/talleresDeportivosPteAlto.routes')
 const reservasPteAlto = require('./api/pteAlto/reservas-pte-alto/reservasPteAlto.routes')
 const statsPteAlto = require('./api/pteAlto/stats-pte-alto/statsPteAlto.routes')
+const eventosPteAlto = require('./api/pteAlto/eventos-pte-alto/eventosPteAlto.routes')
 
 var app = express();
 
@@ -168,6 +169,10 @@ app.use('/ed-pte-alto', espaciosDeportivosPteAlto)
 app.use('/td-pte-alto', talleresDeportivosPteAlto)
 app.use('/reservas-pte-alto', reservasPteAlto)
 app.use('/stats-pte-alto', statsPteAlto)
+app.use('/eventos-pte-alto', eventosPteAlto)
+
+
+
 
 // Liveness Routes
 app.use("/liveness", livenessRoutes);
