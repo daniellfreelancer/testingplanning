@@ -9,6 +9,17 @@ const eventosPteAltoController = {
         try {
 
             const { nombre, descripcion, horarioInicio, horarioFin, fechaInicio, fechaFin, lugar, direccion, capacidad, creadoPor, variantes } = req.body;
+            
+            // Parsear variantes si viene como string JSON (desde FormData)
+            let variantesParsed = variantes;
+            if (typeof variantes === 'string') {
+                try {
+                    variantesParsed = JSON.parse(variantes);
+                } catch (error) {
+                    console.log('Error al parsear variantes:', error);
+                    variantesParsed = [];
+                }
+            }
 
             const nuevoEventoPteAlto = new EventosPteAlto({
                 nombre,
@@ -34,8 +45,8 @@ const eventosPteAltoController = {
                 }
             }
 
-            if (variantes && variantes.length > 0) {
-                for (const variante of variantes) {
+            if (variantesParsed && Array.isArray(variantesParsed) && variantesParsed.length > 0) {
+                for (const variante of variantesParsed) {
                     const nuevaVariante = new VariantesPteAlto({ evento: nuevoEventoPteAlto._id, ...variante });
                     await nuevaVariante.save();
                     nuevoEventoPteAlto.variantes.push(nuevaVariante._id);
