@@ -17,6 +17,7 @@ const complejosDeportivosPteAltoSchema = new mongoose.Schema({
     horarioAtencion: { type: String },
     horarioAtencionFin: { type: String },
     status: { type: Boolean, default: true },
+    imgUrl: { type: String, required: false },
 
 }, {
     timestamps: true
