@@ -7,7 +7,85 @@ const bucketName = process.env.AWS_BUCKET_NAME;
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 /**
+ * Genera sesiones por variante para talleres con sistema de variantes
+ * @param {Object} taller - El taller con variantes, fechaInicio, fechaFin, dias
+ * @returns {Array} Array de variantes con sus sesiones generadas
+ */
+const generarSesionesPorVariante = (taller) => {
+  try {
+    console.log('🔵 === GENERANDO SESIONES POR VARIANTE ===');
+
+    if (!taller.fechaInicio || !taller.fechaFin || !taller.dias || !taller.variantes || taller.variantes.length === 0) {
+      console.log('⚠️ Taller sin datos suficientes para generar sesiones por variante');
+      return [];
+    }
+
+    const diasTaller = Array.isArray(taller.dias) ? taller.dias : [];
+
+    // Mapear días en español a números
+    const diasMap = {
+      'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3,
+      'miercoles': 3, 'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
+    };
+
+    const nombresDias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+    const diasNumeros = diasTaller
+      .map(dia => typeof dia === 'number' ? dia : diasMap[dia.toLowerCase()])
+      .filter(num => num !== undefined);
+
+    if (diasNumeros.length === 0) {
+      console.log('⚠️ No hay días válidos');
+      return [];
+    }
+
+    // Generar sesiones para cada variante
+    const variantesConSesiones = taller.variantes.map(variante => {
+      const sesiones = [];
+      const fechaActual = new Date(taller.fechaInicio);
+      const fechaFinal = new Date(taller.fechaFin);
+
+      console.log(`📅 Generando sesiones para variante: ${variante.nombre}`);
+
+      while (fechaActual <= fechaFinal) {
+        const diaSemana = fechaActual.getDay();
+
+        if (diasNumeros.includes(diaSemana)) {
+          const fechaSesion = new Date(fechaActual);
+          fechaSesion.setHours(0, 0, 0, 0);
+
+          const sesion = {
+            fecha: fechaSesion,
+            dia: nombresDias[diaSemana],
+            usuariosInscritos: [],
+            estado: 'activa',
+            notas: ''
+          };
+
+          sesiones.push(sesion);
+        }
+
+        fechaActual.setDate(fechaActual.getDate() + 1);
+      }
+
+      console.log(`✅ ${sesiones.length} sesiones generadas para variante: ${variante.nombre}`);
+
+      return {
+        ...variante,
+        sesiones
+      };
+    });
+
+    return variantesConSesiones;
+  } catch (error) {
+    console.error('❌ Error al generar sesiones por variante:', error);
+    return [];
+  }
+};
+
+/**
  * Genera sesiones individuales para el taller basado en días, horarios y rango de fechas
+ * LEGACY - Para talleres sin variantes
  * @param {Object} taller - El taller con fechaInicio, fechaFin, dias, horaInicio, horaFin
  * @returns {Array} Array de sesiones generadas
  */
@@ -88,7 +166,105 @@ const generarSesionesTaller = (taller) => {
 };
 
 /**
- * Crea reservas internas para bloquear el espacio deportivo en los días y horarios del taller
+ * Crea reservas internas para talleres con sistema de variantes
+ * Bloquea los espacios comunes en los horarios de cada variante
+ * @param {Object} taller - El taller con variantes
+ * @param {String} adminId - ID del admin que crea el taller
+ */
+const crearReservasInternasConVariantes = async (taller, adminId) => {
+  try {
+    console.log('🔵 === INICIANDO CREACIÓN DE RESERVAS INTERNAS CON VARIANTES ===');
+    console.log('🔵 Taller:', taller.nombre);
+    console.log('🔵 Variantes:', taller.variantes?.length || 0);
+    console.log('🔵 Espacios comunes:', taller.espaciosComunes?.length || 0);
+
+    if (!taller.espaciosComunes || taller.espaciosComunes.length === 0) {
+      console.log('⚠️ Taller sin espacios comunes para reservar');
+      return [];
+    }
+
+    if (!taller.variantes || taller.variantes.length === 0) {
+      console.log('⚠️ Taller sin variantes definidas');
+      return [];
+    }
+
+    const reservasCreadas = [];
+    const diasTaller = Array.isArray(taller.dias) ? taller.dias : [];
+
+    // Mapear días en español a números
+    const diasMap = {
+      'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3,
+      'miercoles': 3, 'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
+    };
+
+    const diasNumeros = diasTaller
+      .map(dia => typeof dia === 'number' ? dia : diasMap[dia.toLowerCase()])
+      .filter(num => num !== undefined);
+
+    if (diasNumeros.length === 0) {
+      console.log('⚠️ No se pudieron mapear los días del taller');
+      return [];
+    }
+
+    // Crear reservas para cada variante en cada espacio común
+    for (const variante of taller.variantes) {
+      console.log(`📅 Procesando variante: ${variante.nombre}`);
+
+      const fechaActual = new Date(taller.fechaInicio);
+      const fechaFinal = new Date(taller.fechaFin);
+
+      while (fechaActual <= fechaFinal) {
+        const diaSemana = fechaActual.getDay();
+
+        if (diasNumeros.includes(diaSemana)) {
+          // Crear reservas en TODOS los espacios comunes para esta variante
+          for (const espacioId of taller.espaciosComunes) {
+            const [horaInicioNum, minutoInicioNum] = variante.horaInicio.split(':').map(Number);
+            const [horaFinNum, minutoFinNum] = variante.horaFin.split(':').map(Number);
+
+            const fechaInicioReserva = new Date(fechaActual);
+            fechaInicioReserva.setHours(horaInicioNum, minutoInicioNum, 0, 0);
+
+            const fechaFinReserva = new Date(fechaActual);
+            fechaFinReserva.setHours(horaFinNum, minutoFinNum, 0, 0);
+
+            const reservaInterna = new ReservasPteAlto({
+              espacioDeportivo: espacioId,
+              taller: taller._id,
+              fechaInicio: fechaInicioReserva,
+              fechaFin: fechaFinReserva,
+              tipoReserva: 'taller',
+              estado: 'activa',
+              esReservaInterna: true,
+              tipoReservaInterna: 'tercero',
+              reservadoPor: adminId,
+              reservadoPara: `Taller: ${taller.nombre} - Variante: ${variante.nombre}`,
+              notas: `Reserva interna automática para variante ${variante.nombre}`
+            });
+
+            await reservaInterna.save();
+            reservasCreadas.push(reservaInterna);
+          }
+        }
+
+        fechaActual.setDate(fechaActual.getDate() + 1);
+      }
+
+      console.log(`✅ Reservas creadas para variante: ${variante.nombre}`);
+    }
+
+    console.log(`✅ Total de reservas internas creadas: ${reservasCreadas.length}`);
+    return reservasCreadas;
+
+  } catch (error) {
+    console.error('❌ Error al crear reservas internas con variantes:', error);
+    throw error;
+  }
+};
+
+/**
+ * LEGACY: Crea reservas internas para bloquear el espacio deportivo en los días y horarios del taller
+ * Mantener para compatibilidad con talleres antiguos sin variantes
  * @param {Object} taller - El taller creado
  * @param {String} adminId - ID del admin que crea el taller
  */
@@ -245,6 +421,16 @@ const talleresDeportivosPteAltoController = {
         bodyData.horaFin = JSON.parse(bodyData.horaFin);
       }
 
+      // Parsear variantes si vienen como string (NUEVO SISTEMA)
+      if (typeof bodyData.variantes === 'string') {
+        bodyData.variantes = JSON.parse(bodyData.variantes);
+      }
+
+      // Parsear espaciosComunes si vienen como string (NUEVO SISTEMA)
+      if (typeof bodyData.espaciosComunes === 'string') {
+        bodyData.espaciosComunes = JSON.parse(bodyData.espaciosComunes);
+      }
+
       // Parsear fechas si vienen como strings ISO
       if (typeof bodyData.fechaInicio === 'string') {
         bodyData.fechaInicio = new Date(bodyData.fechaInicio);
@@ -303,9 +489,20 @@ const talleresDeportivosPteAltoController = {
         console.log('⚠️ No se recibieron archivos en req.files');
       }
 
-      // Generar sesiones automáticamente antes de guardar
-      const sesionesGeneradas = generarSesionesTaller(nuevoTallerDeportivoPteAlto);
-      nuevoTallerDeportivoPteAlto.sesiones = sesionesGeneradas;
+      // Detectar si es taller con variantes (nuevo sistema) o legacy
+      const esVariantes = bodyData.variantes && Array.isArray(bodyData.variantes) && bodyData.variantes.length > 0;
+
+      if (esVariantes) {
+        console.log('🟢 SISTEMA NUEVO: Taller con variantes');
+        // Generar sesiones por variante
+        const variantesConSesiones = generarSesionesPorVariante(nuevoTallerDeportivoPteAlto);
+        nuevoTallerDeportivoPteAlto.variantes = variantesConSesiones;
+      } else {
+        console.log('🟡 SISTEMA LEGACY: Taller sin variantes');
+        // Generar sesiones globales (legacy)
+        const sesionesGeneradas = generarSesionesTaller(nuevoTallerDeportivoPteAlto);
+        nuevoTallerDeportivoPteAlto.sesiones = sesionesGeneradas;
+      }
 
       // Guardar taller con sesiones
       await nuevoTallerDeportivoPteAlto.save();
@@ -338,7 +535,18 @@ const talleresDeportivosPteAltoController = {
       // CREAR RESERVAS INTERNAS AUTOMÁTICAMENTE
       try {
         const adminId = req.user?.id || req.user?.userId || bodyData.reservadoPor || null;
-        const reservasInternas = await crearReservasInternasTaller(nuevoTallerDeportivoPteAlto, adminId);
+        let reservasInternas = [];
+
+        if (esVariantes) {
+          // Nuevo sistema: crear reservas por variante en espacios comunes
+          console.log('🟢 Creando reservas internas con sistema de variantes');
+          reservasInternas = await crearReservasInternasConVariantes(nuevoTallerDeportivoPteAlto, adminId);
+        } else {
+          // Legacy: crear reservas en espacio único
+          console.log('🟡 Creando reservas internas con sistema legacy');
+          reservasInternas = await crearReservasInternasTaller(nuevoTallerDeportivoPteAlto, adminId);
+        }
+
         console.log(`✅ ${reservasInternas.length} reservas internas creadas para el taller`);
       } catch (reservaError) {
         console.error('⚠️ Error al crear reservas internas (el taller se creó pero sin reservas):', reservaError);
@@ -427,6 +635,24 @@ const talleresDeportivosPteAltoController = {
         updateData.horaFin = JSON.parse(updateData.horaFin);
       }
 
+      // Parsear variantes si vienen como string (NUEVO SISTEMA)
+      if (typeof updateData.variantes === 'string') {
+        updateData.variantes = JSON.parse(updateData.variantes);
+      }
+
+      // Parsear espaciosComunes si vienen como string (NUEVO SISTEMA)
+      if (typeof updateData.espaciosComunes === 'string') {
+        updateData.espaciosComunes = JSON.parse(updateData.espaciosComunes);
+      }
+
+      // Parsear fechas si vienen como strings ISO
+      if (typeof updateData.fechaInicio === 'string') {
+        updateData.fechaInicio = new Date(updateData.fechaInicio);
+      }
+      if (typeof updateData.fechaFin === 'string') {
+        updateData.fechaFin = new Date(updateData.fechaFin);
+      }
+
       // Si se suben nuevas imágenes, procesarlas
       if (req.files && req.files.length > 0) {
         const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -484,6 +710,23 @@ const talleresDeportivosPteAltoController = {
         );
       }
 
+      // Detectar si es taller con variantes (nuevo sistema) o legacy
+      const esVariantes = updateData.variantes && Array.isArray(updateData.variantes) && updateData.variantes.length > 0;
+
+      // Si es nuevo sistema con variantes, regenerar sesiones por variante antes de actualizar
+      if (esVariantes) {
+        console.log('🟢 SISTEMA NUEVO: Regenerando sesiones por variante');
+        // Crear objeto temporal con los datos actualizados para generar sesiones
+        const tallerTemp = {
+          ...updateData,
+          fechaInicio: updateData.fechaInicio || (await TalleresDeportivos.findById(id)).fechaInicio,
+          fechaFin: updateData.fechaFin || (await TalleresDeportivos.findById(id)).fechaFin,
+          dias: updateData.dias || (await TalleresDeportivos.findById(id)).dias,
+        };
+        const variantesConSesiones = generarSesionesPorVariante(tallerTemp);
+        updateData.variantes = variantesConSesiones;
+      }
+
       // Actualizar el taller
       const tallerDeportivoPteAlto =
         await TalleresDeportivos.findByIdAndUpdate(id, updateData, {
@@ -502,7 +745,18 @@ const talleresDeportivosPteAltoController = {
       try {
         await eliminarReservasInternasTaller(id);
         const adminId = req.user?.id || req.user?.userId || updateData.reservadoPor || null;
-        const reservasInternas = await crearReservasInternasTaller(tallerDeportivoPteAlto, adminId);
+        let reservasInternas = [];
+
+        if (esVariantes) {
+          // Nuevo sistema: crear reservas por variante en espacios comunes
+          console.log('🟢 Recreando reservas internas con sistema de variantes');
+          reservasInternas = await crearReservasInternasConVariantes(tallerDeportivoPteAlto, adminId);
+        } else {
+          // Legacy: crear reservas en espacio único
+          console.log('🟡 Recreando reservas internas con sistema legacy');
+          reservasInternas = await crearReservasInternasTaller(tallerDeportivoPteAlto, adminId);
+        }
+
         console.log(`✅ ${reservasInternas.length} reservas internas recreadas para el taller actualizado`);
       } catch (reservaError) {
         console.error('⚠️ Error al actualizar reservas internas:', reservaError);
