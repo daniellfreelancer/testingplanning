@@ -4,7 +4,13 @@ const ReservasPteAlto = require('../reservas-pte-alto/reservasPteAlto');
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
-const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT || process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${bucketRegion}.amazonaws.com`;
+
+// Validar que cloudfrontUrl esté definido
+if (!cloudfrontUrl || cloudfrontUrl.includes('undefined')) {
+  console.warn('⚠️ ADVERTENCIA: AWS_ACCESS_CLOUD_FRONT no está configurado correctamente en .env');
+  console.warn('⚠️ Las URLs de imágenes podrían no funcionar correctamente');
+}
 
 /**
  * Genera sesiones por variante para talleres con sistema de variantes
@@ -469,8 +475,14 @@ const talleresDeportivosPteAltoController = {
           }
 
           try {
-            // Subir archivo a S3 usando helper
-            const key = await uploadMulterFile(file);
+            // Generar key personalizado sin prefijo "galeria-"
+            const crypto = require('crypto');
+            const extension = file.originalname.split('.').pop().toLowerCase();
+            const random = crypto.randomBytes(32).toString('hex');
+            const customKey = `${random}.${extension}`;
+
+            // Subir archivo a S3 usando helper con key personalizado
+            const key = await uploadMulterFile(file, customKey);
             const fileUrl = `${cloudfrontUrl}/${key}`;
             galeria.push(fileUrl);
           } catch (uploadError) {
@@ -575,7 +587,14 @@ const talleresDeportivosPteAltoController = {
 
   obtenerTodosLosTalleresDeportivosPteAlto: async (req, res) => {
     try {
-      const talleresDeportivosPteAlto = await TalleresDeportivos.find();
+      const talleresDeportivosPteAlto = await TalleresDeportivos.find()
+        .populate('espacioDeportivo', 'nombre deporte')
+        .populate('complejo', 'nombre direccion')
+        .populate('espaciosComunes', 'nombre deporte')
+        .populate('variantes.espaciosAdicionales', 'nombre deporte')
+        .populate('variantes.usuariosInscritos', 'nombre apellido email')
+        .populate('usuarios', 'nombre apellido email');
+
       res.status(200).json({
         message: 'Talleres deportivos PTE Alto obtenidos correctamente',
         response: talleresDeportivosPteAlto,
@@ -685,7 +704,13 @@ const talleresDeportivosPteAltoController = {
           }
 
           try {
-            const key = await uploadMulterFile(file);
+            // Generar key personalizado sin prefijo "galeria-"
+            const crypto = require('crypto');
+            const random = crypto.randomBytes(32).toString('hex');
+            const customKey = `${random}.${extension}`;
+
+            // Subir archivo a S3 usando helper con key personalizado
+            const key = await uploadMulterFile(file, customKey);
             const fileUrl = `${cloudfrontUrl}/${key}`;
             nuevasImagenes.push(fileUrl);
             console.log('✅ Imagen subida:', fileUrl);
@@ -835,6 +860,7 @@ const talleresDeportivosPteAltoController = {
 
   /**
    * Obtener todas las sesiones de un taller con información de cupos disponibles
+   * Soporta tanto sistema legacy (sesiones globales) como nuevo sistema (sesiones por variante)
    */
   obtenerSesionesTaller: async (req, res) => {
     try {
@@ -842,7 +868,11 @@ const talleresDeportivosPteAltoController = {
 
       const taller = await TalleresDeportivos.findById(tallerId)
         .populate('sesiones.usuariosInscritos', 'nombre apellido email')
-        .populate('espacioDeportivo', 'nombre deporte');
+        .populate('variantes.sesiones.usuariosInscritos', 'nombre apellido email')
+        .populate('variantes.usuariosInscritos', 'nombre apellido email')
+        .populate('espacioDeportivo', 'nombre deporte')
+        .populate('complejo', 'nombre')
+        .populate('espaciosComunes', 'nombre deporte');
 
       if (!taller) {
         return res.status(404).json({
@@ -851,26 +881,73 @@ const talleresDeportivosPteAltoController = {
         });
       }
 
-      // Formatear sesiones con información de cupos
-      const sesionesFormateadas = taller.sesiones.map(sesion => {
-        const capacidadSesion = sesion.capacidad || taller.capacidad || 20;
-        const usuariosInscritos = sesion.usuariosInscritos?.length || 0;
-        const cuposDisponibles = capacidadSesion - usuariosInscritos;
+      // Detectar si es sistema con variantes o legacy
+      const tieneVariantes = taller.variantes && Array.isArray(taller.variantes) && taller.variantes.length > 0;
 
-        return {
-          _id: sesion._id,
-          fecha: sesion.fecha,
-          horaInicio: sesion.horaInicio,
-          horaFin: sesion.horaFin,
-          dia: sesion.dia,
-          capacidad: capacidadSesion,
-          usuariosInscritos: usuariosInscritos,
-          cuposDisponibles: cuposDisponibles,
-          estado: sesion.estado,
-          notas: sesion.notas,
-          usuariosDetalle: sesion.usuariosInscritos || []
-        };
-      });
+      let sesionesFormateadas = [];
+
+      if (tieneVariantes) {
+        // NUEVO SISTEMA: Extraer sesiones de todas las variantes
+        console.log('🟢 Obteniendo sesiones de taller con variantes');
+
+        taller.variantes.forEach((variante, idx) => {
+          if (variante.sesiones && Array.isArray(variante.sesiones)) {
+            variante.sesiones.forEach(sesion => {
+              const usuariosInscritos = sesion.usuariosInscritos?.length || 0;
+              const cuposDisponibles = variante.capacidad - usuariosInscritos;
+
+              sesionesFormateadas.push({
+                _id: sesion._id,
+                fecha: sesion.fecha,
+                horaInicio: variante.horaInicio,
+                horaFin: variante.horaFin,
+                dia: sesion.dia,
+                capacidad: variante.capacidad,
+                usuariosInscritos: usuariosInscritos,
+                cuposDisponibles: cuposDisponibles,
+                estado: sesion.estado,
+                notas: sesion.notas,
+                usuariosDetalle: sesion.usuariosInscritos || [],
+                // Información adicional de la variante
+                varianteId: variante._id,
+                varianteNombre: variante.nombre,
+                varianteDescripcion: variante.descripcion,
+                edadMin: variante.edadMin,
+                edadMax: variante.edadMax,
+                genero: variante.genero,
+                precioIndividual: variante.precioIndividual
+              });
+            });
+          }
+        });
+
+        // Ordenar sesiones por fecha
+        sesionesFormateadas.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+      } else {
+        // LEGACY: Sesiones globales del taller
+        console.log('🟡 Obteniendo sesiones de taller legacy');
+
+        sesionesFormateadas = taller.sesiones.map(sesion => {
+          const capacidadSesion = sesion.capacidad || taller.capacidad || 20;
+          const usuariosInscritos = sesion.usuariosInscritos?.length || 0;
+          const cuposDisponibles = capacidadSesion - usuariosInscritos;
+
+          return {
+            _id: sesion._id,
+            fecha: sesion.fecha,
+            horaInicio: sesion.horaInicio,
+            horaFin: sesion.horaFin,
+            dia: sesion.dia,
+            capacidad: capacidadSesion,
+            usuariosInscritos: usuariosInscritos,
+            cuposDisponibles: cuposDisponibles,
+            estado: sesion.estado,
+            notas: sesion.notas,
+            usuariosDetalle: sesion.usuariosInscritos || []
+          };
+        });
+      }
 
       res.status(200).json({
         message: 'Sesiones del taller obtenidas correctamente',
@@ -879,9 +956,15 @@ const talleresDeportivosPteAltoController = {
           nombre: taller.nombre,
           descripcion: taller.descripcion,
           espacioDeportivo: taller.espacioDeportivo,
+          complejo: taller.complejo,
           capacidadGeneral: taller.capacidad,
+          capacidadTotal: taller.capacidadTotal,
           valor: taller.valor,
-          pago: taller.pago
+          precioCompleto: taller.precioCompleto,
+          pago: taller.pago,
+          tipoInscripcion: taller.tipoInscripcion,
+          tieneVariantes: tieneVariantes,
+          variantes: taller.variantes || []
         },
         sesiones: sesionesFormateadas,
         totalSesiones: sesionesFormateadas.length,
