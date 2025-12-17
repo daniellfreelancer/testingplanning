@@ -21,7 +21,47 @@ const usuariosUcadController = {
     try {
       const { nombre, apellido, rut, email, fechaNacimiento, sexo } = req.body;
 
+      // Validar campos requeridos
+      if (!nombre || !apellido || !rut || !email || !fechaNacimiento || !sexo) {
+        return res.status(400).json({
+          message: "Todos los campos son requeridos: nombre, apellido, rut, email, fechaNacimiento, sexo"
+        });
+      }
 
+      // Convertir fechaNacimiento de string "DD/MM/YYYY" a Date
+      let fechaNacimientoDate;
+      if (typeof fechaNacimiento === 'string') {
+        // Si viene en formato DD/MM/YYYY
+        if (fechaNacimiento.includes('/')) {
+          const parts = fechaNacimiento.split('/');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Los meses en JS son 0-11
+            const year = parseInt(parts[2], 10);
+            fechaNacimientoDate = new Date(year, month, day);
+          } else {
+            return res.status(400).json({
+              message: "Formato de fecha inválido. Use DD/MM/YYYY"
+            });
+          }
+        } else {
+          // Si viene en formato ISO (YYYY-MM-DD o ISO string)
+          fechaNacimientoDate = new Date(fechaNacimiento);
+        }
+        
+        // Validar que la fecha sea válida
+        if (isNaN(fechaNacimientoDate.getTime())) {
+          return res.status(400).json({
+            message: "Fecha de nacimiento inválida"
+          });
+        }
+      } else if (fechaNacimiento instanceof Date) {
+        fechaNacimientoDate = fechaNacimiento;
+      } else {
+        return res.status(400).json({
+          message: "Formato de fecha inválido"
+        });
+      }
 
       // Verificar si ya existe el rut o el correo
       const usuarioExistenteEmail = await UsuariosUcad.findOne({ email });
@@ -43,7 +83,7 @@ const usuariosUcadController = {
         apellido,
         rut,
         email,
-        fechaNacimiento,
+        fechaNacimiento: fechaNacimientoDate,
         sexo,
         rol: 'deportista',
         password: [passwordHashed],
