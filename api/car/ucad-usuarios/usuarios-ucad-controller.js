@@ -1,0 +1,387 @@
+const UsuariosUcad = require("./usuarios-ucad");
+const bcryptjs = require("bcryptjs");
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
+function generateRandomPassword(length = 8) {
+    const characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      const randomIndex = crypto.randomInt(0, characters.length);
+      password += characters[randomIndex];
+    }
+    return password;
+  }
+
+const usuariosUcadController = {
+  registrarDeportista: async (req, res) => {
+    try {
+      const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo } = req.body;
+
+      // Validar campos requeridos
+      if (!nombre || !apellido || !rut || !email || !telefono || !fechaNacimiento || !sexo) {
+        return res.status(400).json({
+          message: "Todos los campos son requeridos: nombre, apellido, rut, email, telefono, fechaNacimiento, sexo"
+        });
+      }
+
+      // Verificar si ya existe el rut o el correo
+      const usuarioExistenteEmail = await UsuariosUcad.findOne({ email });
+      const usuarioExistenteRut = await UsuariosUcad.findOne({ rut });
+
+      if (usuarioExistenteEmail || usuarioExistenteRut) {
+        return res.status(400).json({
+          message: "El correo o RUT ya está registrado"
+        });
+      }
+
+      // Generar password aleatorio
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      // Crear nuevo usuario deportista
+      const nuevoDeportista = new UsuariosUcad({
+        nombre,
+        apellido,
+        rut,
+        email,
+        telefono,
+        fechaNacimiento,
+        sexo,
+        rol: 'deportista',
+        password: [passwordHashed],
+        estadoValidacion: 'pendiente'
+      });
+
+      // Subir imagen si existe
+      if (req.file) {
+        try {
+          const key = await uploadMulterFile(req.file);
+          const fileUrl = `${cloudfrontUrl}/${key}`;
+          nuevoDeportista.imgUrl = fileUrl;
+        } catch (err) {
+          console.error("Error subiendo imagen a S3:", err);
+          return res.status(500).json({
+            message: "Error al subir la imagen",
+            error: err.message
+          });
+        }
+      }
+
+      await nuevoDeportista.save();
+
+      // Mostrar password generado por consola
+      console.log("Password generado para deportista:", password);
+
+      res.status(201).json({
+        message: "Deportista registrado correctamente",
+        usuario: nuevoDeportista,
+        password // Retornar password para que el admin pueda verlo
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al registrar deportista",
+        error: error.message
+      });
+    }
+  },
+
+  registrarColaborador: async (req, res) => {
+    try {
+      const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo, rol, especialidad, direccion, comuna, region } = req.body;
+
+      // Validar campos requeridos
+      if (!nombre || !apellido || !rut || !email || !rol) {
+        return res.status(400).json({
+          message: "Los campos nombre, apellido, rut, email y rol son requeridos"
+        });
+      }
+
+      // Validar que el rol sea válido (colaborador, profesional o deportista)
+      if (!['colaborador', 'profesional', 'deportista'].includes(rol)) {
+        return res.status(400).json({
+          message: "El rol debe ser: colaborador, profesional o deportista"
+        });
+      }
+
+      // Verificar si ya existe el rut o el correo
+      const usuarioExistenteEmail = await UsuariosUcad.findOne({ email });
+      const usuarioExistenteRut = await UsuariosUcad.findOne({ rut });
+
+      if (usuarioExistenteEmail || usuarioExistenteRut) {
+        return res.status(400).json({
+          message: "El correo o RUT ya está registrado"
+        });
+      }
+
+      // Generar password aleatorio
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      // Crear nuevo usuario
+      const nuevoUsuario = new UsuariosUcad({
+        nombre,
+        apellido,
+        rut,
+        email,
+        telefono,
+        fechaNacimiento,
+        sexo,
+        rol,
+        especialidad,
+        direccion,
+        comuna,
+        region,
+        password: [passwordHashed],
+        estadoValidacion: 'validado' // Los usuarios creados por admin se validan automáticamente
+      });
+
+      // Subir imagen si existe
+      if (req.file) {
+        try {
+          const key = await uploadMulterFile(req.file);
+          const fileUrl = `${cloudfrontUrl}/${key}`;
+          nuevoUsuario.imgUrl = fileUrl;
+        } catch (err) {
+          console.error("Error subiendo imagen a S3:", err);
+          return res.status(500).json({
+            message: "Error al subir la imagen",
+            error: err.message
+          });
+        }
+      }
+
+      await nuevoUsuario.save();
+
+      // Mostrar password generado por consola
+      console.log(`Password generado para ${rol}:`, password);
+
+      res.status(201).json({
+        message: `Usuario ${rol} creado correctamente`,
+        usuario: nuevoUsuario,
+        password // Retornar password para que el admin pueda verlo
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al registrar usuario",
+        error: error.message
+      });
+    }
+  },
+
+  loginUsuarioUCAD: async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      // Validar campos requeridos
+      if (!email || !password) {
+        return res.status(400).json({
+          message: "Email y contraseña son requeridos"
+        });
+      }
+
+      // Buscar usuario por email
+      const usuario = await UsuariosUcad.findOne({ email });
+
+      if (!usuario) {
+        return res.status(404).json({
+          message: "Usuario no encontrado, verifica tu correo"
+        });
+      }
+
+      // Verificar password
+      const isMatch = usuario.password.filter((userPassword) =>
+        bcryptjs.compareSync(password, userPassword)
+      );
+
+      if (isMatch.length > 0) {
+        // Generar token JWT
+        const token = jwt.sign(
+          {
+            id: usuario._id,
+            role: usuario.rol
+          },
+          process.env.KEY_JWT,
+          {
+            expiresIn: 60 * 60 * 24 // 24 horas
+          }
+        );
+
+        // Actualizar estado logged
+        usuario.logged = true;
+        await usuario.save();
+
+        res.status(200).json({
+          message: "Usuario logueado correctamente",
+          usuario: {
+            id: usuario._id,
+            nombre: usuario.nombre,
+            apellido: usuario.apellido,
+            email: usuario.email,
+            rol: usuario.rol,
+            rut: usuario.rut,
+            telefono: usuario.telefono,
+            imgUrl: usuario.imgUrl,
+            estadoValidacion: usuario.estadoValidacion
+          },
+          token
+        });
+      } else {
+        return res.status(401).json({
+          message: "Contraseña incorrecta"
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al loguear usuario",
+        error: error.message
+      });
+    }
+  },
+
+  logoutUsuarioUCAD: async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      // Validar campo requerido
+      if (!email) {
+        return res.status(400).json({
+          message: "El email es requerido"
+        });
+      }
+
+      // Buscar y actualizar usuario
+      const usuario = await UsuariosUcad.findOneAndUpdate(
+        { email },
+        { logged: false },
+        { new: true }
+      );
+
+      if (!usuario) {
+        return res.status(404).json({
+          message: "Usuario no encontrado"
+        });
+      }
+
+      res.status(200).json({
+        message: "Usuario deslogueado correctamente",
+        usuario: {
+          id: usuario._id,
+          email: usuario.email,
+          logged: usuario.logged
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al desloguear usuario",
+        error: error.message
+      });
+    }
+  },
+
+  editarUsuarioUCAD: async (req, res) => {
+    try {
+      const { _id } = req.params;
+      const updateData = { ...req.body };
+
+      // Validar que existe el _id
+      if (!_id) {
+        return res.status(400).json({
+          message: "El _id es requerido"
+        });
+      }
+
+      // Buscar usuario
+      const usuario = await UsuariosUcad.findById(_id);
+
+      if (!usuario) {
+        return res.status(404).json({
+          message: "Usuario no encontrado"
+        });
+      }
+
+      // Si se envía un nuevo archivo, subirlo a S3
+      if (req.file) {
+        try {
+          const key = await uploadMulterFile(req.file);
+          const fileUrl = `${cloudfrontUrl}/${key}`;
+          updateData.imgUrl = fileUrl;
+        } catch (err) {
+          console.error("Error subiendo imagen a S3:", err);
+          return res.status(500).json({
+            message: "Error al subir la imagen",
+            error: err.message
+          });
+        }
+      }
+
+      // Si se actualiza el password, hashearlo
+      if (updateData.password) {
+        const passwordHashed = bcryptjs.hashSync(updateData.password, 10);
+        // Agregar el nuevo password al array (mantener historial)
+        usuario.password.push(passwordHashed);
+        updateData.password = usuario.password;
+      }
+
+      // Actualizar usuario
+      const usuarioActualizado = await UsuariosUcad.findByIdAndUpdate(
+        _id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      res.status(200).json({
+        message: "Usuario actualizado correctamente",
+        usuario: usuarioActualizado
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al actualizar usuario",
+        error: error.message
+      });
+    }
+  },
+
+  eliminarUsuarioUCAD: async (req, res) => {
+    try {
+      const { _id } = req.params;
+
+      // Validar que existe el _id
+      if (!_id) {
+        return res.status(400).json({
+          message: "El _id es requerido"
+        });
+      }
+
+      // Buscar y eliminar usuario
+      const usuarioEliminado = await UsuariosUcad.findByIdAndDelete(_id);
+
+      if (!usuarioEliminado) {
+        return res.status(404).json({
+          message: "Usuario no encontrado"
+        });
+      }
+
+      res.status(200).json({
+        message: "Usuario eliminado correctamente",
+        usuario: usuarioEliminado
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al eliminar usuario",
+        error: error.message
+      });
+    }
+  }
+}
+
+module.exports = usuariosUcadController;
