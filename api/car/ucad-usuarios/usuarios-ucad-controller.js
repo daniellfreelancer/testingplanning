@@ -19,14 +19,9 @@ function generateRandomPassword(length = 8) {
 const usuariosUcadController = {
   registrarDeportista: async (req, res) => {
     try {
-      const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo } = req.body;
+      const { nombre, apellido, rut, email, fechaNacimiento, sexo } = req.body;
 
-      // Validar campos requeridos
-      if (!nombre || !apellido || !rut || !email || !telefono || !fechaNacimiento || !sexo) {
-        return res.status(400).json({
-          message: "Todos los campos son requeridos: nombre, apellido, rut, email, telefono, fechaNacimiento, sexo"
-        });
-      }
+
 
       // Verificar si ya existe el rut o el correo
       const usuarioExistenteEmail = await UsuariosUcad.findOne({ email });
@@ -48,7 +43,6 @@ const usuariosUcadController = {
         apellido,
         rut,
         email,
-        telefono,
         fechaNacimiento,
         sexo,
         rol: 'deportista',
