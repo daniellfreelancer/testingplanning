@@ -85,6 +85,11 @@ const reservasPteAlto = require('./api/pteAlto/reservas-pte-alto/reservasPteAlto
 const statsPteAlto = require('./api/pteAlto/stats-pte-alto/statsPteAlto.routes')
 const eventosPteAlto = require('./api/pteAlto/eventos-pte-alto/eventosPteAlto.routes')
 
+
+//Rutas para gestion de usuarios UCAD
+const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
+
+
 var app = express();
 
 // view engine setup
@@ -170,6 +175,9 @@ app.use('/td-pte-alto', talleresDeportivosPteAlto)
 app.use('/reservas-pte-alto', reservasPteAlto)
 app.use('/stats-pte-alto', statsPteAlto)
 app.use('/eventos-pte-alto', eventosPteAlto)
+
+//Rutas para gestion de usuarios UCAD
+app.use('/usuarios-ucad', usuariosUCAD)
 
 
 
