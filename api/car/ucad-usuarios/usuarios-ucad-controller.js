@@ -354,10 +354,18 @@ const usuariosUcadController = {
     await usuario.save();
 
     // Enviar correo con la nueva password
-    // Asumo que tu módulo exporta una función. Ej:
-    // module.exports = async ({ to, nombre, password }) => { ... }
-    await renovarPasswordMail(usuario.email, password, usuario.nombre);
-
+    try {
+      await renovarPasswordMail(usuario.email, password, usuario.nombre);
+      console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
+    } catch (emailError) {
+      console.error('Error al enviar correo de recuperación:', emailError);
+      // Aunque falle el envío del correo, la contraseña ya fue actualizada
+      // Informamos al usuario pero no fallamos la operación completa
+      return res.status(200).json({
+        message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
+        warning: "Error al enviar correo"
+      });
+    }
 
     return res.status(200).json({
       message: "Se envió una nueva contraseña al correo"
