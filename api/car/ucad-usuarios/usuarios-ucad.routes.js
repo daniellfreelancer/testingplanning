@@ -21,4 +21,7 @@ router.put("/editar-usuario/:_id", upload.single('imgUrl'), usuariosUcadControll
 // Eliminar usuario UCAD
 router.delete("/eliminar-usuario/:_id", usuariosUcadController.eliminarUsuarioUCAD);
 
+// Recuperar contraseña
+router.post("/recuperar-password", usuariosUcadController.recuperarPasswordUCAD);
+
 module.exports = router;
