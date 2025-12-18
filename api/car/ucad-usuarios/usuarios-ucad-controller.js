@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+const renovarPasswordMail = require("../email/renovarPassword"); 
 
 function generateRandomPassword(length = 8) {
     const characters =
@@ -319,6 +320,56 @@ const usuariosUcadController = {
       });
     }
   },
+
+  recuperarPasswordUCAD: async (req, res) => {
+  try {
+    let { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "El email es requerido" });
+    }
+
+    // Normalizar
+    email = String(email).trim().toLowerCase();
+
+    // Buscar usuario
+    const usuario = await UsuariosUcad.findOne({ email });
+
+    if (!usuario) {
+      return res.status(404).json({
+        message: "No existe un usuario registrado con ese correo"
+      });
+    }
+
+    // Generar password aleatorio + hash
+    const password = generateRandomPassword(8);
+    const passwordHashed = bcryptjs.hashSync(password, 10);
+
+    // Guardar en el array de passwords (historial)
+    if (!Array.isArray(usuario.password)) {
+      usuario.password = [];
+    }
+    usuario.password.push(passwordHashed);
+
+    await usuario.save();
+
+    // Enviar correo con la nueva password
+    // Asumo que tu módulo exporta una función. Ej:
+    // module.exports = async ({ to, nombre, password }) => { ... }
+    await renovarPasswordMail(usuario.email, password, usuario.nombre);
+
+
+    return res.status(200).json({
+      message: "Se envió una nueva contraseña al correo"
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Error al recuperar contraseña",
+      error: error.message
+    });
+  }
+},
 
   editarUsuarioUCAD: async (req, res) => {
     try {
