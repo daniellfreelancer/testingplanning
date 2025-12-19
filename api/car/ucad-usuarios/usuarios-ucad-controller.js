@@ -4,21 +4,27 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
-const renovarPasswordMail = require("../email/renovarPassword"); 
+const renovarPasswordMail = require("../email/renovarPassword");
+const bienvenidaDeportistaMail = require("../email/bienvenidaDeportista");
+const bienvenidaProfesionalMail = require("../email/bienvenidaProfesional");
+const bienvenidaColaboradorMail = require("../email/bienvenidaColaborador");
+const bienvenidaAdminMail = require("../email/bienvenidaAdmin");
+
+
 
 function generateRandomPassword(length = 8) {
-    const characters =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-      const randomIndex = crypto.randomInt(0, characters.length);
-      password += characters[randomIndex];
-    }
-    return password;
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = crypto.randomInt(0, characters.length);
+    password += characters[randomIndex];
   }
+  return password;
+}
 
-const usuariosUcadController = {
-  registrarDeportista: async (req, res) => {
+const usuariosUcadController = { // si entra como profecional o colaborador,
+  registrarDeportista: async (req, res) => { // bienvenida + clave sin url
     try {
       const { nombre, apellido, rut, email, fechaNacimiento, sexo } = req.body;
 
@@ -49,7 +55,7 @@ const usuariosUcadController = {
           // Si viene en formato ISO (YYYY-MM-DD o ISO string)
           fechaNacimientoDate = new Date(fechaNacimiento);
         }
-        
+
         // Validar que la fecha sea válida
         if (isNaN(fechaNacimientoDate.getTime())) {
           return res.status(400).json({
@@ -107,6 +113,7 @@ const usuariosUcadController = {
       }
 
       await nuevoDeportista.save();
+      await bienvenidaDeportistaMail(nuevoDeportista.email, password, nuevoDeportista.nombre);
 
       // Mostrar password generado por consola
       console.log("Password generado para deportista:", password);
@@ -125,7 +132,7 @@ const usuariosUcadController = {
     }
   },
 
-  registrarColaborador: async (req, res) => {
+  registrarColaborador: async (req, res) => { // si entra como profecional o colaborador, bienvenida + clave, profecional a la app y el colaboraador a la web // 
     try {
       const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo, rol, especialidad, direccion, comuna, region } = req.body;
 
@@ -137,7 +144,7 @@ const usuariosUcadController = {
       }
 
       // Validar que el rol sea válido (colaborador, profesional o deportista)
-      if (!['colaborador', 'profesional', 'deportista'].includes(rol)) {
+      if (!['colaborador', 'profesional', 'deportista', 'admin'].includes(rol)) {
         return res.status(400).json({
           message: "El rol debe ser: colaborador, profesional o deportista"
         });
@@ -191,6 +198,16 @@ const usuariosUcadController = {
       }
 
       await nuevoUsuario.save();
+
+      if (rol === "profesional") {
+        await bienvenidaProfesionalMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      } else if (rol === "colaborador") {
+        await bienvenidaColaboradorMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      } else if (rol === "admin") {
+        await bienvenidaAdminMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      }
+
+
 
       // Mostrar password generado por consola
       console.log(`Password generado para ${rol}:`, password);
@@ -322,54 +339,52 @@ const usuariosUcadController = {
   },
 
   recuperarPasswordUCAD: async (req, res) => {
-  try {
-    let { email } = req.body;
+    try {
+      let { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "El email es requerido" });
-    }
+      if (!email) {
+        return res.status(400).json({ message: "El email es requerido" });
+      }
 
-    // Normalizar
-    email = String(email).trim().toLowerCase();
+      // Normalizar
+      email = String(email).trim().toLowerCase();
 
-    // Buscar usuario
-    const usuario = await UsuariosUcad.findOne({ email });
+      // Buscar usuario
+      const usuario = await UsuariosUcad.findOne({ email });
 
-    if (!usuario) {
-      return res.status(404).json({
-        message: "No existe un usuario registrado con ese correo"
+      if (!usuario) {
+        return res.status(404).json({
+          message: "No existe un usuario registrado con ese correo"
+        });
+      }
+
+      // Generar password aleatorio + hash
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      // Guardar en el array de passwords (historial)
+      if (!Array.isArray(usuario.password)) {
+        usuario.password = [];
+      }
+      usuario.password.push(passwordHashed);
+
+      await usuario.save();
+
+      // Enviar correo con la nueva password
+      await renovarPasswordMail(usuario.email, password, usuario.nombre);
+
+
+      return res.status(200).json({
+        message: "Se envió una nueva contraseña al correo"
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Error al recuperar contraseña",
+        error: error.message
       });
     }
-
-    // Generar password aleatorio + hash
-    const password = generateRandomPassword(8);
-    const passwordHashed = bcryptjs.hashSync(password, 10);
-
-    // Guardar en el array de passwords (historial)
-    if (!Array.isArray(usuario.password)) {
-      usuario.password = [];
-    }
-    usuario.password.push(passwordHashed);
-
-    await usuario.save();
-
-    // Enviar correo con la nueva password
-    // Asumo que tu módulo exporta una función. Ej:
-    // module.exports = async ({ to, nombre, password }) => { ... }
-    await renovarPasswordMail(usuario.email, password, usuario.nombre);
-
-
-    return res.status(200).json({
-      message: "Se envió una nueva contraseña al correo"
-    });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      message: "Error al recuperar contraseña",
-      error: error.message
-    });
-  }
-},
+  },
 
   editarUsuarioUCAD: async (req, res) => {
     try {
