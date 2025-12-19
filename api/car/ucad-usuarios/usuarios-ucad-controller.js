@@ -1,23 +1,31 @@
+const CitaUcad = require("../ucad-citas/citas-ucad");
 const UsuariosUcad = require("./usuarios-ucad");
 const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+const renovarPasswordMail = require("../email/renovarPassword");
+const bienvenidaDeportistaMail = require("../email/bienvenidaDeportista");
+const bienvenidaProfesionalMail = require("../email/bienvenidaProfesional");
+const bienvenidaColaboradorMail = require("../email/bienvenidaColaborador");
+const bienvenidaAdminMail = require("../email/bienvenidaAdmin");
+const sendEmailReservaQR = require("../email/emailreservaQR");
+
 
 function generateRandomPassword(length = 8) {
-    const characters =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-      const randomIndex = crypto.randomInt(0, characters.length);
-      password += characters[randomIndex];
-    }
-    return password;
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = crypto.randomInt(0, characters.length);
+    password += characters[randomIndex];
   }
+  return password;
+}
 
-const usuariosUcadController = {
-  registrarDeportista: async (req, res) => {
+const usuariosUcadController = { // si entra como profecional o colaborador,
+  registrarDeportista: async (req, res) => { // bienvenida + clave sin url
     try {
       const { nombre, apellido, rut, email, fechaNacimiento, sexo } = req.body;
 
@@ -48,7 +56,7 @@ const usuariosUcadController = {
           // Si viene en formato ISO (YYYY-MM-DD o ISO string)
           fechaNacimientoDate = new Date(fechaNacimiento);
         }
-        
+
         // Validar que la fecha sea válida
         if (isNaN(fechaNacimientoDate.getTime())) {
           return res.status(400).json({
@@ -106,6 +114,7 @@ const usuariosUcadController = {
       }
 
       await nuevoDeportista.save();
+      await bienvenidaDeportistaMail(nuevoDeportista.email, password, nuevoDeportista.nombre);
 
       // Mostrar password generado por consola
       console.log("Password generado para deportista:", password);
@@ -124,7 +133,7 @@ const usuariosUcadController = {
     }
   },
 
-  registrarColaborador: async (req, res) => {
+  registrarColaborador: async (req, res) => { // si entra como profecional o colaborador, bienvenida + clave, profecional a la app y el colaboraador a la web // 
     try {
       const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo, rol, especialidad, direccion, comuna, region } = req.body;
 
@@ -136,7 +145,7 @@ const usuariosUcadController = {
       }
 
       // Validar que el rol sea válido (colaborador, profesional o deportista)
-      if (!['colaborador', 'profesional', 'deportista'].includes(rol)) {
+      if (!['colaborador', 'profesional', 'deportista', 'admin'].includes(rol)) {
         return res.status(400).json({
           message: "El rol debe ser: colaborador, profesional o deportista"
         });
@@ -190,6 +199,16 @@ const usuariosUcadController = {
       }
 
       await nuevoUsuario.save();
+
+      if (rol === "profesional") {
+        await bienvenidaProfesionalMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      } else if (rol === "colaborador") {
+        await bienvenidaColaboradorMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      } else if (rol === "admin") {
+        await bienvenidaAdminMail(nuevoUsuario.email, password, nuevoUsuario.nombre, rol);
+      }
+
+
 
       // Mostrar password generado por consola
       console.log(`Password generado para ${rol}:`, password);
@@ -320,6 +339,65 @@ const usuariosUcadController = {
     }
   },
 
+  recuperarPasswordUCAD: async (req, res) => {
+    try {
+      let { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "El email es requerido" });
+      }
+
+      // Normalizar
+      email = String(email).trim().toLowerCase();
+
+      // Buscar usuario
+      const usuario = await UsuariosUcad.findOne({ email });
+
+      if (!usuario) {
+        return res.status(404).json({
+          message: "No existe un usuario registrado con ese correo"
+        });
+      }
+
+      // Generar password aleatorio + hash
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      // Guardar en el array de passwords (historial)
+      if (!Array.isArray(usuario.password)) {
+        usuario.password = [];
+      }
+      usuario.password.push(passwordHashed);
+
+      await usuario.save();
+
+      // Enviar correo con la nueva password
+      try {
+        await renovarPasswordMail(usuario.email, password, usuario.nombre);
+        console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
+      } catch (emailError) {
+        console.error('Error al enviar correo de recuperación:', emailError);
+        // Aunque falle el envío del correo, la contraseña ya fue actualizada
+        // Informamos al usuario pero no fallamos la operación completa
+        return res.status(200).json({
+          message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
+          warning: "Error al enviar correo"
+        });
+      }
+
+
+      return res.status(200).json({
+        message: "Se envió una nueva contraseña al correo"
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Error al recuperar contraseña",
+        error: error.message
+      });
+    }
+  },
+
   editarUsuarioUCAD: async (req, res) => {
     try {
       const { _id } = req.params;
@@ -415,7 +493,95 @@ const usuariosUcadController = {
         error: error.message
       });
     }
-  }
+  },
+  obtenerProfesionales: async (req, res) => {
+
+
+    try {
+      const profesionales = await UsuariosUcad.find({ rol: 'profesional' })
+      .populate('agenda')
+      .select('nombre apellido email especialidad imgUrl agenda rol')
+      res.status(200).json({
+        message: "Profesionales encontrados correctamente",
+        response: profesionales,
+        success: true
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener profesionales",
+        error: error.message,
+        success: false
+      });
+    }
+
+  },
+
+  enviarEmailCitaQR: async (req, res) => {
+    try {
+      const { citaId } = req.body;
+
+      if (!citaId) {
+        return res.status(400).json({ message: "citaId es requerido" });
+      }
+
+      // 1) Buscar cita + poblar deportista y profesional (si el schema tiene ref)
+      let cita = await CitaUcad.findById(citaId)
+        .populate("deportista", "nombre apellido email")
+        .populate("profesional", "nombre apellido email");
+
+      if (!cita) {
+        return res.status(404).json({ message: "Cita no encontrada" });
+      }
+
+      // 2) Si no se pudo poblar (por schema sin ref), buscar manualmente
+      let deportista = cita.deportista;
+      if (!deportista || !deportista.email) {
+        deportista = await UsuariosUcad.findById(cita.deportista).select("nombre apellido email");
+      }
+
+      let profesional = cita.profesional;
+      if (!profesional || !profesional.nombre) {
+        profesional = await UsuariosUcad.findById(cita.profesional).select("nombre apellido email");
+      }
+
+      if (!deportista?.email) {
+        return res.status(400).json({
+          message: "La cita no tiene email de deportista asociado"
+        });
+      }
+
+      // 3) URL que irá al QR (base en env; fallback)
+      const baseUrl = process.env.CITA_QR_BASE_URL || "https://api.vitalmoveglobal.com/citas/validar-cita";
+      const qrUrl = `${baseUrl}/${cita._id}`;
+
+      // 4) Armar “cita enriquecida” para el template
+      // (tu mailer puede leer profesional.nombre/apellido)
+      const citaParaEmail = cita.toObject ? cita.toObject() : cita;
+      citaParaEmail.deportista = deportista;
+      citaParaEmail.profesional = profesional;
+      citaParaEmail.qrUrl = qrUrl; // por si quieres mostrarlo además del QR
+
+      const nombreDeportista = `${deportista.nombre || ""} ${deportista.apellido || ""}`.trim() || "Usuario";
+
+      // 5) Enviar mail (asumo tu emailreservaQR.js recibe: (email, nombre, cita))
+      await sendEmailReservaQR(deportista.email, nombreDeportista, citaParaEmail);
+
+      return res.status(200).json({
+        message: "Email de confirmación de cita enviado",
+        citaId: String(cita._id),
+        emailDestino: deportista.email,
+        qrUrl
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Error enviando email de confirmación",
+        error: error.message
+      });
+    }
+  },
+
 }
 
 module.exports = usuariosUcadController;
