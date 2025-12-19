@@ -47,6 +47,13 @@ const citasUcadSchema = new mongoose.Schema({
   canceladoPor: {
     type: String,
     enum: ['deportista', 'profesional', 'admin']
+  },
+  derivadaPor:{
+    type: mongoose.Types.ObjectId, 
+    ref: 'usuariosUcad',
+  },
+  motivoDerivacion:{
+    type: String,
   }
 }, {
   timestamps: true,

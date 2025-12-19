@@ -5,6 +5,9 @@ const citasUcadController = require("./citas-ucad-controller");
 // Crear nueva cita
 router.post("/crear-cita", citasUcadController.crearCita);
 
+// Derivar cita a otro profesional
+router.post("/derivar-cita", citasUcadController.derivarCita);
+
 // Obtener citas de un deportista
 router.get("/mis-citas/:deportistaId", citasUcadController.obtenerCitasDeportista);
 
