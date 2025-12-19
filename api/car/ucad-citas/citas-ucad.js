@@ -19,7 +19,7 @@ const citasUcadSchema = new mongoose.Schema({
   tipoCita: { 
     type: String, 
     required: true,
-    enum: ['consulta', 'emergencia']
+    enum: ['consulta', 'emergencia', 'derivacion']
   },
   fecha: { 
     type: Date, 
