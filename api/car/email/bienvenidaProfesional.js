@@ -134,22 +134,16 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
                   </p>
 
                   <p class="password-info">
-                    Por seguridad, te recomendamos guardar tu contraseña y cambiarla al ingresar por primera vez.
+                    Por seguridad, te recomendamos guardar tu contraseña y no compartirla con terceros.
                   </p>
 
-                  <tr>
-                <td class="app-download-section">
-                  <p class="app-download-title">Descarga la app de VitalMove en tu dispositivo:</p>
-                  <div class="app-badges-wrapper">
-                    <a href="https://apps.apple.com/app/vitalmove" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
-                    </a>
-                    <a href="https://play.google.com/store/apps/details?id=vitalmove" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
+                  <div class="button-wrapper">
+                    <a href="" class="button" target="_blank">
+                      INICIAR SESIÓN
                     </a>
                   </div>
-                </td>
-              </tr>
+
+                  
                 </td>
               </tr>
             </table>

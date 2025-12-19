@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const { google } = require("googleapis");
 const OAuth2 = google.auth.OAuth2;
+
 const {
   GOOGLE_USER,
   GOOGLE_ID,
@@ -8,9 +9,14 @@ const {
   GOOGLE_REFRESH,
   GOOGLE_URL,
   GOOGLE_ACCESS,
+  // opcional (recomendado): define la URL de login de profesionales en tu .env
+  PROFESIONAL_LOGIN_URL,
 } = process.env;
 
-const sendRenewPasswordMailPteAlto = async (email, password, name) => {
+// 👇 URL fallback si no está en .env
+const DEFAULT_PROFESIONAL_LOGIN_URL = "https://ptealto.vitalmoveglobal.com/login";
+
+const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
   try {
     const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
 
@@ -35,10 +41,16 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
       },
     });
 
+    const toEmail = String(email).trim().toLowerCase();
+    const safeName = name ? String(name).trim() : "¡Hola!";
+    const safeRol = rol ? String(rol).trim() : "profesional";
+
+    const loginUrl = PROFESIONAL_LOGIN_URL || DEFAULT_PROFESIONAL_LOGIN_URL;
+
     const mailOptions = {
       from: GOOGLE_USER,
-      to: email,
-      subject: "Recuperación de contraseña - VitalMove",
+      to: toEmail,
+      subject: "¡Bienvenido/a! Acceso Colaborador - UCAD CAR",
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -46,7 +58,7 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <meta http-equiv="X-UA-Compatible" content="IE=edge">
-          <title>Recuperación de contraseña</title>
+          <title>Bienvenido/a Colaborador</title>
           <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" type="text/css">
           <style>
             body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Montserrat', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -82,30 +94,15 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
             }
             .button:hover { background-color: #00b080; }
 
-            .app-download-section { background-color: #e4faf4; padding: 40px 20px; text-align: center; border-radius: 0 0 8px 8px; }
-            .app-download-title { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 25px; }
-            .app-badges-wrapper { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
-            .app-badge-link { display: inline-block; }
-            .app-badge-img { width: 130px; height: auto; }
-
             .footer { padding: 30px 20px; text-align: center; font-size: 12px; color: #888888; }
             .footer-link { color: #888888; text-decoration: underline; }
 
             @media only screen and (max-width: 620px) {
               .content-table { width: 100% !important; border-radius: 0; box-shadow: none; }
-              .body-content, .app-download-section { padding: 20px 25px 30px 25px !important; }
+              .body-content { padding: 20px 25px 30px 25px !important; }
               .welcome-title { font-size: 24px !important; }
-              .app-badges-wrapper { flex-direction: column; gap: 15px; }
-              .app-badge-img { width: 110px !important; }
             }
           </style>
-          <!--[if mso]>
-          <style type="text/css">
-            .button { padding: 10px 25px; display: inline-block; }
-            .button a { background-color: #00d09c; padding: 10px 25px; border-radius: 5px; color: #ffffff !important; }
-            .button table { display: inline-block !important; }
-          </style>
-          <![endif]-->
         </head>
         <body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Montserrat', sans-serif;">
           <center class="email-wrapper">
@@ -117,46 +114,54 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
                   </a>
                 </td>
               </tr>
+
               <tr>
                 <td class="body-content">
-                  <p class="welcome-title">Recuperación de contraseña</p>
-                  <p class="greeting-text">Hola <span style="font-weight: 600;">${name}</span>,</p>
-                  <p class="greeting-text">Recibimos una solicitud para renovar tu contraseña.</p>
+                  <p class="welcome-title">¡Bienvenido/a! Acceso Profesional</p>
 
-                  <p class="password-info">
-                    Tu nueva contraseña es:
-                    <strong class="highlight-password">${password}</strong>
+                  <p class="greeting-text">
+                    Hola <span style="font-weight: 600;">${safeName}</span>,
+                  </p>
+
+                  <p class="greeting-text">
+                    Tu cuenta de colaborador fue creada exitosamente. Aquí están tus credenciales de acceso:
                   </p>
 
                   <p class="password-info">
-                    Por seguridad, te recomendamos no compartir esta contraseña.
-                    Si tú no solicitaste este cambio, por favor contáctanos.
+                    <strong>Usuario:</strong> ${toEmail}<br/>
+                    <strong>Contraseña:</strong> <span class="highlight-password">${password}</span><br/>
+                    <strong>Rol:</strong> ${safeRol}
                   </p>
+
+                  <p class="password-info">
+                    Por seguridad, te recomendamos guardar tu contraseña y no compartirla con terceros.
+                  </p>
+
+                  <tr>
+                    <td class="app-download-section">
+                      <p class="app-download-title">Descarga la app de VitalMove en tu dispositivo:</p>
+                      <div class="app-badges-wrapper">
+                        <a href="https://apps.apple.com/app/vitalmove" class="app-badge-link" target="_blank">
+                          <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
+                        </a>
+                        <a href="https://play.google.com/store/apps/details?id=vitalmove" class="app-badge-link" target="_blank">
+                          <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
 
                   
                 </td>
               </tr>
-              <!--
-              <tr>
-                <td class="app-download-section">
-                  <p class="app-download-title">Descarga la app de VitalMove en tu dispositivo:</p>
-                  <div class="app-badges-wrapper">
-                    <a href="https://apps.apple.com/app/vitalmove" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
-                    </a>
-                    <a href="https://play.google.com/store/apps/details?id=vitalmove" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
-                    </a>
-                  </div>
-                </td>
-              </tr>
-              -->
             </table>
 
             <table class="footer" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
               <tr>
                 <td>
-                  <p style="margin: 0; padding: 20px;">Visítanos en <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a></p>
+                  <p style="margin: 0; padding: 20px;">
+                    Visítanos en <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a>
+                  </p>
                   <p style="margin: 0;">© 2025 VitalMove. Todos los derechos reservados.</p>
                 </td>
               </tr>
@@ -169,10 +174,10 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
     };
 
     await smtpTransport.sendMail(mailOptions);
-    console.log("Email de recuperación de contraseña enviado con éxito: Receive ok");
+    console.log("Email de bienvenida (profesional) enviado con éxito: Receive ok");
   } catch (error) {
     console.log(error);
   }
 };
 
-module.exports = sendRenewPasswordMailPteAlto;
+module.exports = sendWelcomeProfesionalMail;
