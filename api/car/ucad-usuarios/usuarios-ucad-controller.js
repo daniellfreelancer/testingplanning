@@ -1,3 +1,4 @@
+const CitaUcad = require("../ucad-citas/citas-ucad");
 const UsuariosUcad = require("./usuarios-ucad");
 const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
@@ -9,7 +10,7 @@ const bienvenidaDeportistaMail = require("../email/bienvenidaDeportista");
 const bienvenidaProfesionalMail = require("../email/bienvenidaProfesional");
 const bienvenidaColaboradorMail = require("../email/bienvenidaColaborador");
 const bienvenidaAdminMail = require("../email/bienvenidaAdmin");
-
+const sendEmailReservaQR = require("../email/emailreservaQR");
 
 
 function generateRandomPassword(length = 8) {
@@ -370,19 +371,19 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
 
       await usuario.save();
 
-    // Enviar correo con la nueva password
-    try {
-      await renovarPasswordMail(usuario.email, password, usuario.nombre);
-      console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
-    } catch (emailError) {
-      console.error('Error al enviar correo de recuperación:', emailError);
-      // Aunque falle el envío del correo, la contraseña ya fue actualizada
-      // Informamos al usuario pero no fallamos la operación completa
-      return res.status(200).json({
-        message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
-        warning: "Error al enviar correo"
-      });
-    }
+      // Enviar correo con la nueva password
+      try {
+        await renovarPasswordMail(usuario.email, password, usuario.nombre);
+        console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
+      } catch (emailError) {
+        console.error('Error al enviar correo de recuperación:', emailError);
+        // Aunque falle el envío del correo, la contraseña ya fue actualizada
+        // Informamos al usuario pero no fallamos la operación completa
+        return res.status(200).json({
+          message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
+          warning: "Error al enviar correo"
+        });
+      }
 
 
       return res.status(200).json({
@@ -493,7 +494,7 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
   },
-  obtenerProfesionales: async (req, res) =>{
+  obtenerProfesionales: async (req, res) => {
 
 
     try {
@@ -502,7 +503,7 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         message: "Profesionales encontrados correctamente",
         response: profesionales,
         success: true
-      }); 
+      });
     } catch (error) {
       console.log(error);
       res.status(500).json({
@@ -512,7 +513,73 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
 
-  }
+  },
+
+  enviarEmailCitaQR: async (req, res) => {
+    try {
+      const { citaId } = req.body;
+
+      if (!citaId) {
+        return res.status(400).json({ message: "citaId es requerido" });
+      }
+
+      // 1) Buscar cita + poblar deportista y profesional (si el schema tiene ref)
+      let cita = await CitaUcad.findById(citaId)
+        .populate("deportista", "nombre apellido email")
+        .populate("profesional", "nombre apellido email");
+
+      if (!cita) {
+        return res.status(404).json({ message: "Cita no encontrada" });
+      }
+
+      // 2) Si no se pudo poblar (por schema sin ref), buscar manualmente
+      let deportista = cita.deportista;
+      if (!deportista || !deportista.email) {
+        deportista = await UsuariosUcad.findById(cita.deportista).select("nombre apellido email");
+      }
+
+      let profesional = cita.profesional;
+      if (!profesional || !profesional.nombre) {
+        profesional = await UsuariosUcad.findById(cita.profesional).select("nombre apellido email");
+      }
+
+      if (!deportista?.email) {
+        return res.status(400).json({
+          message: "La cita no tiene email de deportista asociado"
+        });
+      }
+
+      // 3) URL que irá al QR (base en env; fallback)
+      const baseUrl = process.env.CITA_QR_BASE_URL || "https://api.vitalmoveglobal.com/citas/validar-cita";
+      const qrUrl = `${baseUrl}/${cita._id}`;
+
+      // 4) Armar “cita enriquecida” para el template
+      // (tu mailer puede leer profesional.nombre/apellido)
+      const citaParaEmail = cita.toObject ? cita.toObject() : cita;
+      citaParaEmail.deportista = deportista;
+      citaParaEmail.profesional = profesional;
+      citaParaEmail.qrUrl = qrUrl; // por si quieres mostrarlo además del QR
+
+      const nombreDeportista = `${deportista.nombre || ""} ${deportista.apellido || ""}`.trim() || "Usuario";
+
+      // 5) Enviar mail (asumo tu emailreservaQR.js recibe: (email, nombre, cita))
+      await sendEmailReservaQR(deportista.email, nombreDeportista, citaParaEmail);
+
+      return res.status(200).json({
+        message: "Email de confirmación de cita enviado",
+        citaId: String(cita._id),
+        emailDestino: deportista.email,
+        qrUrl
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Error enviando email de confirmación",
+        error: error.message
+      });
+    }
+  },
+
 }
 
 module.exports = usuariosUcadController;

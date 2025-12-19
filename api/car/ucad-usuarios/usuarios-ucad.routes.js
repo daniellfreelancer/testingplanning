@@ -27,4 +27,8 @@ router.post("/recuperar-password", usuariosUcadController.recuperarPasswordUCAD)
 // Obtener profesionales
 router.get("/obtener-profesionales", usuariosUcadController.obtenerProfesionales);
 
+// Enviar email de cita con código QR
+router.post("/citas/enviar-email-qr", usuariosUcadController.enviarEmailCitaQR);
+
+
 module.exports = router;
