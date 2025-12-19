@@ -24,4 +24,7 @@ router.delete("/eliminar-usuario/:_id", usuariosUcadController.eliminarUsuarioUC
 // Recuperar contraseña
 router.post("/recuperar-password", usuariosUcadController.recuperarPasswordUCAD);
 
+// Obtener profesionales
+router.get("/obtener-profesionales", usuariosUcadController.obtenerProfesionales);
+
 module.exports = router;
