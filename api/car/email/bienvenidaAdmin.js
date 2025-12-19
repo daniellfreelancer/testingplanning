@@ -43,7 +43,7 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
 
     const toEmail = String(email).trim().toLowerCase();
     const safeName = name ? String(name).trim() : "¡Hola!";
-    const safeRol = rol ? String(rol).trim() : "profesional";
+    const safeRol = rol ? String(rol).trim() : "administrador";
 
     const loginUrl = PROFESIONAL_LOGIN_URL || DEFAULT_PROFESIONAL_LOGIN_URL;
 
@@ -174,7 +174,7 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
     };
 
     await smtpTransport.sendMail(mailOptions);
-    console.log("Email de bienvenida (profesional) enviado con éxito: Receive ok");
+    console.log("Email de bienvenida (administrador) enviado con éxito: Receive ok");
   } catch (error) {
     console.log(error);
   }
