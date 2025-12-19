@@ -90,6 +90,8 @@ const eventosPteAlto = require('./api/pteAlto/eventos-pte-alto/eventosPteAlto.ro
 const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
 const agendaUCAD = require('./api/car/ucad-agenda/agenda-ucad.routes')
 const citasUCAD = require('./api/car/ucad-citas/citas-ucad.routes')
+const notificacionesUCAD = require('./api/car/ucad-notificaciones/notificaciones-ucad.routes')
+
 
 
 var app = express();
@@ -182,6 +184,8 @@ app.use('/eventos-pte-alto', eventosPteAlto)
 app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
 app.use('/ucad-citas', citasUCAD)
+app.use('/ucad-notificaciones', notificacionesUCAD)
+
 
 
 
