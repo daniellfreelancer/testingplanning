@@ -1,3 +1,4 @@
+const CitaUcad = require("../ucad-citas/citas-ucad");
 const UsuariosUcad = require("./usuarios-ucad");
 const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
@@ -522,45 +523,63 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         return res.status(400).json({ message: "citaId es requerido" });
       }
 
-      // 1) Buscar cita
-      const cita = await Cita.findById(citaId)
-        .populate("usuario", "nombre apellido email"); // si existe relación
+      // 1) Buscar cita + poblar deportista y profesional (si el schema tiene ref)
+      let cita = await CitaUcad.findById(citaId)
+        .populate("deportista", "nombre apellido email")
+        .populate("profesional", "nombre apellido email");
 
       if (!cita) {
         return res.status(404).json({ message: "Cita no encontrada" });
       }
 
-      // 2) email destino
-      const emailDestino =
-        cita?.usuario?.email || cita?.email || null;
+      // 2) Si no se pudo poblar (por schema sin ref), buscar manualmente
+      let deportista = cita.deportista;
+      if (!deportista || !deportista.email) {
+        deportista = await UsuariosUcad.findById(cita.deportista).select("nombre apellido email");
+      }
 
-      if (!emailDestino) {
+      let profesional = cita.profesional;
+      if (!profesional || !profesional.nombre) {
+        profesional = await UsuariosUcad.findById(cita.profesional).select("nombre apellido email");
+      }
+
+      if (!deportista?.email) {
         return res.status(400).json({
-          message: "La cita no tiene email asociado (usuario.email o cita.email)",
+          message: "La cita no tiene email de deportista asociado"
         });
       }
 
-      // 3) Armar payload mínimo (después lo mejoras cuando definas el formato)
-      const payload = {
-        
-      };
+      // 3) URL que irá al QR (base en env; fallback)
+      const baseUrl = process.env.CITA_QR_BASE_URL || "https://api.vitalmoveglobal.com/citas/validar-cita";
+      const qrUrl = `${baseUrl}/${cita._id}`;
 
-      // 4) Enviar mail
-      await sendEmailReservaQR(emailDestino, payload);
+      // 4) Armar “cita enriquecida” para el template
+      // (tu mailer puede leer profesional.nombre/apellido)
+      const citaParaEmail = cita.toObject ? cita.toObject() : cita;
+      citaParaEmail.deportista = deportista;
+      citaParaEmail.profesional = profesional;
+      citaParaEmail.qrUrl = qrUrl; // por si quieres mostrarlo además del QR
+
+      const nombreDeportista = `${deportista.nombre || ""} ${deportista.apellido || ""}`.trim() || "Usuario";
+
+      // 5) Enviar mail (asumo tu emailreservaQR.js recibe: (email, nombre, cita))
+      await sendEmailReservaQR(deportista.email, nombreDeportista, citaParaEmail);
 
       return res.status(200).json({
         message: "Email de confirmación de cita enviado",
-        citaId,
-        emailDestino,
+        citaId: String(cita._id),
+        emailDestino: deportista.email,
+        qrUrl
       });
     } catch (error) {
       console.log(error);
       return res.status(500).json({
         message: "Error enviando email de confirmación",
-        error: error.message,
+        error: error.message
       });
     }
   },
+
 }
 
 module.exports = usuariosUcadController;
