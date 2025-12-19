@@ -9,7 +9,7 @@ const bienvenidaDeportistaMail = require("../email/bienvenidaDeportista");
 const bienvenidaProfesionalMail = require("../email/bienvenidaProfesional");
 const bienvenidaColaboradorMail = require("../email/bienvenidaColaborador");
 const bienvenidaAdminMail = require("../email/bienvenidaAdmin");
-
+const sendEmailReservaQR = require("../email/emailreservaQR");
 
 
 function generateRandomPassword(length = 8) {
@@ -370,19 +370,19 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
 
       await usuario.save();
 
-    // Enviar correo con la nueva password
-    try {
-      await renovarPasswordMail(usuario.email, password, usuario.nombre);
-      console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
-    } catch (emailError) {
-      console.error('Error al enviar correo de recuperación:', emailError);
-      // Aunque falle el envío del correo, la contraseña ya fue actualizada
-      // Informamos al usuario pero no fallamos la operación completa
-      return res.status(200).json({
-        message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
-        warning: "Error al enviar correo"
-      });
-    }
+      // Enviar correo con la nueva password
+      try {
+        await renovarPasswordMail(usuario.email, password, usuario.nombre);
+        console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
+      } catch (emailError) {
+        console.error('Error al enviar correo de recuperación:', emailError);
+        // Aunque falle el envío del correo, la contraseña ya fue actualizada
+        // Informamos al usuario pero no fallamos la operación completa
+        return res.status(200).json({
+          message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
+          warning: "Error al enviar correo"
+        });
+      }
 
 
       return res.status(200).json({
@@ -493,7 +493,7 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
   },
-  obtenerProfesionales: async (req, res) =>{
+  obtenerProfesionales: async (req, res) => {
 
 
     try {
@@ -502,7 +502,7 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         message: "Profesionales encontrados correctamente",
         response: profesionales,
         success: true
-      }); 
+      });
     } catch (error) {
       console.log(error);
       res.status(500).json({
@@ -512,7 +512,55 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
 
-  }
+  },
+
+  enviarEmailCitaQR: async (req, res) => {
+    try {
+      const { citaId } = req.body;
+
+      if (!citaId) {
+        return res.status(400).json({ message: "citaId es requerido" });
+      }
+
+      // 1) Buscar cita
+      const cita = await Cita.findById(citaId)
+        .populate("usuario", "nombre apellido email"); // si existe relación
+
+      if (!cita) {
+        return res.status(404).json({ message: "Cita no encontrada" });
+      }
+
+      // 2) email destino
+      const emailDestino =
+        cita?.usuario?.email || cita?.email || null;
+
+      if (!emailDestino) {
+        return res.status(400).json({
+          message: "La cita no tiene email asociado (usuario.email o cita.email)",
+        });
+      }
+
+      // 3) Armar payload mínimo (después lo mejoras cuando definas el formato)
+      const payload = {
+        
+      };
+
+      // 4) Enviar mail
+      await sendEmailReservaQR(emailDestino, payload);
+
+      return res.status(200).json({
+        message: "Email de confirmación de cita enviado",
+        citaId,
+        emailDestino,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Error enviando email de confirmación",
+        error: error.message,
+      });
+    }
+  },
 }
 
 module.exports = usuariosUcadController;
