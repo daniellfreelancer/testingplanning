@@ -370,8 +370,19 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
 
       await usuario.save();
 
-      // Enviar correo con la nueva password
+    // Enviar correo con la nueva password
+    try {
       await renovarPasswordMail(usuario.email, password, usuario.nombre);
+      console.log(`Correo de recuperación enviado exitosamente a: ${usuario.email}`);
+    } catch (emailError) {
+      console.error('Error al enviar correo de recuperación:', emailError);
+      // Aunque falle el envío del correo, la contraseña ya fue actualizada
+      // Informamos al usuario pero no fallamos la operación completa
+      return res.status(200).json({
+        message: "Se generó una nueva contraseña. Sin embargo, hubo un problema al enviar el correo. Por favor contacta al administrador.",
+        warning: "Error al enviar correo"
+      });
+    }
 
 
       return res.status(200).json({
@@ -481,6 +492,26 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         error: error.message
       });
     }
+  },
+  obtenerProfesionales: async (req, res) =>{
+
+
+    try {
+      const profesionales = await UsuariosUcad.find({ rol: 'profesional' });
+      res.status(200).json({
+        message: "Profesionales encontrados correctamente",
+        response: profesionales,
+        success: true
+      }); 
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener profesionales",
+        error: error.message,
+        success: false
+      });
+    }
+
   }
 }
 

@@ -171,7 +171,9 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
     await smtpTransport.sendMail(mailOptions);
     console.log("Email de recuperación de contraseña enviado con éxito: Receive ok");
   } catch (error) {
-    console.log(error);
+    console.error("Error al enviar email de recuperación de contraseña:", error);
+    // Lanzar el error para que el controlador lo maneje
+    throw new Error(`Error al enviar correo de recuperación: ${error.message}`);
   }
 };
 
