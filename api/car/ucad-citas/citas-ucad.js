@@ -14,7 +14,7 @@ const citasUcadSchema = new mongoose.Schema({
   especialidad: { 
     type: String, 
     required: true,
-    enum: ['Nutrición Deportiva', 'Medicina del Deporte', 'Psicología del Deporte']
+   // enum: ['Nutrición Deportiva', 'Medicina del Deporte', 'Psicología del Deporte']
   },
   tipoCita: { 
     type: String, 

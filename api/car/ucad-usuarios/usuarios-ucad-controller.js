@@ -474,6 +474,26 @@ const usuariosUcadController = {
         error: error.message
       });
     }
+  },
+  obtenerProfesionales: async (req, res) =>{
+
+
+    try {
+      const profesionales = await UsuariosUcad.find({ rol: 'profesional' });
+      res.status(200).json({
+        message: "Profesionales encontrados correctamente",
+        response: profesionales,
+        success: true
+      }); 
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener profesionales",
+        error: error.message,
+        success: false
+      });
+    }
+
   }
 }
 
