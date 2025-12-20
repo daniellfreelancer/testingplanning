@@ -33,7 +33,7 @@ const citasUcadSchema = new mongoose.Schema({
   },
   estado: { 
     type: String, 
-    enum: ['pendiente', 'confirmada', 'completada', 'cancelada'],
+    enum: ['pendiente', 'confirmada', 'completada', 'cancelada','derivada'],
     default: 'pendiente'
   },
   notas: { 
