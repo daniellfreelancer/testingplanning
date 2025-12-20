@@ -60,8 +60,7 @@ const notificacionesUcadController = {
     try {
       const { targetId } = req.params;
 
-      const notificaciones = await NotificacionUcad.find({ target: targetId })
-        .sort({ timestamp: -1 });
+      const notificaciones = await NotificacionUcad.find({ target: targetId }).populate('createdBy', 'nombre apellido imgUrl').sort({ timestamp: -1 });
 
       return res.status(200).json({ notificaciones });
     } catch (error) {
@@ -78,8 +77,7 @@ const notificacionesUcadController = {
     try {
       const { creatorId } = req.params;
 
-      const notificaciones = await NotificacionUcad.find({ createdBy: creatorId })
-        .sort({ timestamp: -1 });
+      const notificaciones = await NotificacionUcad.find({ createdBy: creatorId }).populate('target', 'nombre apellido imgUrl').sort({ timestamp: -1 });
 
       return res.status(200).json({ notificaciones });
     } catch (error) {
