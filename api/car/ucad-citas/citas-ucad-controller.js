@@ -417,6 +417,7 @@ const citasUcadController = {
 
       const citas = await CitasUcad.find(query)
         .populate('deportista', 'nombre apellido email imgUrl')
+        .populate('derivadaPor', 'nombre apellido email especialidad')
         .sort({ fecha: 1 });
 
       res.status(200).json({
