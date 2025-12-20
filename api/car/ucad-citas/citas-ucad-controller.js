@@ -710,7 +710,7 @@ const citasUcadController = {
       });
     }
   },
-  derivarCita: async (req, res) => {
+  derivarCitaUpdate: async (req, res) => {
     
   }
 };
