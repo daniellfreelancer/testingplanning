@@ -155,6 +155,211 @@ const citasUcadController = {
   },
 
   /**
+   * Derivar cita a otro profesional
+   * POST /derivar-cita
+   * Body: { deportista, profesional, especialidad, fecha, duracion, derivadaPor, motivoDerivacion, notas }
+   */
+  derivarCita: async (req, res) => {
+    try {
+      const {
+        deportista,
+        profesional,
+        especialidad,
+        fecha,
+        duracion = 30,
+        derivadaPor,
+        motivoDerivacion,
+        notas,
+      } = req.body;
+
+      // Validar campos requeridos
+      if (
+        !deportista ||
+        !profesional ||
+        !especialidad ||
+        !fecha ||
+        !derivadaPor
+      ) {
+        return res.status(400).json({
+          message:
+            'Los campos deportista, profesional, especialidad, fecha y derivadaPor son requeridos',
+        });
+      }
+
+      // Validar que el deportista existe
+      const deportistaExiste = await UsuariosUcad.findById(deportista);
+      if (!deportistaExiste || deportistaExiste.rol !== 'deportista') {
+        return res.status(404).json({
+          message: 'Deportista no encontrado o no tiene rol válido',
+        });
+      }
+
+      // Validar que el profesional destinatario existe
+      const profesionalDestino = await UsuariosUcad.findById(profesional);
+      if (!profesionalDestino || profesionalDestino.rol !== 'profesional') {
+        return res.status(404).json({
+          message: 'Profesional destinatario no encontrado o no tiene rol válido',
+        });
+      }
+
+      // Validar que el profesional que deriva existe
+      const profesionalOrigen = await UsuariosUcad.findById(derivadaPor);
+      if (!profesionalOrigen || profesionalOrigen.rol !== 'profesional') {
+        return res.status(404).json({
+          message:
+            'Profesional que deriva no encontrado o no tiene rol válido',
+        });
+      }
+
+      // Validar que el profesional destinatario tenga la especialidad correcta
+      if (profesionalDestino.especialidad !== especialidad) {
+        return res.status(400).json({
+          message: 'El profesional destinatario no tiene la especialidad seleccionada',
+        });
+      }
+
+      // Validar que el profesional destinatario esté validado
+      if (profesionalDestino.estadoValidacion !== 'validado') {
+        return res.status(400).json({
+          message: 'El profesional destinatario no está validado',
+        });
+      }
+
+      // Validar que el profesional que deriva esté validado
+      if (profesionalOrigen.estadoValidacion !== 'validado') {
+        return res.status(400).json({
+          message: 'El profesional que deriva no está validado',
+        });
+      }
+
+      // Validar que no se derive a sí mismo
+      if (profesional.toString() === derivadaPor.toString()) {
+        return res.status(400).json({
+          message: 'No se puede derivar una cita a sí mismo',
+        });
+      }
+
+      // Validar fecha
+      const fechaCita = new Date(fecha);
+      if (isNaN(fechaCita.getTime())) {
+        return res.status(400).json({
+          message: 'Formato de fecha inválido',
+        });
+      }
+
+      // Validar que la fecha no sea en el pasado
+      if (fechaCita < new Date()) {
+        return res.status(400).json({
+          message: 'No se pueden crear citas en el pasado',
+        });
+      }
+
+      // Obtener agenda del profesional destinatario
+      const agenda = await AgendaUCAD.findOne({profesional});
+      if (!agenda || !agenda.status) {
+        return res.status(400).json({
+          message:
+            'El profesional destinatario no tiene agenda configurada o está inactiva',
+        });
+      }
+
+      // Validar día de la semana
+      const diasSemana = [
+        'domingo',
+        'lunes',
+        'martes',
+        'miércoles',
+        'jueves',
+        'viernes',
+        'sábado',
+      ];
+      const diaSemana = diasSemana[fechaCita.getDay()];
+      if (!agenda.dias.includes(diaSemana)) {
+        return res.status(400).json({
+          message: `El profesional destinatario no atiende los ${diaSemana}s`,
+        });
+      }
+
+      // Validar horario dentro del rango de disponibilidad
+      const horaCita = fechaCita.getHours();
+      const minutoCita = fechaCita.getMinutes();
+      const [horaInicioNum, minutoInicioNum] = agenda.horaInicio
+        .split(':')
+        .map(Number);
+      const [horaFinNum, minutoFinNum] = agenda.horaFin.split(':').map(Number);
+
+      const horaCitaTotal = horaCita * 60 + minutoCita;
+      const inicioTotal = horaInicioNum * 60 + minutoInicioNum;
+      const finTotal = horaFinNum * 60 + minutoFinNum;
+
+      if (horaCitaTotal < inicioTotal || horaCitaTotal >= finTotal) {
+        return res.status(400).json({
+          message: `El horario debe estar entre ${agenda.horaInicio} y ${agenda.horaFin}`,
+        });
+      }
+
+      // Validar que el horario esté en bloques de 30 minutos
+      if (minutoCita !== 0 && minutoCita !== 30) {
+        return res.status(400).json({
+          message:
+            'Las citas deben agendarse en bloques de 30 minutos (ej: 09:00, 09:30, 10:00)',
+        });
+      }
+
+      // Verificar que no haya conflicto con otra cita
+      const fechaFinCita = new Date(fechaCita);
+      fechaFinCita.setMinutes(fechaFinCita.getMinutes() + duracion);
+
+      const citaConflictiva = await CitasUcad.findOne({
+        profesional,
+        fecha: {
+          $gte: fechaCita,
+          $lt: fechaFinCita,
+        },
+        estado: {$nin: ['cancelada']},
+      });
+
+      if (citaConflictiva) {
+        return res.status(400).json({
+          message: 'Ya existe una cita agendada en este horario',
+        });
+      }
+
+      // Crear la cita de derivación
+      const nuevaCita = new CitasUcad({
+        deportista,
+        profesional,
+        especialidad,
+        tipoCita: 'derivacion',
+        fecha: fechaCita,
+        duracion,
+        notas,
+        derivadaPor,
+        motivoDerivacion: motivoDerivacion || '',
+        estado: 'pendiente',
+      });
+
+      await nuevaCita.save();
+
+      // Populate para respuesta
+      await nuevaCita.populate('deportista', 'nombre apellido email');
+      await nuevaCita.populate('profesional', 'nombre apellido email especialidad');
+      await nuevaCita.populate('derivadaPor', 'nombre apellido email especialidad');
+
+      res.status(201).json({
+        message: 'Cita derivada exitosamente',
+        cita: nuevaCita,
+      });
+    } catch (error) {
+      console.error('Error al derivar cita:', error);
+      res.status(500).json({
+        message: 'Error al derivar cita',
+        error: error.message,
+      });
+    }
+  },
+
+  /**
    * Obtener citas de un deportista
    * GET /mis-citas/:deportistaId
    * Query: ?estado=pendiente (opcional)
@@ -212,6 +417,7 @@ const citasUcadController = {
 
       const citas = await CitasUcad.find(query)
         .populate('deportista', 'nombre apellido email imgUrl')
+        .populate('derivadaPor', 'nombre apellido email especialidad')
         .sort({ fecha: 1 });
 
       res.status(200).json({
@@ -503,6 +709,9 @@ const citasUcadController = {
         error: error.message
       });
     }
+  },
+  derivarCitaUpdate: async (req, res) => {
+    
   }
 };
 

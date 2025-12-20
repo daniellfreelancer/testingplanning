@@ -4,14 +4,14 @@ const NotificacionUcadSchema = new mongoose.Schema(
     {
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "UsuariosUcad",
+            ref: "usuariosUcad",
             required: true,
             index: true,
         },
 
         target: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "UsuariosUcad",
+            ref: "usuariosUcad",
             required: true,
             index: true,
         },
