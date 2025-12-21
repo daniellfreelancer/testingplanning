@@ -10,6 +10,7 @@ const { registerCronJobs } = require('../cron/scheduler');
 var app = require('../app');
 var debug = require('debug')('planningvm:server');
 var http = require('http');
+const { connectDB } = require('../config/database');
 
 /**
  * Get port from environment and store in Express.
@@ -24,18 +25,37 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
-
-// Iniciar cron jobs
-//registerCronJobs();
-console.log('Cronjobs no estan funcionales');
-
 /**
- * Listen on provided port, on all network interfaces.
+ * Iniciar servidor después de conectar a MongoDB
  */
+const startServer = async () => {
+    try {
+        // Esperar a que MongoDB esté conectado antes de iniciar el servidor
+        console.log('Esperando conexión a MongoDB...');
+        await connectDB();
+        console.log('✅ MongoDB conectado. Iniciando servidor...');
 
-server.listen(port, () => console.log(`VitalMove Server is ready on port: ${port}`));
-server.on('error', onError);
-server.on('listening', onListening);
+        // Iniciar cron jobs
+        //registerCronJobs();
+        console.log('Cronjobs no estan funcionales');
+
+        /**
+         * Listen on provided port, on all network interfaces.
+         */
+        server.listen(port, () => {
+            console.log(`✅ VitalMove Server is ready on port: ${port}`);
+        });
+        server.on('error', onError);
+        server.on('listening', onListening);
+    } catch (error) {
+        console.error('❌ Error fatal al iniciar servidor:', error);
+        console.error('No se pudo conectar a MongoDB. El servidor no se iniciará.');
+        process.exit(1);
+    }
+};
+
+// Iniciar el servidor
+startServer();
 
 /**
  * Normalize a port into a number, string, or false.
