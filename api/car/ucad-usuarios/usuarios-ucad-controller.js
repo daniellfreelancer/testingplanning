@@ -494,13 +494,14 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
   },
+  
+  
   obtenerProfesionales: async (req, res) => {
-
 
     try {
       const profesionales = await UsuariosUcad.find({ rol: 'profesional' })
       .populate('agenda')
-      .select('nombre apellido email especialidad imgUrl agenda rol')
+      .select('nombre apellido email especialidad imgUrl agenda rol');
       res.status(200).json({
         message: "Profesionales encontrados correctamente",
         response: profesionales,
@@ -510,6 +511,48 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       console.log(error);
       res.status(500).json({
         message: "Error al obtener profesionales",
+        error: error.message,
+        success: false
+      });
+    }
+
+  },
+
+  obtenerDeportistas: async (req, res) => {
+
+    try {
+      const deportistas = await UsuariosUcad.find({ rol: 'deportista' })
+      .select('nombre apellido email rut telefono imgUrl rol estadoValidacion fechaNacimiento genero');
+      res.status(200).json({
+        message: "Deportistas encontrados correctamente",
+        response: deportistas,
+        success: true
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener deportistas",
+        error: error.message,
+        success: false
+      });
+    }
+
+  },
+
+  obtenerColaboradores: async (req, res) => {
+
+    try {
+      const colaboradores = await UsuariosUcad.find({ rol: 'colaborador' })
+      .select('nombre apellido email rut telefono imgUrl rol estadoValidacion');
+      res.status(200).json({
+        message: "Colaboradores encontrados correctamente",
+        response: colaboradores,
+        success: true
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener colaboradores",
         error: error.message,
         success: false
       });
