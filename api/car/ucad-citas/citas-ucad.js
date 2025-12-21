@@ -66,12 +66,12 @@ citasUcadSchema.index({ estado: 1 });
 citasUcadSchema.index({ fecha: 1, estado: 1 });
 
 // Validación: No permitir citas en el pasado
-citasUcadSchema.pre('save', function(next) {
-  if (this.fecha && this.fecha < new Date()) {
-    return next(new Error('No se pueden crear citas en el pasado'));
-  }
-  next();
-});
+// citasUcadSchema.pre('save', function(next) {
+//   if (this.fecha && this.fecha < new Date()) {
+//     return next(new Error('No se pueden crear citas en el pasado'));
+//   }
+//   next();
+// });
 
 const CitasUcad = mongoose.model("citasUcad", citasUcadSchema);
 
