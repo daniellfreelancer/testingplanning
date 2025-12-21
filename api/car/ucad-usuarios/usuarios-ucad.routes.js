@@ -27,6 +27,12 @@ router.post("/recuperar-password", usuariosUcadController.recuperarPasswordUCAD)
 // Obtener profesionales
 router.get("/obtener-profesionales", usuariosUcadController.obtenerProfesionales);
 
+// Obtener deportistas
+router.get("/obtener-deportistas", usuariosUcadController.obtenerDeportistas);
+
+// Obtener colaboradores
+router.get("/obtener-colaboradores", usuariosUcadController.obtenerColaboradores);
+
 // Enviar email de cita con código QR
 router.post("/citas/enviar-email-qr", usuariosUcadController.enviarEmailCitaQR);
 
