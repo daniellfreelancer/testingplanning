@@ -566,6 +566,7 @@ const citasUcadController = {
   completarCita: async (req, res) => {
     try {
       const { citaId } = req.params;
+      const { notas } = req.body;
 
       const cita = await CitasUcad.findById(citaId);
       if (!cita) {
@@ -581,6 +582,7 @@ const citasUcadController = {
       }
 
       cita.estado = 'completada';
+      cita.notas = notas || '';
       await cita.save();
 
       await cita.populate('deportista', 'nombre apellido email');
