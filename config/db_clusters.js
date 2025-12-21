@@ -4,6 +4,22 @@ mongoose.set('strictQuery', true);
 // Objeto para almacenar múltiples conexiones
 const connections = {};
 
+// Opciones de conexión robustas para producción (compartidas con database.js)
+const connectionOptions = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+    retryWrites: true,
+    retryReads: true,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 30000,
+    heartbeatFrequencyMS: 10000,
+    directConnection: false,
+};
+
 // Función para obtener cliente desde header
 const getClientFromRequest = (req) => {
     return req.get('X-Client-ID') || null;
@@ -29,12 +45,22 @@ const getConnectionByClient = (clientId) => {
             throw new Error(`No database configuration found for client: ${clientId}`);
         }
         
-        connections[clientId] = mongoose.createConnection(dbUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
+        connections[clientId] = mongoose.createConnection(dbUri, connectionOptions);
+        
+        // Configurar eventos de conexión
+        connections[clientId].on('connected', () => {
+            console.log(`✅ MongoDB conectado para cliente: ${clientId}`);
         });
         
-        console.log(`Conectado a MongoDB para cliente: ${clientId}`);
+        connections[clientId].on('error', (err) => {
+            console.error(`❌ Error en conexión MongoDB para cliente ${clientId}:`, err);
+        });
+        
+        connections[clientId].on('disconnected', () => {
+            console.warn(`⚠️ MongoDB desconectado para cliente: ${clientId}`);
+        });
+        
+        console.log(`Conectando a MongoDB para cliente: ${clientId}...`);
     }
     return connections[clientId];
 };
@@ -47,12 +73,22 @@ const getDefaultConnection = () => {
             throw new Error('No default database configuration found');
         }
         
-        connections['default'] = mongoose.createConnection(dbUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
+        connections['default'] = mongoose.createConnection(dbUri, connectionOptions);
+        
+        // Configurar eventos de conexión
+        connections['default'].on('connected', () => {
+            console.log('✅ MongoDB conectado por defecto');
         });
         
-        console.log('Conectado a MongoDB por defecto');
+        connections['default'].on('error', (err) => {
+            console.error('❌ Error en conexión MongoDB por defecto:', err);
+        });
+        
+        connections['default'].on('disconnected', () => {
+            console.warn('⚠️ MongoDB desconectado por defecto');
+        });
+        
+        console.log('Conectando a MongoDB por defecto...');
     }
     return connections['default'];
 };
