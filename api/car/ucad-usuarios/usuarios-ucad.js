@@ -14,7 +14,7 @@ const usuariosUcadSchema = new mongoose.Schema({
   sexo: { type: String },
   comuna: { type: String },
   region: { type: String },
-  estadoValidacion: { type: String, enum: ['pendiente', 'validado', 'rechazado'], default: 'pendiente' },
+  estadoValidacion: { type: String, enum: ['pendiente', 'validado', 'rechazado'], default: 'validado' },
   especialidad: { type: String },
   agenda: { type: mongoose.Types.ObjectId, ref: 'agendaUCAD' },
   logged: { type: Boolean, default: false },
