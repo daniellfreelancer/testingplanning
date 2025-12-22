@@ -193,17 +193,16 @@ const AccesosUcadController = {
     }
   },
   accesoCompletoUcad: async (req, res) => {
-
     try {
-
       const { rut } = req.params;
 
-      // El RUT viene sin dígito verificador (ej: 27210192)
-      // En la BD está almacenado con formato completo (ej: 27210192-2)
-      // Buscamos usando regex para encontrar RUTs que empiecen con el número recibido
-      const rutLimpio = rut.replace(/-/g, '').trim(); // Limpiar cualquier guion que pueda venir
-      
-      // Buscar RUT que comience con el número recibido seguido de guion y dígito verificador
+      // Limpiar y validar RUT
+      const rutLimpio = rut.replace(/-/g, '').trim();
+      if (!rutLimpio || rutLimpio.length < 7) {
+        return res.status(400).json({ message: "RUT inválido" });
+      }
+
+      // Buscar usuario UCAD por RUT (formato: 27210192-2)
       const usuarioUcad = await UsuariosUcad.findOne({ 
         rut: { $regex: `^${rutLimpio}-` } 
       });
@@ -212,92 +211,103 @@ const AccesosUcadController = {
         return res.status(404).json({ message: "Usuario ucad no encontrado" });
       }
 
+      // ID del sistema para registrar accesos automáticos
+      const sistemaUsuarioId = "6945e1914f071a7cad249dff";
+      const nombreCompleto = `${usuarioUcad.nombre} ${usuarioUcad.apellido}`;
+
+      // Caso 1: Usuario no es deportista - acceso directo
       if (usuarioUcad.rol !== "deportista") {
-        /**
-         * aqui vamos a registrar un acceso ucad con el rol no deportista
-         */
+        const acceso = await AccesosUcad.create({
+          usuario: sistemaUsuarioId,
+          usuarioAutorizado: usuarioUcad._id,
+          accesoLugar: "CAR",
+          accesoTipo: "ingreso",
+          resultado: "permitido",
+          motivo: "Ingreso a las instalaciones",
+        });
+
+        return res.status(200).json({
+          message: "Registro de acceso creado correctamente",
+          response: acceso,
+          success: true,
+        });
       }
 
-      //buscar las citas ucad por usuario ucad
-        const citasUcad = await CitasUcad.find({ deportista: usuarioUcad._id }).populate('profesional', 'nombre apellido email');
+      // Caso 2: Usuario es deportista - verificar citas
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const hoyString = hoy.toDateString();
 
-      /** 
-       * en caso de encontrar citas ucad, debe verificar si la/s cita/s tiene estado pendiente o derivada y el campo fecha es igual a hoy sin importar la hora
-       * 
-       */
+      // Buscar citas del deportista con populate optimizado
+      const citasUcad = await CitasUcad.find({ 
+        deportista: usuarioUcad._id 
+      }).populate('profesional', 'nombre apellido email');
 
-      if (citasUcad.length > 0) {
-        /**
-         * en caso de encontrar citas ucad, debe verificar si la/s cita/s tiene estado pendiente o derivada y el campo fecha es igual a hoy y la hora actual debe ser menor al menos 2 horas antes de la hora de la cita
-         */
-        const horaActual = new Date().getHours();
-        const citasPendientesHoy = citasUcad.filter(cita => cita.estado === "pendiente" && cita.fecha.toDateString() === new Date().toDateString());
-        const citasDerivadasHoy = citasUcad.filter(cita => cita.estado === "derivada" && cita.fecha.toDateString() === new Date().toDateString());
-        const citasPendientesODerivadas = [...citasPendientesHoy, ...citasDerivadasHoy];
+      // Filtrar citas pendientes o derivadas de hoy
+      const citasPendientesODerivadas = citasUcad.filter(cita => {
+        const fechaCita = new Date(cita.fecha);
+        fechaCita.setHours(0, 0, 0, 0);
+        return (
+          (cita.estado === "pendiente" || cita.estado === "derivada") &&
+          fechaCita.toDateString() === hoyString
+        );
+      });
 
-        if (citasPendientesODerivadas.length > 0) {
-          /**
-           * por cada cita pendiente o derivada, debe crear una notificacion ejemplo:
-           * 
-           * {"createdBy": usuarioUcad._id, "target": usuarioUcad._id, "motivo": "Tu cita con el profesional [nombre profesional] ha sido pendiente o derivada", "prioridad": "alta", "tipo": "cita"}
-           * 
-           * luego debe guardar la notificacion en la base de datos
-           * 
-           * await NotificacionUcad.create({
-           *   createdBy: usuarioUcad._id,
-           *   target: usuarioUcad._id,
-           *   motivo: "Tu cita con el profesional [nombre profesional] ha sido pendiente o derivada",
-           *   prioridad: "alta",
-           *   tipo: "cita"
-           * });
-           */
+      // Si hay citas pendientes/derivadas hoy, enviar notificaciones
+      if (citasPendientesODerivadas.length > 0) {
+        // Procesar emails y notificaciones en paralelo para cada cita
+        const notificacionesPromises = citasPendientesODerivadas.map(async (cita) => {
+          const emailPromise = sendEmailAsistenciaCita(
+            cita.profesional.email, 
+            nombreCompleto, 
+            cita
+          );
+          
+          const notificacion = new NotificacionesUcad({
+            createdBy: usuarioUcad._id,
+            target: cita.profesional._id,
+            motivo: `El deportista ${nombreCompleto} ha ingresado a las instalaciones, para la atención de la cita`,
+            prioridad: "alta",
+            tipo: "cita"
+          });
+          const notificacionPromise = notificacion.save();
 
-          // for (const cita of citasPendientesODerivadas) {
-          //   const notificacion = await new NotificacionesUcad({
-          //     createdBy: usuarioUcad._id,
-          //     target: cita.profesional,
-          //     motivo: `Tu cita con el profesional ${cita.profesional.nombre} ha sido pendiente o derivada`,
-          //     prioridad: "alta",
-          //     tipo: "cita"
-          //   })
-          //   await notificacion.save();
-          // }
+          return Promise.all([emailPromise, notificacionPromise]);
+        });
 
-          for (const cita of citasPendientesODerivadas) {
-            await sendEmailAsistenciaCita(cita.profesional.email, usuarioUcad.nombre + " " + usuarioUcad.apellido, cita);
-          }
+        await Promise.all(notificacionesPromises);
+      }
 
-          //**
-          // ahora debe crear un acceso para registrar que ingreso a las instalaciones
-
-          //  */
-
-          const acceso = await AccesosUcad({
-            usuario: "6945e1914f071a7cad249dff",
-            usuarioAutorizado: usuarioUcad._id,
-            accesoLugar: "CAR Ingreso",
-            accesoTipo: "ingreso",
-            resultado: "permitido",
-            motivo: "Ingreso a las instalaciones",
-
-          }).save();
-
-
-          res.status(200).json({
-            message:"Registro de acceso creado correctamente y notificaciones enviadas",
-            response: acceso,
-            success: true,
-          })
-
+      // Crear registro de acceso (siempre se crea para deportistas)
+      const acceso = await AccesosUcad.create({
+        usuario: sistemaUsuarioId,
+        usuarioAutorizado: usuarioUcad._id,
+        accesoLugar: "CAR",
+        accesoTipo: "ingreso",
+        resultado: "permitido",
+        motivo: citasPendientesODerivadas.length > 0 
+          ? "Ingreso a las instalaciones con citas programadas" 
+          : "Ingreso a las instalaciones",
+        metadata: {
+          tieneCitasHoy: citasPendientesODerivadas.length > 0,
+          cantidadCitas: citasPendientesODerivadas.length
         }
-      }
-      
+      });
+
+      return res.status(200).json({
+        message: citasPendientesODerivadas.length > 0
+          ? "Registro de acceso creado correctamente y notificaciones enviadas"
+          : "Registro de acceso creado correctamente",
+        response: acceso,
+        success: true,
+      });
+
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ message: error.message });
+      console.error("Error en accesoCompletoUcad:", error);
+      return res.status(500).json({ 
+        message: error.message || "Error al procesar el acceso" 
+      });
     }
-
-
   }
 };
 
