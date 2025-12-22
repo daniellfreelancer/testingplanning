@@ -20,4 +20,7 @@ router.get("/obtener-accesos-por-autorizador/:autorizadorId/:periodo", AccesosUc
 // todos
 router.get("/obtener-todos-los-accesos", AccesosUcadController.obtenerTodosLosAccesos);
 
+// acceso completo ucad
+router.get("/usuario/:rut", AccesosUcadController.accesoCompletoUcad);
+
 module.exports = router;
