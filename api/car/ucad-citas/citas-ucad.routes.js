@@ -8,6 +8,9 @@ router.post("/crear-cita", citasUcadController.crearCita);
 // Derivar cita a otro profesional
 router.post("/derivar-cita", citasUcadController.derivarCita);
 
+// Obtener todas las citas (admin)
+router.get("/todas-las-citas", citasUcadController.obtenerTodasLasCitas);
+
 // Obtener citas de un deportista
 router.get("/mis-citas/:deportistaId", citasUcadController.obtenerCitasDeportista);
 

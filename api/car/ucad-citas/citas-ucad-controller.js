@@ -434,6 +434,47 @@ const citasUcadController = {
   },
 
   /**
+   * Obtener todas las citas (para admin)
+   * GET /todas-las-citas
+   */
+  obtenerTodasLasCitas: async (req, res) => {
+    try {
+      const { estado, fecha } = req.query;
+
+      const query = {};
+      if (estado) {
+        query.estado = estado;
+      }
+
+      if (fecha) {
+        const fechaDate = new Date(fecha);
+        const inicioDia = new Date(fechaDate);
+        inicioDia.setHours(0, 0, 0, 0);
+        const finDia = new Date(fechaDate);
+        finDia.setHours(23, 59, 59, 999);
+        query.fecha = { $gte: inicioDia, $lte: finDia };
+      }
+
+      const citas = await CitasUcad.find(query)
+        .populate('deportista', 'nombre apellido email imgUrl rut')
+        .populate('profesional', 'nombre apellido email especialidad')
+        .populate('derivadaPor', 'nombre apellido email especialidad')
+        .sort({ fecha: -1 });
+
+      res.status(200).json({
+        citas,
+        total: citas.length
+      });
+    } catch (error) {
+      console.error('Error al obtener todas las citas:', error);
+      res.status(500).json({
+        message: "Error al obtener citas",
+        error: error.message
+      });
+    }
+  },
+
+  /**
    * Obtener detalle de una cita
    * GET /cita/:citaId
    */
