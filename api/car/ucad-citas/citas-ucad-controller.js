@@ -57,13 +57,6 @@ const citasUcadController = {
         });
       }
 
-      // Validar que la fecha no sea en el pasado
-      if (fechaCita < new Date()) {
-        return res.status(400).json({
-          message: "No se pueden crear citas en el pasado"
-        });
-      }
-
       // Obtener agenda del profesional
       const agenda = await AgendaUCAD.findOne({ profesional });
       if (!agenda || !agenda.status) {
