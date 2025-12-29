@@ -1,5 +1,7 @@
 const User = require('../models/admin');
-const { uploadMulterFile } = require('../utils/s3Client'); 
+const { uploadMulterFile } = require('../utils/s3Client');
+
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 const docsController = {
   idFrontUpload: async (req, res) => {
@@ -14,13 +16,15 @@ const docsController = {
           `docs/${id}/id-front`
         );
 
-        user.idFront = key;
+        // Generamos la URL de CloudFront
+        const fileUrl = `${cloudfrontUrl}/${key}`;
+        user.idFront = fileUrl;
         await user.save();
 
         res.status(200).json({
           message: 'Archivo cargado con exito',
           success: true,
-          response: key,
+          response: fileUrl,
         });
       } else {
         res.status(400).json({
@@ -48,13 +52,15 @@ const docsController = {
           `docs/${id}/id-back`
         );
 
-        user.idBack = key;
+        // Generamos la URL de CloudFront
+        const fileUrl = `${cloudfrontUrl}/${key}`;
+        user.idBack = fileUrl;
         await user.save();
 
         res.status(200).json({
           message: 'Archivo cargado con exito',
           success: true,
-          response: key,
+          response: fileUrl,
         });
       } else {
         res.status(400).json({
@@ -82,13 +88,15 @@ const docsController = {
           `docs/${id}/background`
         );
 
-        user.backgroundDoc = key;
+        // Generamos la URL de CloudFront
+        const fileUrl = `${cloudfrontUrl}/${key}`;
+        user.backgroundDoc = fileUrl;
         await user.save();
 
         res.status(200).json({
           message: 'Archivo cargado con exito',
           success: true,
-          response: key,
+          response: fileUrl,
         });
       } else {
         res.status(400).json({
@@ -116,13 +124,15 @@ const docsController = {
           `docs/${id}/other-${Date.now()}`
         );
 
-        user.otherDocs = key;
+        // Generamos la URL de CloudFront
+        const fileUrl = `${cloudfrontUrl}/${key}`;
+        user.otherDocs = fileUrl;
         await user.save();
 
         res.status(200).json({
           message: 'Archivo cargado con exito',
           success: true,
-          response: key,
+          response: fileUrl,
         });
       } else {
         res.status(400).json({

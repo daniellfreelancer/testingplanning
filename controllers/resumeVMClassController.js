@@ -8,11 +8,49 @@ const {
   uploadMulterFileVmclass,
 } = require('../utils/s3ClientVMclass');
 
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
 const resumeQueryPopulate = [
   {
     path: 'byTeacher plannerClass',
   },
 ];
+
+// helper para obtener URL de las imágenes del resumen
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
+function attachCloudFrontUrls(resumeDoc) {
+  if (!resumeDoc) return resumeDoc;
+
+  const plain = resumeDoc.toObject ? resumeDoc.toObject() : resumeDoc;
+
+  try {
+    // Procesar imgFirstVMClass
+    if (plain.imgFirstVMClass) {
+      if (!plain.imgFirstVMClass.startsWith('http://') && !plain.imgFirstVMClass.startsWith('https://')) {
+        plain.imgFirstVMClass = `${cloudfrontUrl}/${plain.imgFirstVMClass}`;
+      }
+    }
+
+    // Procesar imgSecondVMClass
+    if (plain.imgSecondVMClass) {
+      if (!plain.imgSecondVMClass.startsWith('http://') && !plain.imgSecondVMClass.startsWith('https://')) {
+        plain.imgSecondVMClass = `${cloudfrontUrl}/${plain.imgSecondVMClass}`;
+      }
+    }
+
+    // Procesar imgThirdVMClass
+    if (plain.imgThirdVMClass) {
+      if (!plain.imgThirdVMClass.startsWith('http://') && !plain.imgThirdVMClass.startsWith('https://')) {
+        plain.imgThirdVMClass = `${cloudfrontUrl}/${plain.imgThirdVMClass}`;
+      }
+    }
+  } catch (err) {
+    console.error('Error generando URLs para imágenes del resumen:', err);
+  }
+
+  return plain;
+}
 
 const createSurveysForStudents = async (resumeId, arrayStudentsForSurvey, classroomId) => {
   const surveys = [];
@@ -122,19 +160,22 @@ const resumeVMClassController = {
       if (req.files && req.files['imgFirstVMClass']?.[0]) {
         const file = req.files['imgFirstVMClass'][0];
         const key = await uploadMulterFileVmclass(file);
-        resume.imgFirstVMClass = key;
+        // Generamos la URL de CloudFront
+        resume.imgFirstVMClass = `${cloudfrontUrl}/${key}`;
       }
 
       if (req.files && req.files['imgSecondVMClass']?.[0]) {
         const file = req.files['imgSecondVMClass'][0];
         const key = await uploadMulterFileVmclass(file);
-        resume.imgSecondVMClass = key;
+        // Generamos la URL de CloudFront
+        resume.imgSecondVMClass = `${cloudfrontUrl}/${key}`;
       }
 
       if (req.files && req.files['imgThirdVMClass']?.[0]) {
         const file = req.files['imgThirdVMClass'][0];
         const key = await uploadMulterFileVmclass(file);
-        resume.imgThirdVMClass = key;
+        // Generamos la URL de CloudFront
+        resume.imgThirdVMClass = `${cloudfrontUrl}/${key}`;
       }
 
       // Guardar resumen
@@ -142,6 +183,9 @@ const resumeVMClassController = {
 
       const resumeId = resume._id;
       const arrayStudentsForSurvey = resume.presentStudents;
+
+      // Aplicar URLs de CloudFront al resumen antes de devolverlo
+      const resumeWithUrls = attachCloudFrontUrls(resume);
 
       try {
         if (req.body.classroomId) {
@@ -159,7 +203,7 @@ const resumeVMClassController = {
             return res.status(200).json({
               message: 'VMClass Finalizado con exito',
               success: true,
-              response: resume,
+              response: resumeWithUrls,
             });
           }
         }
@@ -180,7 +224,7 @@ const resumeVMClassController = {
             return res.status(200).json({
               message: 'VMClass Finalizado con exito',
               success: true,
-              response: resume,
+              response: resumeWithUrls,
             });
           }
         }
@@ -189,7 +233,7 @@ const resumeVMClassController = {
         return res.status(200).json({
           message: 'VMClass creado (sin classroom/workshop asociado)',
           success: true,
-          response: resume,
+          response: resumeWithUrls,
         });
       } catch (error) {
         console.log(error);
@@ -206,10 +250,13 @@ const resumeVMClassController = {
 
   getResume: async (req, res) => {
     try {
-      const resumes = await ResumeVmClass.find()
+      let resumes = await ResumeVmClass.find()
         .populate('byTeacher', { name: 1, lastName: 1 })
         .populate('plannerClass')
         .populate('classroomId', { grade: 1, level: 1, section: 1 });
+
+      // Aplicar URLs de CloudFront a todos los resúmenes
+      resumes = resumes.map(resume => attachCloudFrontUrls(resume));
 
       res.status(200).json(resumes);
     } catch (error) {
@@ -222,10 +269,13 @@ const resumeVMClassController = {
     const { classroomId } = req.params;
 
     try {
-      const resumes = await ResumeVmClass.find({ classroomId })
+      let resumes = await ResumeVmClass.find({ classroomId })
         .populate('plannerClass')
         .sort({ createdAt: -1 })
         .exec();
+
+      // Aplicar URLs de CloudFront a todos los resúmenes
+      resumes = resumes.map(resume => attachCloudFrontUrls(resume));
 
       res.json(resumes);
     } catch (error) {
@@ -238,7 +288,7 @@ const resumeVMClassController = {
     let { id } = req.params;
 
     try {
-      const resumeFund = await ResumeVmClass.findById(id)
+      let resumeFund = await ResumeVmClass.findById(id)
         .populate('byTeacher', { name: 1, lastName: 1 })
         .populate('plannerClass')
         .populate('classroomId', { grade: 1, section: 1, level: 1 });
@@ -252,6 +302,9 @@ const resumeVMClassController = {
             JSON.parse(student)
           );
         }
+
+        // Aplicar URLs de CloudFront
+        resumeFund = attachCloudFrontUrls(resumeFund);
 
         res.status(200).json({
           response: resumeFund,
@@ -277,9 +330,12 @@ const resumeVMClassController = {
     try {
       const { teacherId } = req.params;
 
-      const resumes = await ResumeVmClass.find({ byTeacher: teacherId }).sort({
+      let resumes = await ResumeVmClass.find({ byTeacher: teacherId }).sort({
         createdAt: -1,
       });
+
+      // Aplicar URLs de CloudFront a todos los resúmenes
+      resumes = resumes.map(resume => attachCloudFrontUrls(resume));
 
       if (resumes.length > 0) {
         res.status(200).json({
