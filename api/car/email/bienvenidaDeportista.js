@@ -43,7 +43,7 @@ const sendWelcomeDeportistaMail = async (email, password, name) => {
     const mailOptions = {
       from: GOOGLE_USER,
       to: toEmail,
-      subject: "¡Bienvenido/a al sistema de gestion de citas UCAD - CAR!",
+      subject: "¡Bienvenido/a al sistema de gestion de citas UCAD!",
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -130,11 +130,7 @@ const sendWelcomeDeportistaMail = async (email, password, name) => {
                     Por seguridad, te recomendamos guardar tu contraseña y no compartirla con terceros.
                   </p>
 
-                  <div class="button-wrapper">
-                    <a href="" class="button" target="_blank">
-                      INICIAR SESIÓN
-                    </a>
-                  </div>
+                  
                 </td>
               </tr>
             </table>
@@ -146,6 +142,19 @@ const sendWelcomeDeportistaMail = async (email, password, name) => {
                     Visítanos en <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a>
                   </p>
                   <p style="margin: 0;">© 2025 VitalMove. Todos los derechos reservados.</p>
+                </td>
+              </tr>
+               <tr>
+                <td class="app-download-section">
+                  <p class="app-download-title">Descarga la app de VM UCAD en tu dispositivo:</p>
+                  <div class="app-badges-wrapper">
+                    <a href="https://apps.apple.com" class="app-badge-link" target="_blank">
+                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
+                    </a>
+                 <a href="https://play.google.com/store/apps/details?id=com.vitalmovecar&pcampaignid=web_share" class="app-badge-link" target="_blank">
+                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
+                    </a>
+                  </div>
                 </td>
               </tr>
             </table>

@@ -10,11 +10,11 @@ const {
   GOOGLE_URL,
   GOOGLE_ACCESS,
   // opcional (recomendado): define la URL de login de profesionales en tu .env
-  PROFESIONAL_LOGIN_URL,
+
 } = process.env;
 
 // 👇 URL fallback si no está en .env
-const DEFAULT_PROFESIONAL_LOGIN_URL = "";
+const DEFAULT_PROFESIONAL_LOGIN_URL = "https://ucad.vitalmoveglobal.com/login";
 
 const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
   try {
@@ -45,12 +45,12 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
     const safeName = name ? String(name).trim() : "¡Hola!";
     const safeRol = rol ? String(rol).trim() : "administrador";
 
-    const loginUrl = PROFESIONAL_LOGIN_URL || DEFAULT_PROFESIONAL_LOGIN_URL;
+    const loginUrl = DEFAULT_PROFESIONAL_LOGIN_URL;
 
     const mailOptions = {
       from: GOOGLE_USER,
       to: toEmail,
-      subject: "¡Bienvenido/a! Sistema de acceso UCAD-CAR",
+      subject: "¡Bienvenido/a! Acceso Administrador - UCAD",
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -136,20 +136,13 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
                   <p class="password-info">
                     Por seguridad, te recomendamos guardar tu contraseña y no compartirla con terceros.
                   </p>
+                  <div class="button-wrapper">
+                    <a href="${loginUrl}" class="button" target="_blank">
+                      INICIAR SESIÓN
+                    </a>
+                  </div>
 
-                  <tr>
-                    <td class="app-download-section">
-                      <p class="app-download-title">Descarga la app de VitalMove en tu dispositivo:</p>
-                      <div class="app-badges-wrapper">
-                        <a href="https://apps.apple.com/app/vitalmove" class="app-badge-link" target="_blank">
-                          <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
-                        </a>
-                        <a href="https://play.google.com/store/apps/details?id=vitalmove" class="app-badge-link" target="_blank">
-                          <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
+                 
 
                   
                 </td>

@@ -7,6 +7,8 @@ const Workshops = require('../models/workshop');
 // ⬇️ Nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require('../utils/s3Client');
 
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
 const studentQueryPopulate = [
   {
     path: 'classroom school workshop program tasks',
@@ -14,6 +16,45 @@ const studentQueryPopulate = [
       'grade level section name  title description fileStudent status classroom notation teacher dueDate',
   },
 ];
+
+// helper para obtener URL de CloudFront
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
+function attachCloudFrontUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${cloudfrontUrl}/${url}`;
+}
+
+// helper para aplicar URLs de CloudFront a un estudiante
+function attachStudentCloudFrontUrls(studentDoc) {
+  if (!studentDoc) return studentDoc;
+
+  const plain = studentDoc.toObject ? studentDoc.toObject() : studentDoc;
+
+  try {
+    // Aplicar URL a imgUrl del estudiante
+    if (plain.imgUrl) {
+      plain.imgUrl = attachCloudFrontUrl(plain.imgUrl);
+    }
+
+    // Aplicar URLs a las tareas del estudiante
+    if (Array.isArray(plain.tasks)) {
+      plain.tasks = plain.tasks.map(task => {
+        if (task.fileStudent) {
+          task.fileStudent = attachCloudFrontUrl(task.fileStudent);
+        }
+        return task;
+      });
+    }
+  } catch (err) {
+    console.error('Error generando URLs para estudiante:', err);
+  }
+
+  return plain;
+}
 
 const studentController = {
   create: async (req, res) => {
@@ -97,13 +138,17 @@ const studentController = {
           // ⬇️ Subir foto de perfil a S3 usando helper centralizado
           if (req.file) {
             const key = await uploadMulterFile(req.file);
-            newStudent.imgUrl = key;
+            // Generamos la URL de CloudFront
+            newStudent.imgUrl = `${cloudfrontUrl}/${key}`;
           }
 
           await newStudent.save();
 
+          // Aplicar URLs de CloudFront
+          const studentWithUrls = attachStudentCloudFrontUrls(newStudent);
+
           res.status(200).json({
-            response: newStudent,
+            response: studentWithUrls,
             message: 'Estudiante creado con exito',
             success: true,
           });
@@ -141,7 +186,7 @@ const studentController = {
     let id = req.params.id;
 
     try {
-      const student = await Students.findById(id).populate(
+      let student = await Students.findById(id).populate(
         studentQueryPopulate,
       );
 
@@ -151,6 +196,9 @@ const studentController = {
           success: false,
         });
       }
+
+      // Aplicar URLs de CloudFront
+      student = attachStudentCloudFrontUrls(student);
 
       res.status(200).json({
         student,
@@ -193,15 +241,19 @@ const studentController = {
       // ⬇️ Subir archivo de tarea a S3 usando helper centralizado
       if (req.file) {
         const key = await uploadMulterFile(req.file);
-        task.fileStudent = key;
+        // Generamos la URL de CloudFront
+        task.fileStudent = `${cloudfrontUrl}/${key}`;
       }
 
       task.status = 'DONE';
 
       await student.save();
 
+      // Aplicar URLs de CloudFront
+      const studentWithUrls = attachStudentCloudFrontUrls(student);
+
       res.status(200).json({
-        response: student,
+        response: studentWithUrls,
         message: 'Tarea actualizada exitosamente',
         success: true,
       });
@@ -237,9 +289,15 @@ const studentController = {
         });
       }
 
+      // Aplicar URL de CloudFront al archivo de la tarea
+      const taskWithUrl = {
+        ...task.toObject ? task.toObject() : task,
+        fileStudent: task.fileStudent ? attachCloudFrontUrl(task.fileStudent) : task.fileStudent,
+      };
+
       return res.status(200).json({
         success: true,
-        task: task,
+        task: taskWithUrl,
         message: 'Estudiante y tarea encontrados',
       });
     } catch (error) {
@@ -284,14 +342,21 @@ const studentController = {
       // ⬇️ Subir archivo si viene uno nuevo
       if (req.file) {
         const key = await uploadMulterFile(req.file);
-        student.tasks[taskIndex].fileStudent = key;
+        // Generamos la URL de CloudFront
+        student.tasks[taskIndex].fileStudent = `${cloudfrontUrl}/${key}`;
       }
 
       await student.save();
 
+      // Aplicar URL de CloudFront al archivo de la tarea
+      const taskWithUrl = {
+        ...student.tasks[taskIndex].toObject ? student.tasks[taskIndex].toObject() : student.tasks[taskIndex],
+        fileStudent: student.tasks[taskIndex].fileStudent ? attachCloudFrontUrl(student.tasks[taskIndex].fileStudent) : student.tasks[taskIndex].fileStudent,
+      };
+
       return res.status(200).json({
         success: true,
-        task: student.tasks[taskIndex],
+        task: taskWithUrl,
         message: 'Tarea actualizada exitosamente',
       });
     } catch (error) {
@@ -324,9 +389,14 @@ const studentController = {
         );
 
         if (classroom) {
+          // Aplicar URLs de CloudFront a todos los estudiantes
+          const studentsWithUrls = classroom.students.map(student => 
+            attachStudentCloudFrontUrls(student)
+          );
+
           res.status(200).json({
             success: true,
-            response: classroom.students,
+            response: studentsWithUrls,
           });
         } else {
           return res.status(404).json({
@@ -342,9 +412,14 @@ const studentController = {
         );
 
         if (workshop) {
+          // Aplicar URLs de CloudFront a todos los estudiantes
+          const studentsWithUrls = workshop.students.map(student => 
+            attachStudentCloudFrontUrls(student)
+          );
+
           res.status(200).json({
             success: true,
-            response: workshop.students,
+            response: studentsWithUrls,
           });
         } else {
           return res.status(404).json({
@@ -363,9 +438,12 @@ const studentController = {
 
   getStudents: async (req, res) => {
     try {
-      const students = await Students.find();
+      let students = await Students.find();
 
       if (students) {
+        // Aplicar URLs de CloudFront a todos los estudiantes
+        students = students.map(student => attachStudentCloudFrontUrls(student));
+
         res.status(200).json({
           success: true,
           response: students,
@@ -388,7 +466,7 @@ const studentController = {
     try {
       const { id } = req.params;
 
-      const updatedStudent = await Students.findByIdAndUpdate(id, req.body, {
+      let updatedStudent = await Students.findByIdAndUpdate(id, req.body, {
         new: true,
       });
 
@@ -398,6 +476,9 @@ const studentController = {
           message: 'Estudiante no encontrado',
         });
       }
+
+      // Aplicar URLs de CloudFront
+      updatedStudent = attachStudentCloudFrontUrls(updatedStudent);
 
       return res.status(200).json({
         success: true,
@@ -446,7 +527,10 @@ const studentController = {
 
   getStudentsAll: async (req, res) => {
     try {
-      const students = await Students.find();
+      let students = await Students.find();
+
+      // Aplicar URLs de CloudFront a todos los estudiantes
+      students = students.map(student => attachStudentCloudFrontUrls(student));
 
       return res.status(200).json({
         success: true,

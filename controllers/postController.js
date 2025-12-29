@@ -7,13 +7,14 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 const mongoose = require('mongoose');
 
+
 const {
   s3Client,
   uploadMulterFile,
-  getSignedUrlForKey,
 } = require('../utils/s3Client');
 
 const bucketName = process.env.AWS_BUCKET_NAME;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 const quizIdentifier = () =>
   crypto.randomBytes(32).toString('hex');
@@ -43,7 +44,9 @@ const PostQueryPopulate = [
   },
 ];
 
-// helper para firmar URL de la imagen del post (imagen o video)
+// helper para obtener URL de la imagen del post (imagen o video)
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
 async function attachSignedPostUrl(postDoc) {
   if (!postDoc || !postDoc.postImage) return postDoc;
 
@@ -52,12 +55,16 @@ async function attachSignedPostUrl(postDoc) {
     : postDoc;
 
   try {
-    plain.postImage = await getSignedUrlForKey(
-      plain.postImage
-    );
+    // Si ya es una URL completa (contiene http:// o https://), la devolvemos tal cual
+    if (plain.postImage && (plain.postImage.startsWith('http://') || plain.postImage.startsWith('https://'))) {
+      return plain;
+    }
+    
+    // Si es un key antiguo, generamos la URL de CloudFront
+    plain.postImage = `${cloudfrontUrl}/${plain.postImage}`;
   } catch (err) {
     console.error(
-      'Error generando URL firmada para postImage:',
+      'Error generando URL para postImage:',
       err
     );
   }
@@ -90,6 +97,7 @@ const postController = {
         extension.toLowerCase() === 'mp4';
 
       let key;
+      let fileUrl;
 
       if (isVideo) {
         // video: subimos el buffer tal cual
@@ -97,6 +105,8 @@ const postController = {
           req.file,
           `post-video-${quizIdentifier()}.${extension}`
         );
+        // Generamos la URL de CloudFront
+        fileUrl = `${cloudfrontUrl}/${key}`;
       } else {
         // imagen: corregimos orientación + resize con sharp
         const exif = await sharp(fileContent).metadata();
@@ -128,11 +138,13 @@ const postController = {
           fakeFile,
           `post-image-${quizIdentifier()}.${extension}`
         );
+        // Generamos la URL de CloudFront
+        fileUrl = `${cloudfrontUrl}/${key}`;
       }
 
       const newPost = new Post({
         user,
-        postImage: key, // guardamos el key de S3
+        postImage: fileUrl, // guardamos la URL completa de CloudFront
         likes: [],
         commentsAllow,
         comments: [],
@@ -346,11 +358,21 @@ const postController = {
           .json({ message: 'Post not found' });
       }
 
-      const fileName = post.postImage;
-      if (fileName) {
+      const postImage = post.postImage;
+      if (postImage) {
+        // Si es una URL completa de CloudFront, extraemos el key
+        // Si es un key antiguo, lo usamos tal cual
+        let key;
+        if (postImage.startsWith('http://') || postImage.startsWith('https://')) {
+          // Extraer el key de la URL de CloudFront
+          key = postImage.replace(`${cloudfrontUrl}/`, '');
+        } else {
+          key = postImage;
+        }
+
         const deleteParams = {
           Bucket: bucketName,
-          Key: fileName,
+          Key: key,
         };
         const deleteCommand = new DeleteObjectCommand(
           deleteParams

@@ -84,9 +84,9 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
 
             .app-download-section { background-color: #e4faf4; padding: 40px 20px; text-align: center; border-radius: 0 0 8px 8px; }
             .app-download-title { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 25px; }
-            .app-badges-wrapper { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; }
-            .app-badge-link { display: inline-block; }
-            .app-badge-img { width: 130px; height: auto; }
+            .app-badges-wrapper { display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: nowrap; width: 100%; }
+            .app-badge-link { display: inline-block; width: 40%; text-align: center; }
+            .app-badge-img { width: 100%; max-width: 100%; height: auto; }
 
             .footer { padding: 30px 20px; text-align: center; font-size: 12px; color: #888888; }
             .footer-link { color: #888888; text-decoration: underline; }
@@ -95,8 +95,9 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
               .content-table { width: 100% !important; border-radius: 0; box-shadow: none; }
               .body-content, .app-download-section { padding: 20px 25px 30px 25px !important; }
               .welcome-title { font-size: 24px !important; }
-              .app-badges-wrapper { flex-direction: column; gap: 15px; }
-              .app-badge-img { width: 110px !important; }
+              .app-badges-wrapper { flex-direction: row; gap: 15px; }
+              .app-badge-link { width: 40% !important; }
+              .app-badge-img { width: 100% !important; max-width: 100% !important; }
             }
           </style>
           <!--[if mso]>
@@ -136,21 +137,21 @@ const sendRenewPasswordMailPteAlto = async (email, password, name) => {
                   
                 </td>
               </tr>
-              <!--
+             
               <tr>
                 <td class="app-download-section">
-                  <p class="app-download-title">Descarga la app de VitalMove en tu dispositivo:</p>
+                  <p class="app-download-title">Descarga la app de VM UCAD en tu dispositivo:</p>
                   <div class="app-badges-wrapper">
-                    <a href="https://apps.apple.com/app/vitalmove" class="app-badge-link" target="_blank">
+                    <a href="https://apps.apple.com" class="app-badge-link" target="_blank">
                       <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
                     </a>
-                    <a href="https://play.google.com/store/apps/details?id=vitalmove" class="app-badge-link" target="_blank">
+                 <a href="https://play.google.com/store/apps/details?id=com.vitalmovecar&pcampaignid=web_share" class="app-badge-link" target="_blank">
                       <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
                     </a>
                   </div>
                 </td>
               </tr>
-              -->
+              
             </table>
 
             <table class="footer" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
