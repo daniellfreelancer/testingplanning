@@ -6,6 +6,36 @@ const { uploadMulterFile, s3Client } = require('../utils/s3Client');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const bucketName = process.env.AWS_BUCKET_NAME;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
+// helper para obtener URL de CloudFront
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
+function attachCloudFrontUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${cloudfrontUrl}/${url}`;
+}
+
+// helper para aplicar URLs de CloudFront a una planificación
+function attachPlanificationCloudFrontUrls(planificationDoc) {
+  if (!planificationDoc) return planificationDoc;
+
+  const plain = planificationDoc.toObject ? planificationDoc.toObject() : planificationDoc;
+
+  try {
+    // Aplicar URL a quiz
+    if (plain.quiz) {
+      plain.quiz = attachCloudFrontUrl(plain.quiz);
+    }
+  } catch (err) {
+    console.error('Error generando URLs para planificación:', err);
+  }
+
+  return plain;
+}
 
 const workshopPlanificationController = {
   createPlanification: async (req, res) => {
@@ -15,7 +45,8 @@ const workshopPlanificationController = {
       //  Si viene archivo (quiz), lo subimos a S3 con el helper
       if (req.file) {
         const key = await uploadMulterFile(req.file);
-        savedPlanification.quiz = key;
+        // Generamos la URL de CloudFront
+        savedPlanification.quiz = `${cloudfrontUrl}/${key}`;
       }
 
       await savedPlanification.save();
@@ -29,8 +60,11 @@ const workshopPlanificationController = {
           workshop.planner.push(planificationID);
           await workshop.save();
 
+          // Aplicar URLs de CloudFront
+          const planificationWithUrls = attachPlanificationCloudFrontUrls(savedPlanification);
+
           return res.status(200).json({
-            response: savedPlanification,
+            response: planificationWithUrls,
             id: planificationID,
             message: 'Planificación creada y agregada al taller',
           });
@@ -68,9 +102,19 @@ const workshopPlanificationController = {
 
       // ⬇️ Si hay archivo asociado en S3, lo borramos
       if (quizdoc) {
+        // Si es una URL completa de CloudFront, extraemos el key
+        // Si es un key antiguo, lo usamos tal cual
+        let key;
+        if (quizdoc.startsWith('http://') || quizdoc.startsWith('https://')) {
+          // Extraer el key de la URL de CloudFront
+          key = quizdoc.replace(`${cloudfrontUrl}/`, '');
+        } else {
+          key = quizdoc;
+        }
+
         const params = {
           Bucket: bucketName,
-          Key: quizdoc,
+          Key: key,
         };
 
         const command = new DeleteObjectCommand(params);
@@ -104,7 +148,7 @@ const workshopPlanificationController = {
     const { id } = req.params;
 
     try {
-      const planificationFund = await WorkshopPlanification.findById(id).populate(
+      let planificationFund = await WorkshopPlanification.findById(id).populate(
         'workshop',
       );
 
@@ -114,6 +158,9 @@ const workshopPlanificationController = {
           success: false,
         });
       }
+
+      // Aplicar URLs de CloudFront
+      planificationFund = attachPlanificationCloudFrontUrls(planificationFund);
 
       return res.status(200).json(planificationFund);
     } catch (error) {
@@ -145,15 +192,19 @@ const workshopPlanificationController = {
       // ⬇️ Si viene nuevo archivo, lo subimos a S3 con el helper
       if (req.file) {
         const key = await uploadMulterFile(req.file);
-        planification.quiz = key;
+        // Generamos la URL de CloudFront
+        planification.quiz = `${cloudfrontUrl}/${key}`;
       }
 
       await planification.save();
 
+      // Aplicar URLs de CloudFront
+      const planificationWithUrls = attachPlanificationCloudFrontUrls(planification);
+
       res.status(200).json({
         message: 'Planificación actualizada con éxito',
         success: true,
-        planification,
+        planification: planificationWithUrls,
       });
     } catch (error) {
       console.log(error);
@@ -166,9 +217,14 @@ const workshopPlanificationController = {
 
   getPlanificationWorkshop: async (req, res) => {
     try {
-      const planifications = await WorkshopPlanification.find();
+      let planifications = await WorkshopPlanification.find();
 
       if (planifications && planifications.length > 0) {
+        // Aplicar URLs de CloudFront a todas las planificaciones
+        planifications = planifications.map(planification => 
+          attachPlanificationCloudFrontUrls(planification)
+        );
+
         res.status(201).json({
           message: 'Planificaciones obtenidas con éxito',
           success: true,

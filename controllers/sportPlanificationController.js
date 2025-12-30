@@ -4,6 +4,37 @@ const SportCategory = require('../models/sportCategory');
 // Nuevo: usamos el helper centralizado
 const { uploadMulterFile } = require('../utils/s3Client');
 
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
+// helper para obtener URL de CloudFront
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
+function attachCloudFrontUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${cloudfrontUrl}/${url}`;
+}
+
+// helper para aplicar URLs de CloudFront a una planificación
+function attachPlanificationCloudFrontUrls(planificationDoc) {
+  if (!planificationDoc) return planificationDoc;
+
+  const plain = planificationDoc.toObject ? planificationDoc.toObject() : planificationDoc;
+
+  try {
+    // Aplicar URL a quiz
+    if (plain.quiz) {
+      plain.quiz = attachCloudFrontUrl(plain.quiz);
+    }
+  } catch (err) {
+    console.error('Error generando URLs para planificación:', err);
+  }
+
+  return plain;
+}
+
 const sportPlanificationController = {
   createSportPlanification: async (req, res) => {
     const savedPlanification = new SportPlanification(req.body);
@@ -12,7 +43,8 @@ const sportPlanificationController = {
       if (req.file) {
         // Subimos el archivo con el helper centralizado
         const key = await uploadMulterFile(req.file);
-        savedPlanification.quiz = key; // Guardar el key en el campo quiz
+        // Generamos la URL de CloudFront
+        savedPlanification.quiz = `${cloudfrontUrl}/${key}`;
       }
 
       await savedPlanification.save();
@@ -47,10 +79,17 @@ const sportPlanificationController = {
 
   updateSportPlanification: async (req, res) => {
     const { id } = req.params;
-    const updatedPlanification = req.body;
+    let updatedPlanification = { ...req.body };
 
     try {
-      const planification = await SportPlanification.findByIdAndUpdate(
+      // Si se sube un nuevo archivo, procesarlo
+      if (req.file) {
+        const key = await uploadMulterFile(req.file);
+        // Generamos la URL de CloudFront
+        updatedPlanification.quiz = `${cloudfrontUrl}/${key}`;
+      }
+
+      let planification = await SportPlanification.findByIdAndUpdate(
         id,
         updatedPlanification,
         { new: true }
@@ -63,9 +102,13 @@ const sportPlanificationController = {
         });
       }
 
+      // Aplicar URLs de CloudFront
+      planification = attachPlanificationCloudFrontUrls(planification);
+
       res.status(200).json({
         message: 'Planificacion actualizada exitosamente',
         success: true,
+        response: planification,
       });
     } catch (error) {
       console.log(error);
@@ -112,7 +155,7 @@ const sportPlanificationController = {
     const { id } = req.params;
 
     try {
-      const planification = await SportPlanification.findById(id);
+      let planification = await SportPlanification.findById(id);
 
       if (!planification) {
         return res.status(404).json({
@@ -120,6 +163,9 @@ const sportPlanificationController = {
           success: false,
         });
       }
+
+      // Aplicar URLs de CloudFront
+      planification = attachPlanificationCloudFrontUrls(planification);
 
       res.status(200).json(planification);
     } catch (error) {
@@ -135,7 +181,7 @@ const sportPlanificationController = {
     const { id } = req.params;
 
     try {
-      const planifications = await SportPlanification.find({ sport: id });
+      let planifications = await SportPlanification.find({ sport: id });
 
       if (!planifications || planifications.length === 0) {
         return res.status(404).json({
@@ -143,6 +189,11 @@ const sportPlanificationController = {
           success: false,
         });
       }
+
+      // Aplicar URLs de CloudFront a todas las planificaciones
+      planifications = planifications.map(planification => 
+        attachPlanificationCloudFrontUrls(planification)
+      );
 
       res.status(200).json(planifications);
     } catch (error) {

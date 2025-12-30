@@ -4,17 +4,32 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 
 // usamos el helper centralizado
-const { s3Client, uploadMulterFile, getSignedUrlForKey } = require('../utils/s3Client');
+const { s3Client, uploadMulterFile } = require('../utils/s3Client');
 
 const bucketName = process.env.AWS_BUCKET_NAME;
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
 const quizIdentifier = () => crypto.randomBytes(32).toString('hex');
 
+// helper para obtener URL de la imagen del momento
+// Si ya es una URL completa (CloudFront), la devuelve tal cual
+// Si es un key antiguo, genera la URL de CloudFront
 async function attachSignedMomentUrl(momentDoc) {
   if (!momentDoc || !momentDoc.momentImg) return momentDoc;
 
   const plain = momentDoc.toObject ? momentDoc.toObject() : momentDoc;
-  plain.momentImg = await getSignedUrlForKey(plain.momentImg);
+
+  try {
+    // Si ya es una URL completa (contiene http:// o https://), la devolvemos tal cual
+    if (plain.momentImg && (plain.momentImg.startsWith('http://') || plain.momentImg.startsWith('https://'))) {
+      return plain;
+    }
+    
+    // Si es un key antiguo, generamos la URL de CloudFront
+    plain.momentImg = `${cloudfrontUrl}/${plain.momentImg}`;
+  } catch (err) {
+    console.error('Error generando URL para momentImg:', err);
+  }
   return plain;
 }
 
@@ -63,11 +78,14 @@ const momentscontroller = {
         `post-image-${quizIdentifier()}.${extension}`
       );
 
+      // Generamos la URL de CloudFront
+      const fileUrl = `${cloudfrontUrl}/${key}`;
+
       const { user, classroom, workshop } = req.body;
 
       const newMoment = new Moments({
         user,
-        momentImg: key, // guardamos el key de S3
+        momentImg: fileUrl, // guardamos la URL completa de CloudFront
         classroom,
         workshop,
       });
@@ -85,9 +103,19 @@ const momentscontroller = {
 
       for (const oldMoment of oldMoments) {
         // Eliminar imagen de S3
+        // Si es una URL completa de CloudFront, extraemos el key
+        // Si es un key antiguo, lo usamos tal cual
+        let key;
+        if (oldMoment.momentImg && (oldMoment.momentImg.startsWith('http://') || oldMoment.momentImg.startsWith('https://'))) {
+          // Extraer el key de la URL de CloudFront
+          key = oldMoment.momentImg.replace(`${cloudfrontUrl}/`, '');
+        } else {
+          key = oldMoment.momentImg;
+        }
+
         const deleteParams = {
           Bucket: bucketName,
-          Key: oldMoment.momentImg,
+          Key: key,
         };
 
         await s3Client.send(new DeleteObjectCommand(deleteParams));
@@ -113,7 +141,7 @@ const momentscontroller = {
         .sort({ createdAt: -1 })
         .exec();
 
-      // firmar las URLs para bucket privado
+      // obtener URLs de CloudFront (o generar si es key antiguo)
       moments = await Promise.all(moments.map(m => attachSignedMomentUrl(m)));
 
       return res.status(200).json({ moments });
@@ -166,9 +194,19 @@ const momentscontroller = {
           .json({ message: 'No puedes eliminar este momento' });
       }
 
+      // Si es una URL completa de CloudFront, extraemos el key
+      // Si es un key antiguo, lo usamos tal cual
+      let key;
+      if (moment.momentImg && (moment.momentImg.startsWith('http://') || moment.momentImg.startsWith('https://'))) {
+        // Extraer el key de la URL de CloudFront
+        key = moment.momentImg.replace(`${cloudfrontUrl}/`, '');
+      } else {
+        key = moment.momentImg;
+      }
+
       const deleteParams = {
         Bucket: bucketName,
-        Key: moment.momentImg,
+        Key: key,
       };
       await s3Client.send(new DeleteObjectCommand(deleteParams));
 

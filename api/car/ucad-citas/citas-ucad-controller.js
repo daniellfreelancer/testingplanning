@@ -248,7 +248,7 @@ const citasUcadController = {
       }
 
       // Obtener agenda del profesional destinatario
-      const agenda = await AgendaUCAD.findOne({profesional});
+      const agenda = await AgendaUCAD.findOne({ profesional });
       if (!agenda || !agenda.status) {
         return res.status(400).json({
           message:
@@ -309,7 +309,7 @@ const citasUcadController = {
           $gte: fechaCita,
           $lt: fechaFinCita,
         },
-        estado: {$nin: ['cancelada']},
+        estado: { $nin: ['cancelada'] },
       });
 
       if (citaConflictiva) {
@@ -747,7 +747,26 @@ const citasUcadController = {
     }
   },
   derivarCitaUpdate: async (req, res) => {
-    
+
+  },
+  obtenerTodasLasCitas: async (req, res) => {
+    try {
+
+      const citas = await CitasUcad.find().populate('deportista', 'nombre apellido email rut telefono imgUrl').populate('profesional', 'nombre apellido email especialidad telefono imgUrl');
+
+
+      res.status(200).json({
+        message: "Citas obtenidas exitosamente",
+        response: citas,
+        success: true
+      });
+    } catch (error) {
+      console.error('Error al obtener todas las citas:', error);
+      res.status(500).json({
+        message: "Error al obtener todas las citas",
+        error: error.message
+      });
+    }
   }
 };
 
