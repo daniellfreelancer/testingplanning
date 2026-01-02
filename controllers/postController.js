@@ -108,21 +108,33 @@ const postController = {
         // Generamos la URL de CloudFront
         fileUrl = `${cloudfrontUrl}/${key}`;
       } else {
-        // imagen: corregimos orientación + resize con sharp
+        // imagen: corregimos orientación + resize a 16:9 con sharp
         const exif = await sharp(fileContent).metadata();
         console.log('Información EXIF:', exif);
 
         const orientation = exif ? exif.orientation : 1;
 
+        // Dimensiones en proporción 16:9 (1920x1080 Full HD)
+        const targetWidth = 1920;
+        const targetHeight = 1080;
+
         let optimizedImageBuffer;
         if (orientation === 6 || orientation === 8) {
+          // Rotar imágenes de Samsung (orientación 6 u 8) y redimensionar a 16:9
           optimizedImageBuffer = await sharp(fileContent)
             .rotate(90)
-            .resize(1350, 1720)
+            .resize(targetWidth, targetHeight, {
+              fit: 'cover', // Llena el área manteniendo proporción, recortando si es necesario
+              position: 'center'
+            })
             .toBuffer();
         } else {
+          // Redimensionar a 16:9 sin rotación
           optimizedImageBuffer = await sharp(fileContent)
-            .resize(1350, 1720)
+            .resize(targetWidth, targetHeight, {
+              fit: 'cover', // Llena el área manteniendo proporción, recortando si es necesario
+              position: 'center'
+            })
             .toBuffer();
         }
 
