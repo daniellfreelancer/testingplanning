@@ -49,17 +49,28 @@ const momentscontroller = {
 
       const orientation = exif ? exif.orientation : 1;
 
+      // Dimensiones en proporción 9:16 (vertical, formato stories/momentos)
+      const targetWidth = 1080;
+      const targetHeight = 1920;
+
       let optimizedImageBuffer;
 
-      // Si la orientación de la imagen es horizontal, rotarla 90 grados
+      // Si la orientación de la imagen es horizontal (Samsung), rotarla 90 grados
       if (orientation === 6 || orientation === 8) {
         optimizedImageBuffer = await sharp(fileContent)
           .rotate(90)
-          .resize(1350, 1720)
+          .resize(targetWidth, targetHeight, {
+            fit: 'cover', // Llena el área manteniendo proporción, recortando si es necesario
+            position: 'center'
+          })
           .toBuffer();
       } else {
+        // Redimensionar a formato vertical 9:16 sin rotación
         optimizedImageBuffer = await sharp(fileContent)
-          .resize(1350, 1720)
+          .resize(targetWidth, targetHeight, {
+            fit: 'cover', // Llena el área manteniendo proporción, recortando si es necesario
+            position: 'center'
+          })
           .toBuffer();
       }
 
