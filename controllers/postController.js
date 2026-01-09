@@ -90,11 +90,8 @@ const postController = {
       }
 
       const fileContent = req.file.buffer;
-      const extension = req.file.originalname
-        .split('.')
-        .pop();
-      const isVideo =
-        extension.toLowerCase() === 'mp4';
+      const extension = req.file.originalname.split('.').pop();
+      const isVideo = extension.toLowerCase() === 'mp4';
 
       let key;
       let fileUrl;
