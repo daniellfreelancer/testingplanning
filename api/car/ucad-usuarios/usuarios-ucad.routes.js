@@ -36,5 +36,8 @@ router.get("/obtener-colaboradores", usuariosUcadController.obtenerColaboradores
 // Enviar email de cita con código QR
 router.post("/citas/enviar-email-qr", usuariosUcadController.enviarEmailCitaQR);
 
+// Obtener usuario UCAD
+router.get("/obtener-usuario/:_id", usuariosUcadController.obtenerUsuarioUCAD);
+
 
 module.exports = router;
