@@ -624,6 +624,40 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       });
     }
   },
+  obtenerUsuarioUCAD: async (req, res) => {
+    try {
+      const { _id } = req.params;
+      const usuario = await UsuariosUcad.findById(_id);
+
+      let usuarioCompleto = {
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
+        rut: usuario.rut,
+        telefono: usuario.telefono,
+        imgUrl: usuario.imgUrl,
+        rol: usuario.rol,
+        estadoValidacion: usuario.estadoValidacion,
+        fechaNacimiento: usuario.fechaNacimiento,
+        sexo: usuario.sexo,
+        direccion: usuario.direccion,
+        comuna: usuario.comuna,
+        region: usuario.region,
+
+      }
+      res.status(200).json({
+        message: "Usuario encontrado correctamente",
+        response: usuarioCompleto
+      });
+    }
+    catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener usuario",
+        error: error.message
+      });
+    }
+  }
 
 }
 
