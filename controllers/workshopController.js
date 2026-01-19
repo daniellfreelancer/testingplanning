@@ -199,8 +199,11 @@ const workshopController = {
   addStudentToWorkshop: async (req, res) => {
     try {
       const { workshopId, studentId } = req.body
+      console.log('[WORKSHOP ADD STUDENT] Agregando estudiante al taller:', { workshopId, studentId });
+      
       const workshop = await Workshops.findById(workshopId);
       if (!workshop) {
+        console.log('[WORKSHOP ADD STUDENT] Taller no encontrado:', workshopId);
         return res.status(404).json({
           message: 'Taller no encontrado',
           success: false
@@ -209,20 +212,24 @@ const workshopController = {
 
       workshop.students.push(studentId);
       await workshop.save();
+      console.log('[WORKSHOP ADD STUDENT] Estudiante agregado al taller');
+      
       const student = await Students.findById(studentId)
 
       if (student) {
         student.workshop.push(workshopId);
         await student.save()
+        console.log('[WORKSHOP ADD STUDENT] Taller agregado al estudiante');
       }
 
+      console.log('[WORKSHOP ADD STUDENT] Proceso completado exitosamente');
       return res.status(200).json({
         message: 'Estudiante agregado con exito al taller',
         success: true
       });
 
     } catch (error) {
-      console.log(error);
+      console.error('[WORKSHOP ADD STUDENT] Error:', error);
       return res.status(400).json({
         message: 'Error al agregar id de estudiante al taller',
         success: false
