@@ -37,6 +37,7 @@ const userNotifications = require('./routes/tokenRoutes')
 const userNotificationsApp = require('./routes/notificationRoutes')
 const userSurvey = require('./routes/surveyRoutes')
 const userFitData = require('./routes/fitData.routes')
+const servicesRoutes = require('./controllers/services/servicesRoutes')
 //const userArduino = require('./routes/arduino.routes') deshabilitado por ahora
 const userWorkshopReport = require('./routes/workshopReport.routes')
 const userDusunSmartwatch = require('./routes/dusunSM.routes')
@@ -93,6 +94,8 @@ const citasUCAD = require('./api/car/ucad-citas/citas-ucad.routes')
 const notificacionesUCAD = require('./api/car/ucad-notificaciones/notificaciones-ucad.routes')
 const accesosUCAD = require('./api/car/ucad-accesos/accesos-ucad.routes');
 
+//Rutas para gestion de emails
+const emailStudentFutbol = require('./email/emailStudentFutbol.routes')
 
 var app = express();
 
@@ -141,6 +144,7 @@ app.use('/push', userNotifications)
 app.use('/notification', userNotificationsApp)
 app.use('/survey', userSurvey)
 app.use('/googlefit', userFitData)
+app.use('/services', servicesRoutes)
 //app.use('/devices', userArduino)
 app.use('/workshop-report', userWorkshopReport)
 app.use('/dusun-sw', userDusunSmartwatch)
@@ -166,6 +170,8 @@ app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
 app.use('/suscripciones-piscinas', suscripcionesPiscinas)
 
+//Rutas para gestion de emails
+app.use('/email-student-futbol', emailStudentFutbol)
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
 app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall

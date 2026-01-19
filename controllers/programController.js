@@ -1,6 +1,19 @@
 const Programs = require('../models/program')
 const Students = require('../models/student')
 const Teachers = require('../models/admin')
+const Institution = require('../models/institution')
+const mongoose = require('mongoose')
+const { uploadMulterFile } = require('../utils/s3Client')
+
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
+// helper: si imgUrl es un key antiguo, lo convierte a URL de CloudFront (si está configurado)
+function attachCloudFrontUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (!cloudfrontUrl) return url;
+  return `${cloudfrontUrl}/${url}`;
+}
 
 const programPopulateQuery = [
   {
@@ -39,12 +52,75 @@ const programPopulateQuery = [
   }
 ];
 
+const studentsPopulateQuery = [
+  {
+    path: 'students',
+    select: 'name lastName email role rut logged phone age weight size gender imgUrl classroom school grade',
+    populate: {
+      path: 'workshop',
+      select: 'name'
+    },
+    options: {
+      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+    }
+  },
+];
+
+const teachersPopulateQuery = [
+  {
+    path: 'teachers',
+    select: 'name lastName email role rut logged phone gender imgUrl',
+    populate: {
+      path: 'workshop',
+      select: 'name'
+    },
+    options: {
+      sort: { lastName: 1 } // ordenar por el campo "name" en orden ascendente
+    }
+  },
+];
 const programControllers = {
 
   createProgram: async (req, res) => {
 
     try {
-      const newProgram = await new Programs(req.body).save()
+      const institutionIdFromParams = req.params?.institutionId;
+      const institutionId = institutionIdFromParams || req.body?.institution;
+
+      if (!institutionId || !mongoose.Types.ObjectId.isValid(institutionId)) {
+        return res.status(400).json({
+          message: 'institutionId inválido',
+          success: false
+        })
+      }
+
+      const institution = await Institution.findById(institutionId).select('_id programs')
+      if (!institution) {
+        return res.status(404).json({
+          message: 'Institución no encontrada',
+          success: false
+        })
+      }
+
+      const newProgram = new Programs({
+        ...req.body,
+        institution: institutionId
+      })
+
+      // ⬇️ Subir foto del programa a S3 (opcional)
+      if (req.file) {
+        const key = await uploadMulterFile(req.file);
+        // Guardamos la URL completa de CloudFront (mismo patrón que Student/Post/Moment)
+        newProgram.imgUrl = cloudfrontUrl ? `${cloudfrontUrl}/${key}` : key;
+      }
+
+      await newProgram.save()
+
+      // Agregar el programa a la institución
+      await Institution.updateOne(
+        { _id: institutionId },
+        { $addToSet: { programs: newProgram._id } }
+      )
 
       if (newProgram) {
         res.status(200).json({
@@ -224,8 +300,11 @@ const programControllers = {
   addStudentToProgram: async (req, res) => {
     try {
       const { programId, studentId } = req.body
+      console.log('[PROGRAM ADD STUDENT] Agregando estudiante al programa:', { programId, studentId });
+      
       const program = await Programs.findById(programId);
       if (!program) {
+        console.log('[PROGRAM ADD STUDENT] Programa no encontrado:', programId);
         return res.status(404).json({
           message: 'Programa no encontrado',
           success: false
@@ -234,21 +313,24 @@ const programControllers = {
 
       program.students.push(studentId);
       await program.save();
+      console.log('[PROGRAM ADD STUDENT] Estudiante agregado al programa');
 
       const student = await Students.findById(studentId)
 
       if (student) {
         student.program.push(programId);
         await student.save()
+        console.log('[PROGRAM ADD STUDENT] Programa agregado al estudiante');
       }
 
+      console.log('[PROGRAM ADD STUDENT] Proceso completado exitosamente');
       return res.status(200).json({
         message: 'Estudiante agregado con exito al programa',
         success: true
       });
 
     } catch (error) {
-      console.log(error);
+      console.error('[PROGRAM ADD STUDENT] Error:', error);
       return res.status(400).json({
         message: 'Error al agregar id de estudiante al programa',
         success: false
@@ -361,8 +443,143 @@ const programControllers = {
         success: false
       });
     }
-  }
+  },
+  getProgramByInstitution: async (req, res) => {
+    try {
+      const { institutionId } = req.params;
 
+      // Traer todos los programas de la institución y popular según el schema
+      const programs = await Programs.find({ institution: institutionId }).populate(programPopulateQuery);
+
+      if (programs) {
+        return res.status(200).json({
+          message: 'Programas encontrados',
+          response: programs,
+          success: true
+        });
+      }
+
+      return res.status(404).json({
+        message: 'No se encontraron programas para esta institución',
+        success: false
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: 'Error en el servidor',
+        success: false
+      });
+    }
+  },
+  getProgramByInstitutionFutbolType: async (req, res) => {
+
+    try {
+
+      const institutions = await Institution.find({ type: 'futbol' }).select('_id');
+      const institutionIds = (institutions || []).map(i => i._id);
+
+      if (institutionIds.length === 0) {
+        return res.status(200).json({
+          message: 'No hay instituciones tipo futbol',
+          response: [],
+          success: true
+        });
+      }
+
+/**
+ * retornar los programas de las instituciones, con los siguientes campos:
+ * _id, name, address, email, phone,  imgUrl,
+ * workshops: [array de objetos con los siguientes campos: _id, name]
+ */
+
+      const programs = await Programs.find({ institution: { $in: institutionIds } })
+        .select('_id name address email phone imgUrl workshops')
+        .populate({
+          path: 'workshops',
+          select: '_id name ageStart ageEnd',
+        })
+        .lean();
+
+      const programsResponse = (programs || []).map(p => ({
+        _id: p._id,
+        name: p.name,
+        address: p.address,
+        email: p.email,
+        phone: p.phone,
+        imgUrl: attachCloudFrontUrl(p.imgUrl),
+        workshops: Array.isArray(p.workshops)
+          ? p.workshops.map(w => ({ _id: w?._id, name: w?.name, ageStart: w?.ageStart, ageEnd: w?.ageEnd }))
+          : []
+      }));
+
+      return res.status(200).json({
+        message: 'Programas encontrados',
+        response: programsResponse,
+        success: true
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: 'Error en el servidor',
+        success: false
+      });
+    }
+  },
+  getStudentsProgramByInstitution: async (req, res) => {
+    try {
+      const { institutionId } = req.params;
+
+      // Traer todos los programas de la institución y popular según el schema
+      const programs = await Programs.find({ institution: institutionId })
+      .populate(studentsPopulateQuery).select('students name',);
+
+      if (programs) {
+        return res.status(200).json({
+          message: 'Programas encontrados',
+          response: programs,
+          success: true
+        });
+      }
+
+      return res.status(404).json({
+        message: 'No se encontraron programas para esta institución',
+        success: false
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: 'Error en el servidor',
+        success: false
+      });
+    }
+  },
+  getTeachersProgramByInstitution: async (req, res) => {
+    try {
+      const { institutionId } = req.params;
+      const programs = await Programs.find({ institution: institutionId })
+      .populate(teachersPopulateQuery).select('teachers name',);
+
+
+      if (programs) {
+        return res.status(200).json({
+          message: 'Programas encontrados',
+          response: programs,
+          success: true
+        });
+      }
+
+      return res.status(404).json({
+        message: 'No se encontraron programas para esta institución',
+        success: false
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: 'Error en el servidor',
+        success: false
+      });
+    }
+  },
 }
 
 module.exports = programControllers

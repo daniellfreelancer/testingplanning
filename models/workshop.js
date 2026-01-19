@@ -25,6 +25,8 @@ const workshopSchema = new mongoose.Schema({
     team: { type: mongoose.Types.ObjectId, ref: 'team' }, // Equipo relacionado a esta categoria.
     seasonStart: { type: Date }, // Inicio de la temporada de la categoría
     seasonEnd: { type: Date }, // Fin de la temporada de la categoría
+    ageStart: { type: Date }, // Edad de inicio de la categoría
+    ageEnd: { type: Date }, // Edad de fin de la categoría
 })
 
 const WORKSHOP = mongoose.model(
