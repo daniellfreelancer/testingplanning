@@ -2,6 +2,7 @@ const Programs = require('../models/program')
 const Students = require('../models/student')
 const Teachers = require('../models/admin')
 const Institution = require('../models/institution')
+const Workshops = require('../models/workshop')
 const mongoose = require('mongoose')
 const { uploadMulterFile } = require('../utils/s3Client')
 
@@ -392,19 +393,44 @@ const programControllers = {
     try {
       const { id } = req.params
 
-      const deletedProgram = await Programs.findByIdAndDelete(id) 
+      // Buscar el programa antes de eliminarlo para obtener sus relaciones
+      const program = await Programs.findById(id);
 
-      if (deletedProgram) {
-        res.status(200).json({
-          message: 'Programa eliminado',
-          success: true
-        });
-      } else {
-        res.status(404).json({
+      if (!program) {
+        return res.status(404).json({
           message: 'Programa no encontrado',
           success: false
         });
       }
+
+      // 1. Eliminar todos los estudiantes del programa
+      if (program.students && program.students.length > 0) {
+        await Students.deleteMany({ _id: { $in: program.students } });
+        console.log(`[DELETE PROGRAM] Eliminados ${program.students.length} estudiantes del programa`);
+      }
+
+      // 2. Eliminar todos los profesores/teachers del programa
+      if (program.teachers && program.teachers.length > 0) {
+        await Teachers.deleteMany({ _id: { $in: program.teachers } });
+        console.log(`[DELETE PROGRAM] Eliminados ${program.teachers.length} profesores del programa`);
+      }
+
+      // 3. Eliminar el programa de la institución
+      if (program.institution) {
+        await Institution.updateOne(
+          { _id: program.institution },
+          { $pull: { programs: id } }
+        );
+        console.log(`[DELETE PROGRAM] Programa eliminado de la institución ${program.institution}`);
+      }
+
+      // 4. Finalmente eliminar el programa
+      await Programs.findByIdAndDelete(id);
+
+      res.status(200).json({
+        message: 'Programa eliminado junto con sus profesores y estudiantes',
+        success: true
+      });
 
     } catch (error) {
       console.log(error);
@@ -423,6 +449,12 @@ const programControllers = {
       const updatedProgram = await Programs.findByIdAndUpdate(id, update, { new: true });
 
       await updatedProgram.save();
+
+      if (req.file) {
+        const key = await uploadMulterFile(req.file);
+        updatedProgram.imgUrl = cloudfrontUrl ? `${cloudfrontUrl}/${key}` : key;
+        await updatedProgram.save();
+      }
 
       if (updatedProgram) {
         res.status(200).json({
@@ -580,6 +612,40 @@ const programControllers = {
       });
     }
   },
+  createWorkshopAndAddToProgram: async (req, res) => {
+
+    try {
+
+      const programId = req.params.programId;
+
+      const newWorkshop = new Workshops(req.body);
+
+      await newWorkshop.save();
+
+      const program = await Programs.findById(programId);
+
+      if (!program) {
+        return res.status(404).json({
+          message: 'Programa no encontrado',
+          success: false
+        });
+      }
+
+      program.workshops.push(newWorkshop._id);
+      await program.save();
+
+      return res.status(200).json({
+        message: 'Taller creado y agregado al programa',
+        response: newWorkshop,
+        success: true
+      });
+    } catch (error) {
+      
+    }
+
+
+  }
+
 }
 
 module.exports = programControllers
