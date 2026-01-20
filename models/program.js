@@ -30,8 +30,9 @@ const programSchema = new mongoose.Schema({
     enrollmentStartDate: { type: Date }, // fecha de inicio de inscripciones
     enrollmentEndDate: { type: Date }, // fecha de fin de inscripciones
     imgUrl: { type: String }, // url de la imagen del programa.
+    membershipPrice: { type: Number }, // precio de la membresía
 },
-    {
+    { 
         timestamps: true,
     })
 
