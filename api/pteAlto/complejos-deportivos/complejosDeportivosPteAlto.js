@@ -12,6 +12,7 @@ const complejosDeportivosPteAltoSchema = new mongoose.Schema({
     region: { type: String, },
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion' },
     espaciosDeportivos: [{ type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' }],
+    dias: { type: Array, default: [] },
     horarioApertura: { type: String },
     horarioCierre: { type: String },
     horarioAtencion: { type: String },
