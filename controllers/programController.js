@@ -41,7 +41,7 @@ const programPopulateQuery = [
   },
   {
     path: 'workshops',
-    select: 'name address phone email planner classHistory student ageRange days hours',
+    select: 'name address phone email planner classHistory student ageRange days hours ageStart ageEnd',
     populate: {
       path: 'teacher students planner',
       select: 'name lastName email role rut logged phone age weight size gender date duration classObjetives learningObjectives  evaluationIndicators skills activities  materials evaluationType content'

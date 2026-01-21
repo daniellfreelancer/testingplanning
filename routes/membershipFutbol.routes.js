@@ -24,6 +24,12 @@ router.get('/get-current-month-to-pay-membership/:rut', membershipController.get
 // nuevo endpoint para actualizar el mes de la membresia
 router.patch('/update-membership-month', membershipController.updateMembershipMonth)
 router.patch('/update-membership-amount/:membershipId', membershipController.updateMembershipAmount)
-
+// nuevo endpoint para consultar las membresias de un estudiante
+router.get('/get-memberships-by-student/:studentId', membershipController.getMembershipsByStudent)
+router.get('/get-memberships-by-institution/:institutionId', membershipController.getMembershipsByInstitution)
+// nuevo endpoint para actualizar pago manual (transferencia, efectivo, etc.)
+router.patch('/update-manual-payment', membershipController.updateManualPayment)
+// nuevo endpoint para obtener estadísticas de pagos por institución
+router.get('/payment-stats/:institutionId', membershipController.getPaymentStatsByInstitution)
 
 module.exports = router;

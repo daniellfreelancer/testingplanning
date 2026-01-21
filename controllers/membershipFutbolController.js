@@ -516,6 +516,167 @@ const membershipController = {
         .json({ message: 'Error al buscar las membresías', error });
     }
   },
+  // consultar las membresias de un estudiante
+  async getMembershipsByStudent(req, res) {
+    const { studentId } = req.params;
+    try {
+      const memberships = await Membership.find({ student: studentId })
+      .populate('student', {
+        name: 1,
+        lastName: 1,
+        email: 1,
+        imgUrl: 1,
+        phone: 1,
+        rut: 1,
+      },)
+      return res.status(200).json({ memberships });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error al buscar las membresías', error });
+    }
+  },
+  async getMembershipsByInstitution(req, res) {
+    const { institutionId } = req.params;
+    try {
+      const memberships = await Membership.find({ institution: institutionId })
+      .populate('student', {
+        name: 1,
+        lastName: 1,
+        email: 1,
+        imgUrl: 1,
+        phone: 1,
+        rut: 1,
+      })
+      .populate('futbolSchool', {
+        name: 1,
+      })
+      return res.status(200).json({ memberships });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error al buscar las membresías', error });
+    }
+  },
+
+  // Actualizar pago manual (transferencia, efectivo, etc.)
+  async updateManualPayment(req, res) {
+    const { membershipId, month, paymentType, paymentPrice, recipe, notes } = req.body;
+
+    try {
+      const membership = await Membership.findById(membershipId);
+      if (!membership) {
+        return res.status(404).json({ message: 'Membresía no encontrada' });
+      }
+
+      const validMonths = [
+        'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december'
+      ];
+
+      if (!validMonths.includes(month)) {
+        return res.status(400).json({ message: 'Mes no válido' });
+      }
+
+      const validPaymentTypes = ['TRANSFERENCIA', 'EFECTIVO', 'APIO', 'WEBPAY', 'OTRO'];
+      if (!validPaymentTypes.includes(paymentType)) {
+        return res.status(400).json({ message: 'Tipo de pago no válido' });
+      }
+
+      membership[month].status = 'pagado';
+      membership[month].paymentType = paymentType;
+      membership[month].paymentPrice = paymentPrice || membership.amount;
+      membership[month].paymentDate = new Date();
+      membership[month].recipe = recipe || null;
+      if (notes) {
+        membership[month].notes = notes;
+      }
+
+      await membership.save();
+
+      return res.status(200).json({ 
+        message: 'Pago registrado exitosamente', 
+        membership 
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error al registrar el pago', error });
+    }
+  },
+
+  // Obtener estadísticas de pagos por institución
+  async getPaymentStatsByInstitution(req, res) {
+    const { institutionId } = req.params;
+    const { year, month } = req.query;
+
+    try {
+      const currentYear = year || new Date().getFullYear().toString();
+      const memberships = await Membership.find({ 
+        institution: institutionId,
+        year: currentYear
+      })
+      .populate('student', { name: 1, lastName: 1, rut: 1 })
+      .populate('futbolSchool', { name: 1 });
+
+      const months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                      'july', 'august', 'september', 'october', 'november', 'december'];
+      
+      // Calcular estadísticas generales
+      let totalPendiente = 0;
+      let totalPagado = 0;
+      let countPendiente = 0;
+      let countPagado = 0;
+      
+      // Estadísticas por tipo de pago
+      const paymentTypeStats = {
+        TRANSFERENCIA: { count: 0, amount: 0 },
+        EFECTIVO: { count: 0, amount: 0 },
+        APIO: { count: 0, amount: 0 },
+        WEBPAY: { count: 0, amount: 0 },
+        OTRO: { count: 0, amount: 0 }
+      };
+
+      // Si se especifica un mes, filtrar solo ese mes
+      const monthsToCheck = month ? [month] : months;
+
+      memberships.forEach(membership => {
+        monthsToCheck.forEach(m => {
+          if (membership[m]) {
+            const monthData = membership[m];
+            const price = monthData.paymentPrice || membership.amount || 0;
+            
+            if (monthData.status === 'pagado') {
+              totalPagado += price;
+              countPagado++;
+              
+              // Contar por tipo de pago
+              const pType = monthData.paymentType || 'OTRO';
+              if (paymentTypeStats[pType]) {
+                paymentTypeStats[pType].count++;
+                paymentTypeStats[pType].amount += price;
+              }
+            } else if (monthData.status === 'pendiente') {
+              totalPendiente += price;
+              countPendiente++;
+            }
+          }
+        });
+      });
+
+      return res.status(200).json({
+        stats: {
+          totalPendiente,
+          totalPagado,
+          countPendiente,
+          countPagado,
+          paymentTypeStats,
+          totalMemberships: memberships.length
+        },
+        memberships
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error al obtener estadísticas', error });
+    }
+  }
 };
 
 module.exports = membershipController;
