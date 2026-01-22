@@ -513,6 +513,22 @@ const usuariosPteAltoController = {
         error: error.message,
       });
     }
+  },
+  obtenerColaboradoresPteAlto: async (req, res) => {
+    try {
+      const colaboradoresPteAlto = await UsuariosPteAlto.find({ rol: 'COLABORADOR' });
+      res.status(200).json({
+        message: "Colaboradores PTE Alto encontrados correctamente",
+        response: colaboradoresPteAlto,
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener colaboradores PTE Alto",
+        error: error.message,
+      });
+    }
   }
 };
 
