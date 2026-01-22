@@ -18,8 +18,6 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     status: { type: Boolean, default: false },
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion' },
     estadoValidacion: { type: String, enum: ['pendiente', 'validado', 'rechazado'], default: 'pendiente' },
-    //reservas: [{ type: mongoose.Types.ObjectId, ref: 'reservas' }],
-
 },
 {
     timestamps: true
