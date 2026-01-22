@@ -141,10 +141,18 @@ const usuariosPteAltoController = {
   actualizarUsuarioPteAlto: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nombre, apellido, email, rut, rol } = req.body;
+      const { nombre, apellido, email, rut, rol, status } = req.body;
+      const updateData = {};
+      if (nombre !== undefined) updateData.nombre = nombre;
+      if (apellido !== undefined) updateData.apellido = apellido;
+      if (email !== undefined) updateData.email = email;
+      if (rut !== undefined) updateData.rut = rut;
+      if (rol !== undefined) updateData.rol = rol;
+      if (status !== undefined) updateData.status = status;
+      
       const usuarioPteAlto = await UsuariosPteAlto.findByIdAndUpdate(
         id,
-        { nombre, apellido, email, rut, rol },
+        updateData,
         { new: true }
       );
       if (!usuarioPteAlto) {
@@ -499,7 +507,7 @@ const usuariosPteAltoController = {
     try {
 
       // obtener los usuarios con rol ADMIN, EMPLOYED, TRAINER
-      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'EMPLOYED', 'TRAINER'] } });
+      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES'] } });
       res.status(200).json({
         message: "Usuarios internos PTE Alto encontrados correctamente",
         response: usuariosInternosPteAlto,
@@ -516,7 +524,12 @@ const usuariosPteAltoController = {
   },
   obtenerColaboradoresPteAlto: async (req, res) => {
     try {
-      const colaboradoresPteAlto = await UsuariosPteAlto.find({ rol: 'COLABORADOR' });
+      // Obtener todos los colaboradores: todos los roles excepto USER (usuario final)
+      // Roles administrativos según usuarios-roles.md:
+      // ADMIN, SUPERVISOR, AGENDAMIENTO, ADMIN_RECINTO, COORDINADOR, MONITOR, COMUNICACIONES
+      const colaboradoresPteAlto = await UsuariosPteAlto.find({ 
+        rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES'] } 
+      });
       res.status(200).json({
         message: "Colaboradores PTE Alto encontrados correctamente",
         response: colaboradoresPteAlto,

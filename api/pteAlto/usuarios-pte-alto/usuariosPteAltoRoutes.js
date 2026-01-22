@@ -17,4 +17,5 @@ router.put("/asignar-admin-pte-alto/:id", usuariosPteAltoController.asignarAdmin
 router.post("/crear-usuario-form-pte-alto", upload.single('certificadoDomicilio'), usuariosPteAltoController.crearUsuarioFormPteAlto);
 router.get("/obtener-colaboradores", usuariosPteAltoController.obtenerUsuariosInternosPteAlto);
 router.put("/usuarios-pte-alto/:id/certificado-domicilio",upload.single("certificadoDomicilio"),usuariosPteAltoController.actualizarCertificadoDomicilioPteAlto);
+router.get("/obtener-colaboradores-pte-alto", usuariosPteAltoController.obtenerColaboradoresPteAlto);
 module.exports = router;
