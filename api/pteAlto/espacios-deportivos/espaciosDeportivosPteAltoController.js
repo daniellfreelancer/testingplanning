@@ -94,7 +94,7 @@ const espaciosDeportivosPteAltoController = {
 
   obtenerTodosLosEspaciosDeportivosPteAlto: async (req, res) => {
     try {
-      const espaciosDeportivosPteAlto = await EspaciosDeportivos.find();
+      const espaciosDeportivosPteAlto = await EspaciosDeportivos.find().populate('complejoDeportivo', {nombre: 1});
       res.status(200).json({
         message: 'Espacios deportivos PTE Alto obtenidos correctamente',
         response: espaciosDeportivosPteAlto,
