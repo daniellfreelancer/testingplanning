@@ -85,6 +85,7 @@ const talleresDeportivosPteAlto = require('./api/pteAlto/talleres-deportivos/tal
 const reservasPteAlto = require('./api/pteAlto/reservas-pte-alto/reservasPteAlto.routes')
 const statsPteAlto = require('./api/pteAlto/stats-pte-alto/statsPteAlto.routes')
 const eventosPteAlto = require('./api/pteAlto/eventos-pte-alto/eventosPteAlto.routes')
+const noticiasPteAlto = require('./api/pteAlto/noticias-pte-alto/noticiaRoutes')
 
 
 //Rutas para gestion de usuarios UCAD
@@ -185,6 +186,7 @@ app.use('/td-pte-alto', talleresDeportivosPteAlto)
 app.use('/reservas-pte-alto', reservasPteAlto)
 app.use('/stats-pte-alto', statsPteAlto)
 app.use('/eventos-pte-alto', eventosPteAlto)
+app.use('/noticias-pte-alto', noticiasPteAlto)
 
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
