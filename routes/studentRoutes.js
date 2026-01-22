@@ -1,5 +1,5 @@
 var express = require('express');
-const { create, getStudentDetail, updateTask, findTaskByStudent, updateTaskById, getStudentsByfilter, getStudents, updateStudent, deleteStudent, getStudentsAll } = require('../controllers/studentController');
+const { create, getStudentDetail, updateTask, findTaskByStudent, updateTaskById, getStudentsByfilter, getStudents, updateStudent, deleteStudent, getStudentsAll, getStudentByRut } = require('../controllers/studentController');
 const upload = require('../libs/docsStorage')
 var router = express.Router();
 
@@ -13,6 +13,7 @@ router.get('/search', getStudentsByfilter)
 router.get('/get-all', getStudents)
 router.put('/update/:id', updateStudent)
 router.delete('/delete/:id', deleteStudent)
+router.get('/get-by-rut/:rut', getStudentByRut)
 
 
 

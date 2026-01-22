@@ -15,8 +15,18 @@ const complejosDeportivosPteAltoController = {
             if (!institucionDoc) {
                 return res.status(404).json({ message: "Institución no encontrada" });
             }
+            // Parsear dias si viene como string JSON
+            let diasArray = req.body.dias || [];
+            if (typeof req.body.dias === 'string') {
+                try {
+                    diasArray = JSON.parse(req.body.dias);
+                } catch (e) {
+                    diasArray = [];
+                }
+            }
             const nuevoComplejoDeportivoPteAlto = new ComplejosDeportivosPteAlto({
                 ...req.body,
+                dias: diasArray,
             });
            
             if (req.file) {
@@ -97,8 +107,17 @@ const complejosDeportivosPteAltoController = {
     actualizarComplejoDeportivoPteAltoPorId: async (req, res) => {
         try {
             const { id } = req.params;
-            const { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin } = req.body;
-            const complejoDeportivoPteAlto = await ComplejosDeportivosPteAlto.findByIdAndUpdate(id, { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin }, { new: true });
+            const { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, dias, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin } = req.body;
+            // Parsear dias si viene como string JSON
+            let diasArray = dias;
+            if (typeof dias === 'string') {
+                try {
+                    diasArray = JSON.parse(dias);
+                } catch (e) {
+                    diasArray = [];
+                }
+            }
+            const complejoDeportivoPteAlto = await ComplejosDeportivosPteAlto.findByIdAndUpdate(id, { nombre, descripcion, direccion, telefono, email, rut, ciudad, comuna, region, institucion, espaciosDeportivos, dias: diasArray, horarioApertura, horarioCierre, horarioAtencion, horarioAtencionFin }, { new: true });
             if (req.file) {
                 try {
                     const key = await uploadMulterFile(req.file);

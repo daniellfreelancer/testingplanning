@@ -3,7 +3,7 @@ var router = express.Router();
 const membershipController = require('../controllers/membershipFutbolController')
 const upload = require('../libs/docsStorage');
 
-router.post('/memberships/:year/:institutionId/price/:amount', membershipController.createMembership);
+//router.post('/memberships/:year/:institutionId/price/:amount', membershipController.createMembership);
 router.post('/memberships-update/:year/:clubId/price/:amount', membershipController.createMembershipNewMembers);
 router.post('/new-membership-player/:clubId/:studentId', membershipController.createMembershipByPlayer)
 router.patch('/update-status/:membershipId', membershipController.updateStatus)
@@ -17,5 +17,19 @@ router.get('/get-memberships-active-clubs/:clubId/year/:year', membershipControl
 router.delete('/delete-membership/:membershipId', membershipController.deleteMembership)
 
 
+// nuevo endpoint para crear ticket de pago para la membresía
+router.post('/create-futbol-membership-ticket', membershipController.createFutbolMembershipTicket)
+// nuevo endpoint para consultar el mes actual para poder pagar la membresia
+router.get('/get-current-month-to-pay-membership/:rut', membershipController.getCurrentMonthtoPayMembership)
+// nuevo endpoint para actualizar el mes de la membresia
+router.patch('/update-membership-month', membershipController.updateMembershipMonth)
+router.patch('/update-membership-amount/:membershipId', membershipController.updateMembershipAmount)
+// nuevo endpoint para consultar las membresias de un estudiante
+router.get('/get-memberships-by-student/:studentId', membershipController.getMembershipsByStudent)
+router.get('/get-memberships-by-institution/:institutionId', membershipController.getMembershipsByInstitution)
+// nuevo endpoint para actualizar pago manual (transferencia, efectivo, etc.)
+router.patch('/update-manual-payment', membershipController.updateManualPayment)
+// nuevo endpoint para obtener estadísticas de pagos por institución
+router.get('/payment-stats/:institutionId', membershipController.getPaymentStatsByInstitution)
 
 module.exports = router;

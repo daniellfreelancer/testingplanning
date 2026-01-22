@@ -7,11 +7,11 @@ const programSchema = new mongoose.Schema({
     teachers: [{ type: mongoose.Types.ObjectId, ref: 'user' }],
     workshops: [{ type: mongoose.Types.ObjectId, ref: 'workshop' }],
     students: [{ type: mongoose.Types.ObjectId, ref: 'student' }],
-    institution: [{ type: mongoose.Types.ObjectId, ref: 'insti' }],
+    institution: { type: mongoose.Types.ObjectId, ref: 'insti' },
     address: { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
-    rut: { type: String, required: true },
+    rut: { type: String },
     devices: [{ type: mongoose.Types.ObjectId, ref: 'device' }],
     // Campos específicos para escuelas de fútbol privadas
     category: { type: String }, // Categoría de la escuela (ej. infantil, juvenil, femenino)
@@ -29,8 +29,10 @@ const programSchema = new mongoose.Schema({
     medicalStaff: [{ type: mongoose.Types.ObjectId, ref: 'user' }], //staff médico de la escuela.
     enrollmentStartDate: { type: Date }, // fecha de inicio de inscripciones
     enrollmentEndDate: { type: Date }, // fecha de fin de inscripciones
+    imgUrl: { type: String }, // url de la imagen del programa.
+    membershipPrice: { type: Number }, // precio de la membresía
 },
-    {
+    { 
         timestamps: true,
     })
 
