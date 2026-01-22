@@ -119,21 +119,25 @@ async function uploadFile(file, options = {}) {
   const key = keyOverride || generateObjectKey(file, category);
 
   // Soporte para express-fileupload y multer
-  let fileBuffer = file.data || file.buffer;
+  let fileBuffer;
   let contentType = file.mimetype;
 
-  // Si no hay buffer, leer el archivo
-  if (!fileBuffer && file.tempFilePath) {
+  // Prioridad: tempFilePath (express-fileupload con useTempFiles), buffer (multer), data (express-fileupload sin useTempFiles)
+  if (file.tempFilePath) {
     const fs = require('fs');
     fileBuffer = fs.readFileSync(file.tempFilePath);
+  } else if (file.buffer) {
+    fileBuffer = file.buffer;
+  } else if (file.data) {
+    fileBuffer = file.data;
   }
 
-  if (!fileBuffer) {
-    throw new Error('No se pudo obtener el buffer del archivo');
+  if (!fileBuffer || fileBuffer.length === 0) {
+    throw new Error('No se pudo obtener el buffer del archivo o está vacío');
   }
 
   // Optimizar imagen si es necesario
-  if (optimize && contentType && contentType.startsWith('image/')) {
+  if (optimize && contentType && contentType.startsWith('image/') && fileBuffer && fileBuffer.length > 0) {
     fileBuffer = await optimizeImage(fileBuffer, optimizeOptions);
     // Si se especificó formato en optimización, actualizar contentType
     if (optimizeOptions.format === 'webp') {

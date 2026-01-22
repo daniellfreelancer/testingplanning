@@ -37,7 +37,7 @@ exports.getAllNoticias = async (req, res) => {
       query.categoria = categoria;
     }
 
-    if (req.user.institucionId) {
+    if (req.user?.institucionId) {
       query.institucionId = req.user.institucionId;
     }
 
@@ -46,9 +46,7 @@ exports.getAllNoticias = async (req, res) => {
     const noticias = await Noticia.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email');
+      .limit(parseInt(limit));
 
     const total = await Noticia.countDocuments(query);
 
@@ -161,9 +159,7 @@ exports.getNoticiaById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const noticia = await Noticia.findById(id)
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email');
+    const noticia = await Noticia.findById(id);
 
     if (!noticia) {
       return res.status(404).json({
@@ -280,8 +276,8 @@ exports.createNoticia = async (req, res) => {
       redirigirExterna: redirigirExterna === 'true' || redirigirExterna === true,
       notificarUsuarios: notificarUsuarios === 'true' || notificarUsuarios === true,
       orden: orden || 0,
-      institucionId: req.user.institucionId,
-      createdBy: req.user._id
+      institucionId: req.user?.institucionId || null,
+      createdBy: req.user?._id || null
     });
 
     await noticia.save();
@@ -387,7 +383,7 @@ exports.updateNoticia = async (req, res) => {
     if (notificarUsuarios !== undefined) noticia.notificarUsuarios = notificarUsuarios === 'true' || notificarUsuarios === true;
     if (orden !== undefined) noticia.orden = orden;
 
-    noticia.updatedBy = req.user._id;
+    noticia.updatedBy = req.user?._id || null;
 
     await noticia.save();
 
@@ -480,7 +476,7 @@ exports.toggleDestacada = async (req, res) => {
     }
 
     noticia.destacada = !noticia.destacada;
-    noticia.updatedBy = req.user._id;
+    noticia.updatedBy = req.user?._id || null;
     await noticia.save();
 
     res.status(200).json({
@@ -538,7 +534,7 @@ exports.addImagenes = async (req, res) => {
     }));
 
     noticia.imagenes.push(...nuevasImagenes);
-    noticia.updatedBy = req.user._id;
+    noticia.updatedBy = req.user?._id || null;
     await noticia.save();
 
     res.status(200).json({
@@ -590,7 +586,7 @@ exports.deleteImagen = async (req, res) => {
     }
 
     noticia.imagenes.pull(imagenId);
-    noticia.updatedBy = req.user._id;
+    noticia.updatedBy = req.user?._id || null;
     await noticia.save();
 
     res.status(200).json({
