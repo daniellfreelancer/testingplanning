@@ -6,7 +6,7 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     email: { type: String },
     rut: { type: String },
     telefono: { type: String },
-    direccion: { type: String },
+    direccion: { type: String }, // url de la direccion de google maps
     fechaNacimiento: { type: Date },
     sexo: { type: String },
     comuna: { type: String },
