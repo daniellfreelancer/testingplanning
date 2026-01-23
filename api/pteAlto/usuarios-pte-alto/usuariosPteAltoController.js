@@ -4,7 +4,7 @@ const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
-const sendWelcomeMailPteAlto = require("../../mail/welcomeUsuariosPteAlto");
+const sendWelcomeColaboradorPuenteAlto = require("../mail/welcomeColaborador");
 
 // 👇 nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require("../../../utils/s3Client");
@@ -27,10 +27,15 @@ const usuariosPteAltoController = {
       // valida si el correo y rut ya existen
       const usuarioPteAltoEmail = await UsuariosPteAlto.findOne({ email });
       const usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut });
-      if (usuarioPteAltoEmail || usuarioPteAltoRut) {
+      if (usuarioPteAltoEmail ) {
         return res
           .status(400)
-          .json({ message: "El correo o rut ya existe" });
+          .json({ message: "El correo ya existe, ingrese otro correo" });
+      }
+      if (usuarioPteAltoRut) {
+        return res
+          .status(400)
+          .json({ message: "El rut ya existe, ingrese otro rut" });
       }
 
       const password = generateRandomPassword(8);
@@ -48,12 +53,24 @@ const usuariosPteAltoController = {
       nuevoUsuarioPteAlto.estadoValidacion = "validado";
       await nuevoUsuarioPteAlto.save();
 
+    //enviar correo de bienvenida a los roles de colaboradores
+    if (nuevoUsuarioPteAlto.rol === "ADMIN"
+      || nuevoUsuarioPteAlto.rol === "SUPERVISOR"
+      || nuevoUsuarioPteAlto.rol === "AGENDAMIENTO"
+      || nuevoUsuarioPteAlto.rol === "ADMIN_RECINTO"
+      || nuevoUsuarioPteAlto.rol === "COORDINADOR"
+      || nuevoUsuarioPteAlto.rol === "MONITOR"
+      || nuevoUsuarioPteAlto.rol === "COMUNICACIONES"
+    ) {
+      await sendWelcomeColaboradorPuenteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
+    }
+
+ 
       // mostrar por consola el password generado
       console.log("Password generado:", password);
       res.status(201).json({
-        message: "Usuario PTE Alto creado correctamente",
+        message: "Usuario creado correctamente",
         usuarioPteAlto: nuevoUsuarioPteAlto,
-        password,
       });
     } catch (error) {
       console.log(error);
