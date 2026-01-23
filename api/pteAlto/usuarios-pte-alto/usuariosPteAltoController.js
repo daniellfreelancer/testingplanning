@@ -524,12 +524,7 @@ const usuariosPteAltoController = {
   },
   obtenerColaboradoresPteAlto: async (req, res) => {
     try {
-      // Obtener todos los colaboradores: todos los roles excepto USER (usuario final)
-      // Roles administrativos según usuarios-roles.md:
-      // ADMIN, SUPERVISOR, AGENDAMIENTO, ADMIN_RECINTO, COORDINADOR, MONITOR, COMUNICACIONES
-      const colaboradoresPteAlto = await UsuariosPteAlto.find({ 
-        rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES'] } 
-      });
+      const colaboradoresPteAlto = await UsuariosPteAlto.find({ rol: 'COLABORADOR' });
       res.status(200).json({
         message: "Colaboradores PTE Alto encontrados correctamente",
         response: colaboradoresPteAlto,
