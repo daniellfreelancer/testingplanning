@@ -123,10 +123,52 @@ app.use(cookieParser());
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
-app.use(fileUpload({
-  useTempFiles : true,
-  tempFileDir : './files'
-}));
+// Middleware de fileUpload - excluir rutas que usan multer
+app.use((req, res, next) => {
+  // Excluir rutas que usan multer para evitar conflictos
+  const multerRoutes = [
+    '/vm-users-cd/crear-usuario-piscina',
+    '/vm-users-cd/actualizar-usuario-piscina'
+  ];
+  
+  const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
+  
+  if (shouldSkip) {
+    return next();
+  }
+  
+  // Aplicar fileUpload para todas las demás rutas
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: './files',
+    createParentPath: true,
+    safeFileNames: true,
+    preserveExtension: true,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB máximo
+    abortOnLimit: true,
+  })(req, res, next);
+});
+
+// Middleware para limpiar archivos temporales después de cada request
+app.use((req, res, next) => {
+  // Limpiar archivos temporales cuando la respuesta termine
+  res.on('finish', () => {
+    if (req.files) {
+      const fs = require('fs');
+      Object.values(req.files).forEach((file) => {
+        const files = Array.isArray(file) ? file : [file];
+        files.forEach((f) => {
+          if (f.tempFilePath && fs.existsSync(f.tempFilePath)) {
+            fs.unlink(f.tempFilePath, (err) => {
+              if (err) console.warn('Error eliminando archivo temporal:', err.message);
+            });
+          }
+        });
+      });
+    }
+  });
+  next();
+});
 
 //VitalMove Routes
 app.use('/admin', userAdmin)

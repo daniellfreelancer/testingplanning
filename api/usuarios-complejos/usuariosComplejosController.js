@@ -15,6 +15,8 @@ const RegistroAccesos = require("../acceso-usuarios-complejos/accesoUsuariosComp
 // 👇 NUEVO: helper centralizado S3
 const { uploadMulterFile } = require("../../utils/s3Client");
 
+const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
+
 function generateRandomPassword(length = 8) {
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -469,7 +471,8 @@ const usuariosComplejosController = {
           const key = await uploadMulterFile(
             req.files["fotoCedulaFrontal"][0]
           );
-          userData.fotoCedulaFrontal = key;
+          // Generamos la URL completa de CloudFront
+          userData.fotoCedulaFrontal = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo fotoCedulaFrontal:", err);
           return res.status(500).json({
@@ -484,7 +487,8 @@ const usuariosComplejosController = {
           const key = await uploadMulterFile(
             req.files["fotoCedulaReverso"][0]
           );
-          userData.fotoCedulaReverso = key;
+          // Generamos la URL completa de CloudFront
+          userData.fotoCedulaReverso = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo fotoCedulaReverso:", err);
           return res.status(500).json({
@@ -497,7 +501,8 @@ const usuariosComplejosController = {
       if (req.files && req.files["firma"]) {
         try {
           const key = await uploadMulterFile(req.files["firma"][0]);
-          userData.firma = key;
+          // Generamos la URL completa de CloudFront
+          userData.firma = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo firma:", err);
           return res.status(500).json({
@@ -733,7 +738,8 @@ const usuariosComplejosController = {
           const key = await uploadMulterFile(
             req.files["fotoCedulaFrontal"][0]
           );
-          updateData.fotoCedulaFrontal = key;
+          // Generamos la URL completa de CloudFront
+          updateData.fotoCedulaFrontal = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo fotoCedulaFrontal:", err);
           return res.status(500).json({
@@ -748,7 +754,8 @@ const usuariosComplejosController = {
           const key = await uploadMulterFile(
             req.files["fotoCedulaReverso"][0]
           );
-          updateData.fotoCedulaReverso = key;
+          // Generamos la URL completa de CloudFront
+          updateData.fotoCedulaReverso = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo fotoCedulaReverso:", err);
           return res.status(500).json({
@@ -761,7 +768,8 @@ const usuariosComplejosController = {
       if (req.files && req.files["firma"]) {
         try {
           const key = await uploadMulterFile(req.files["firma"][0]);
-          updateData.firma = key;
+          // Generamos la URL completa de CloudFront
+          updateData.firma = `${cloudfrontUrl}/${key}`;
         } catch (err) {
           console.error("Error subiendo firma:", err);
           return res.status(500).json({
