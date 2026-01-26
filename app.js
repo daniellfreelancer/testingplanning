@@ -89,6 +89,7 @@ const noticiasPteAlto = require('./api/pteAlto/noticias-pte-alto/noticiaRoutes')
 const navItems = require('./routes/navItem.routes')
 const secciones = require('./routes/seccion.routes')
 const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
+const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
 
 
 //Rutas para gestion de usuarios UCAD
@@ -235,6 +236,7 @@ app.use('/noticias-pte-alto', noticiasPteAlto)
 app.use('/nav-items', navItems)
 app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
+app.use('/videos-pte-alto', videosPteAlto)
 
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)

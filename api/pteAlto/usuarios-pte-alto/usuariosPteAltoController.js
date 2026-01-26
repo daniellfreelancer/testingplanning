@@ -308,7 +308,7 @@ const usuariosPteAltoController = {
       const usuariosPteAlto = await UsuariosPteAlto.find({ rol: "USER" })
         .sort({ createAt: -1 })
         .select(
-          "nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio comuna ciudad region fechaNacimiento sexo direccion telefono"
+          "nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio fotoCedulaFrontal motivoValidacion motivoRechazo comuna ciudad region fechaNacimiento sexo direccion telefono"
         );
 
       if (usuariosPteAlto?.length > 0) {
@@ -418,24 +418,38 @@ const usuariosPteAltoController = {
   validarUsuarioPteAlto: async (req, res) => {
     try {
       const { id } = req.params;
-      const { estadoValidacion } = req.body;
-      const usuarioPteAlto = await UsuariosPteAlto.findByIdAndUpdate(
-        id,
-        { estadoValidacion },
-        { new: true }
-      );
+      const { estadoValidacion, status, motivoValidacion, motivoRechazo } = req.body;
+      
+      // Buscar el usuario
+      const usuarioPteAlto = await UsuariosPteAlto.findById(id);
       if (!usuarioPteAlto) {
         return res
           .status(404)
           .json({ message: "Usuario PTE Alto no encontrado" });
       }
 
-      usuarioPteAlto.status = true;
-      usuarioPteAlto.estadoValidacion = estadoValidacion;
+      // Actualizar campos según lo que se envíe
+      if (estadoValidacion !== undefined) {
+        usuarioPteAlto.estadoValidacion = estadoValidacion;
+      }
+      
+      if (status !== undefined) {
+        // Convertir string a boolean si es necesario
+        usuarioPteAlto.status = status === "true" || status === true;
+      }
+      
+      if (motivoValidacion !== undefined) {
+        usuarioPteAlto.motivoValidacion = motivoValidacion;
+      }
+      
+      if (motivoRechazo !== undefined) {
+        usuarioPteAlto.motivoRechazo = motivoRechazo;
+      }
 
       await usuarioPteAlto.save();
+      
       res.status(200).json({
-        message: "Usuario PTE Alto validado correctamente",
+        message: "Usuario PTE Alto actualizado correctamente",
         usuarioPteAlto,
       });
     } catch (error) {
@@ -484,15 +498,15 @@ const usuariosPteAltoController = {
       institucionDoc.usuariosPteAlto.push(nuevoUsuarioPteAlto._id);
       await institucionDoc.save();
 
-      // ⬇️ Subida de archivo usando helper S3 central
-      if (req.file) {
-        try {
-          const key = await uploadMulterFile(req.file);
-          nuevoUsuarioPteAlto.certificadoDomicilio = key;
+      // ⬇️ Subida de archivo usando helper S3 central (se debe subir el certificado de domicilio y la foto de la cedula frontal)
+      if (req.files) {
+        for (const file of req.files) {
+          const key = await uploadMulterFile(file);
+          nuevoUsuarioPteAlto[file.fieldname] = key;
         } catch (err) {
-          console.error("Error subiendo certificado a S3:", err);
+          console.log("Error subiendo archivo a S3:", err);
           return res.status(500).json({
-            message: "Error al subir el certificado de domicilio",
+            message: "Error al subir el archivo",
             error: err.message,
           });
         }

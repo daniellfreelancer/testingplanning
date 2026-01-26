@@ -9,7 +9,7 @@ const espaciosDeportivosPteAltoSchema = new mongoose.Schema({
     region: { type: String, },
     complejoDeportivo: { type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' },
     talleres: [{ type: mongoose.Types.ObjectId, ref: 'talleresDeportivosPteAlto' }],
-    status: { type: String, enum: ['activo', 'interno', 'mantencion', 'desactivado'], default: 'activo' },
+    status: { type: String, enum: ['activo', 'interno', 'mantencion', 'desactivado'], default: 'desactivado' },
     dias: { type: Array },
     horarioApertura: { type: String },
     horarioCierre: { type: String },
