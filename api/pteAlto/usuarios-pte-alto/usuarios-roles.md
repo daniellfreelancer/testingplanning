@@ -16,7 +16,8 @@ Los roles mínimos que deberán estar disponibles son los siguientes:
 
 ### c. Personal de agendamientos - Rol: AGENDAMIENTO
 1. Crear actividades, talleres y/o convenios.
-2. Eliminar actividades, talleres y/o convenios. Esto serán registrados en un historial, especificando fecha, hora y perfil del funcionario/a que realiza la acción.
+2. Eliminar actividades, talleres y/o convenios. 
+**Esto serán registrados en un historial, especificando fecha, hora y perfil del funcionario/a que realiza la acción.**
 3. Extraer información y bases de datos del sistema.
 
 ### d. Administradores/as de recintos y cancheros/as - Rol: ADMIN_RECINTO
@@ -24,7 +25,7 @@ Los roles mínimos que deberán estar disponibles son los siguientes:
 2. Registrar asistencia u observaciones de las reservas.
 
 ### e. Coordinadores y monitores deportivos - Rol: COORDINADOR 
-1. Visualizar actividades, talleres y/o convenios. (puede visualizar todos los espacios deportivos y talleres)
+1. Visualizar actividades, talleres y/o convenios. 
 
 ### g. Equipo de agendamientos - Rol: MONITOR 
 1. Visualizar actividades, talleres y/o convenios. (puede visualizar sus talleres y espacios deportivos asignados)

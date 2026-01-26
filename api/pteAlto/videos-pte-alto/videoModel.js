@@ -17,7 +17,6 @@ const videoSchema = new mongoose.Schema({
   },
   youtubeId: {
     type: String,
-    required: true,
     trim: true
   },
   miniatura: {
