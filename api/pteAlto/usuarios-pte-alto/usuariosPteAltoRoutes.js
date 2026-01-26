@@ -4,7 +4,10 @@ const usuariosPteAltoController = require("./usuariosPteAltoController");
 const upload = require('../../../libs/docsStorage');
 
 router.post("/crear-usuario", usuariosPteAltoController.crearUsuarioPteAlto);
-router.post("/crear-usuario-externo", upload.single('certificadoDomicilio'), usuariosPteAltoController.crearUsuarioExternoPteAlto);
+router.post("/crear-usuario-externo", upload.fields([
+  { name: 'certificadoDomicilio', maxCount: 1 },
+  { name: 'fotoCedulaFrontal', maxCount: 1 }
+]), usuariosPteAltoController.crearUsuarioExternoPteAlto);
 router.post("/asignar-admin-pte-alto", usuariosPteAltoController.asignarAdminPteAlto);
 router.put("/actualizar-usuario/:id", usuariosPteAltoController.actualizarUsuarioPteAlto);
 router.delete("/eliminar-usuario/:id", usuariosPteAltoController.eliminarUsuarioPteAlto);

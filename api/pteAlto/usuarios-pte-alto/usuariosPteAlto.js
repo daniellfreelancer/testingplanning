@@ -13,11 +13,14 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     ciudad: { type: String },
     region: { type: String },
     certificadoDomicilio: { type: String },
+    fotoCedulaFrontal: { type: String },
     password: [{ type: String }],
     rol: { type: String },
     status: { type: Boolean, default: false },
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion' },
     estadoValidacion: { type: String, enum: ['pendiente', 'validado', 'rechazado'], default: 'pendiente' },
+    motivoValidacion: { type: String },
+    motivoRechazo: { type: String },
 },
 {
     timestamps: true
