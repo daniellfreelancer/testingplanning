@@ -11,6 +11,7 @@ const varianteTallerSchema = new mongoose.Schema({
     horaInicio: { type: String, required: true },
     horaFin: { type: String, required: true },
     espaciosAdicionales: [{ type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' }], // Espacios específicos para esta variante
+    complejo: { type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' },
     precioIndividual: { type: Number }, // Precio si se inscribe solo a esta variante
     usuariosInscritos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     sesiones: [{
