@@ -32,9 +32,12 @@ const sesionTallerSchema = new mongoose.Schema({
     horaFin: { type: String, required: true },
     dia: { type: String },
     usuariosInscritos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
+    profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
+    asistencia: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     capacidad: { type: Number },
     estado: { type: String, enum: ['activa', 'cancelada', 'completada'], default: 'activa' },
-    notas: { type: String }
+    notas: { type: String },
+    galeria: [{ type: String }],
 }, {
     timestamps: true
 });
@@ -42,37 +45,29 @@ const sesionTallerSchema = new mongoose.Schema({
 const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
     descripcion: { type: String },
-    galeria: [{ type: String }],
+    imgUrl: [{ type: String }],
     video: { type: String },
     link: { type: String },
-
-    // NUEVO SISTEMA - Múltiples espacios
+    categoria: { type: String },
     complejo: { type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' },
+    sede: { type: mongoose.Types.ObjectId, ref: 'sedesDeportivasPteAlto' },
     deporte: { type: String }, // futbol, padel, tenis, etc.
-    espaciosComunes: [{ type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' }], // Espacios que usan todas las variantes
-
-    // Sistema de variantes
-    tipoInscripcion: { type: String, enum: ['completa', 'por_variante'], default: 'completa' },
-    variantes: [varianteTallerSchema],
     precioCompleto: { type: Number }, // Precio si se inscribe a todas las variantes (inscripción completa)
     capacidadTotal: { type: Number }, // Suma de capacidades de todas las variantes
-
-    // Fechas y días (aplican a todas las variantes)
     fechaInicio: { type: Date },
     fechaFin: { type: Date },
+    horaInicio: { type: Array },
+    horaFin: { type: Array },
     dias: { type: Array }, // días de la semana
-
-    // CAMPOS LEGACY - mantener para compatibilidad con talleres antiguos
-    espacioDeportivo: { type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' },
+    fechaPublicacion: { type: Date },
+    espacioDeportivo: [{ type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' }], // puede ser uno o varios espacios
     capacidad: { type: Number },
     valor: { type: Number },
     pago: { type: Boolean },
-    horaInicio: { type: Array },
-    horaFin: { type: Array },
     usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
-    sesiones: [sesionTallerSchema],
-
+    sesiones: [sesionTallerSchema], //  estas van a ser las clases / sesiones que se van a crear para el taller
     profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
+    coordinadores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     status: { type: Boolean, default: true },
 
 }, {

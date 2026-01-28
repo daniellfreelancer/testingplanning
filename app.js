@@ -90,6 +90,7 @@ const navItems = require('./routes/navItem.routes')
 const secciones = require('./routes/seccion.routes')
 const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
 const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
+const sedesDeportivasPteAlto = require('./api/pteAlto/sedes-deportivas/sedesDeportivasPteAlto.routes')
 
 
 //Rutas para gestion de usuarios UCAD
@@ -127,9 +128,26 @@ app.use('/users', usersRouter);
 // Middleware de fileUpload - excluir rutas que usan multer
 app.use((req, res, next) => {
   // Excluir rutas que usan multer para evitar conflictos
+  /**
+   * excluir crear y actualizar espacios deportivos de puente alto
+   * excluir crear y actualizar complejos deportivos de puente alto
+   * excluir crear y actualizar talleres deportivos de puente alto
+   * excluir crear y actualizar noticias de puente alto
+   */
   const multerRoutes = [
     '/vm-users-cd/crear-usuario-piscina',
-    '/vm-users-cd/actualizar-usuario-piscina'
+    '/vm-users-cd/actualizar-usuario-piscina',
+    '/sedes-pte-alto/crear-sede-deportiva',
+    '/sedes-pte-alto/actualizar-sede-deportiva',
+    '/ed-pte-alto/crear-espacio',
+    '/ed-pte-alto/actualizar-espacio',
+    '/cd-pte-alto/crear-complejo-deportivo',
+   // '/cd-pte-alto/actualizar-complejo-deportivo',
+    '/td-pte-alto/crear-taller',
+    '/td-pte-alto/actualizar-taller',
+    '/noticias-pte-alto',
+    '/noticias-pte-alto/actualizar-noticia',
+
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
@@ -237,6 +255,7 @@ app.use('/nav-items', navItems)
 app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
+app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
 
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)

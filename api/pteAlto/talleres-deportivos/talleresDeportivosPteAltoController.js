@@ -1,6 +1,8 @@
+const mongoose = require('mongoose');
 const TalleresDeportivos = require('./talleresDeportivosPteAlto');
 const EspaciosDeportivos = require('../espacios-deportivos/espaciosDeportivosPteAlto');
 const ReservasPteAlto = require('../reservas-pte-alto/reservasPteAlto');
+const ComplejosDeportivos = require('../complejos-deportivos/complejosDeportivosPteAlto');
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -269,59 +271,65 @@ const crearReservasInternasConVariantes = async (taller, adminId) => {
 };
 
 /**
- * LEGACY: Crea reservas internas para bloquear el espacio deportivo en los días y horarios del taller
- * Mantener para compatibilidad con talleres antiguos sin variantes
- * @param {Object} taller - El taller creado
- * @param {String} adminId - ID del admin que crea el taller
+ * Obtiene los IDs de espacios a bloquear: espacioDeportivo + espaciosComunes (sin duplicados).
+ * Si no hay ninguno y el taller tiene complejo, usa los espacios del complejo.
+ * @param {Object} taller - Taller con espacioDeportivo, espaciosComunes, complejo
+ * @returns {Promise<string[]>} Array de IDs de espacios
+ */
+const obtenerEspaciosABloquearParaTaller = async (taller) => {
+  const arrEspacios = [].concat(
+    Array.isArray(taller.espacioDeportivo) ? taller.espacioDeportivo : (taller.espacioDeportivo ? [taller.espacioDeportivo] : []),
+    Array.isArray(taller.espaciosComunes) ? taller.espaciosComunes : (taller.espaciosComunes ? [taller.espaciosComunes] : [])
+  );
+  const ids = [...new Set(arrEspacios.map(id => (id && id.toString ? id.toString() : String(id))))].filter(Boolean);
+  if (ids.length > 0) return ids;
+  if (taller.complejo) {
+    const complejo = await ComplejosDeportivos.findById(taller.complejo).lean();
+    if (complejo && complejo.espaciosDeportivos && complejo.espaciosDeportivos.length) {
+      return complejo.espaciosDeportivos.map(e => (e && e.toString ? e.toString() : String(e)));
+    }
+  }
+  return [];
+};
+
+/**
+ * Crea reservas internas para bloquear los espacios/sede del taller en los días y horarios enviados.
+ * Usa espacioDeportivo, espaciosComunes o, si no hay espacios, los espacios del complejo.
+ * Una reserva por cada (día en rango, bloque horaInicio[i]-horaFin[i], espacio).
+ * @param {Object} taller - El taller ya guardado (con _id)
+ * @param {string} adminId - ID del admin que crea el taller
  */
 const crearReservasInternasTaller = async (taller, adminId) => {
   try {
-    console.log('🔵 === INICIANDO CREACIÓN DE RESERVAS INTERNAS ===');
-    console.log('🔵 Taller completo:', JSON.stringify(taller, null, 2));
-    console.log('🔵 AdminId:', adminId);
+    console.log('🔵 === CREACIÓN DE RESERVAS INTERNAS POR DÍAS Y HORARIOS ===');
+    console.log('🔵 Taller:', taller.nombre, '| AdminId:', adminId);
 
-    if (!taller.espacioDeportivo || !taller.fechaInicio || !taller.fechaFin || !taller.dias || !taller.horaInicio || !taller.horaFin) {
-      console.log('⚠️ Taller sin datos suficientes para crear reservas internas');
-      console.log('⚠️ espacioDeportivo:', taller.espacioDeportivo);
-      console.log('⚠️ fechaInicio:', taller.fechaInicio);
-      console.log('⚠️ fechaFin:', taller.fechaFin);
-      console.log('⚠️ dias:', taller.dias);
-      console.log('⚠️ horaInicio:', taller.horaInicio);
-      console.log('⚠️ horaFin:', taller.horaFin);
+    if (!taller.fechaInicio || !taller.fechaFin || !taller.dias || !taller.horaInicio || !taller.horaFin) {
+      console.log('⚠️ Taller sin fechaInicio, fechaFin, dias u horarios');
+      return [];
+    }
+
+    const idsEspacios = await obtenerEspaciosABloquearParaTaller(taller);
+    if (idsEspacios.length === 0) {
+      console.log('⚠️ No hay espacios a bloquear (espacioDeportivo, espaciosComunes ni complejo con espacios)');
       return [];
     }
 
     const reservasCreadas = [];
     const diasTaller = Array.isArray(taller.dias) ? taller.dias : [];
-    const horaInicio = Array.isArray(taller.horaInicio) && taller.horaInicio.length > 0 ? taller.horaInicio[0] : null;
-    const horaFin = Array.isArray(taller.horaFin) && taller.horaFin.length > 0 ? taller.horaFin[0] : null;
-
-    console.log('🔵 diasTaller:', diasTaller);
-    console.log('🔵 horaInicio:', horaInicio);
-    console.log('🔵 horaFin:', horaFin);
-
-    if (!horaInicio || !horaFin) {
+    const horariosInicio = Array.isArray(taller.horaInicio) ? taller.horaInicio : [taller.horaInicio].filter(Boolean);
+    const horariosFin = Array.isArray(taller.horaFin) ? taller.horaFin : [taller.horaFin].filter(Boolean);
+    if (horariosInicio.length === 0 || horariosFin.length === 0) {
       console.log('⚠️ Taller sin horas de inicio/fin definidas');
-      console.log('⚠️ horaInicio type:', typeof taller.horaInicio, taller.horaInicio);
-      console.log('⚠️ horaFin type:', typeof taller.horaFin, taller.horaFin);
       return [];
     }
 
-    // Mapear días en español a números de día de la semana (0 = domingo, 1 = lunes, etc.)
     const diasMap = {
-      'domingo': 0,
-      'lunes': 1,
-      'martes': 2,
-      'miércoles': 3,
-      'miercoles': 3,
-      'jueves': 4,
-      'viernes': 5,
-      'sábado': 6,
-      'sabado': 6
+      'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
+      'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6
     };
-
     const diasNumeros = diasTaller
-      .map(dia => diasMap[dia.toLowerCase()])
+      .map(dia => (typeof dia === 'number' ? dia : diasMap[String(dia).toLowerCase()]))
       .filter(num => num !== undefined);
 
     if (diasNumeros.length === 0) {
@@ -329,55 +337,54 @@ const crearReservasInternasTaller = async (taller, adminId) => {
       return [];
     }
 
-    // Iterar desde fechaInicio hasta fechaFin
     const fechaActual = new Date(taller.fechaInicio);
     const fechaFinal = new Date(taller.fechaFin);
+    fechaActual.setHours(0, 0, 0, 0);
+    fechaFinal.setHours(23, 59, 59, 999);
 
-    console.log(`📅 Creando reservas internas desde ${fechaActual.toISOString()} hasta ${fechaFinal.toISOString()}`);
-    console.log(`📅 Días: ${diasTaller.join(', ')} (${diasNumeros.join(', ')})`);
-    console.log(`⏰ Horario: ${horaInicio} - ${horaFin}`);
+    console.log(`📅 Días: ${diasTaller.join(', ')} | Horarios: ${horariosInicio.length} bloque(s) | Espacios: ${idsEspacios.length}`);
 
     while (fechaActual <= fechaFinal) {
       const diaSemana = fechaActual.getDay();
-
-      // Si el día actual coincide con uno de los días del taller
-      if (diasNumeros.includes(diaSemana)) {
-        const [horaInicioNum, minutoInicioNum] = horaInicio.split(':').map(Number);
-        const [horaFinNum, minutoFinNum] = horaFin.split(':').map(Number);
-
-        const fechaInicioReserva = new Date(fechaActual);
-        fechaInicioReserva.setHours(horaInicioNum, minutoInicioNum, 0, 0);
-
-        const fechaFinReserva = new Date(fechaActual);
-        fechaFinReserva.setHours(horaFinNum, minutoFinNum, 0, 0);
-
-        // Crear reserva interna
-        const reservaInterna = new ReservasPteAlto({
-          espacioDeportivo: taller.espacioDeportivo,
-          taller: taller._id,
-          fechaInicio: fechaInicioReserva,
-          fechaFin: fechaFinReserva,
-          tipoReserva: 'taller',
-          estado: 'activa',
-          esReservaInterna: true,
-          tipoReservaInterna: 'tercero', // Puedes ajustar esto según tu lógica
-          reservadoPor: adminId,
-          reservadoPara: `Taller: ${taller.nombre}`,
-          notas: `Reserva interna automática para el taller ${taller.nombre}`
-        });
-
-        await reservaInterna.save();
-        reservasCreadas.push(reservaInterna);
-        console.log(`✅ Reserva interna creada: ${fechaInicioReserva.toISOString()} - ${fechaFinReserva.toISOString()}`);
+      if (!diasNumeros.includes(diaSemana)) {
+        fechaActual.setDate(fechaActual.getDate() + 1);
+        continue;
       }
 
-      // Avanzar al siguiente día
+      for (let i = 0; i < Math.max(horariosInicio.length, horariosFin.length); i++) {
+        const horaInicioStr = horariosInicio[i] || horariosInicio[0];
+        const horaFinStr = horariosFin[i] || horariosFin[0];
+        const [hI, mI] = String(horaInicioStr).split(':').map(Number);
+        const [hF, mF] = String(horaFinStr).split(':').map(Number);
+
+        const fechaInicioReserva = new Date(fechaActual);
+        fechaInicioReserva.setHours(hI || 0, mI || 0, 0, 0);
+        const fechaFinReserva = new Date(fechaActual);
+        fechaFinReserva.setHours(hF || 0, mF || 0, 0, 0);
+
+        for (const espacioId of idsEspacios) {
+          const reservaInterna = new ReservasPteAlto({
+            espacioDeportivo: espacioId,
+            taller: taller._id,
+            fechaInicio: fechaInicioReserva,
+            fechaFin: fechaFinReserva,
+            tipoReserva: 'taller',
+            estado: 'activa',
+            esReservaInterna: true,
+            tipoReservaInterna: 'tercero',
+            reservadoPor: adminId || undefined,
+            reservadoPara: `Taller: ${taller.nombre}`,
+            notas: `Reserva interna automática para el taller ${taller.nombre}`
+          });
+          await reservaInterna.save();
+          reservasCreadas.push(reservaInterna);
+        }
+      }
       fechaActual.setDate(fechaActual.getDate() + 1);
     }
 
-    console.log(`✅ Total de reservas internas creadas: ${reservasCreadas.length}`);
+    console.log(`✅ Reservas internas creadas: ${reservasCreadas.length}`);
     return reservasCreadas;
-
   } catch (error) {
     console.error('❌ Error al crear reservas internas:', error);
     throw error;
@@ -412,32 +419,50 @@ const talleresDeportivosPteAltoController = {
         req.files ? `Sí (${req.files.length} archivos)` : 'No'
       );
 
-      // Parsear arrays JSON si vienen como strings
       const bodyData = { ...req.body };
-      if (typeof bodyData.horarios === 'string') {
-        bodyData.horarios = JSON.parse(bodyData.horarios);
-      }
+
+      // Parsear según modelo: dias, horaInicio, horaFin (arrays)
       if (typeof bodyData.dias === 'string') {
-        bodyData.dias = JSON.parse(bodyData.dias);
+        try {
+          bodyData.dias = JSON.parse(bodyData.dias);
+        } catch {
+          bodyData.dias = bodyData.dias ? [bodyData.dias] : [];
+        }
       }
       if (typeof bodyData.horaInicio === 'string') {
-        bodyData.horaInicio = JSON.parse(bodyData.horaInicio);
+        try {
+          bodyData.horaInicio = JSON.parse(bodyData.horaInicio);
+        } catch {
+          bodyData.horaInicio = bodyData.horaInicio ? [bodyData.horaInicio] : [];
+        }
       }
       if (typeof bodyData.horaFin === 'string') {
-        bodyData.horaFin = JSON.parse(bodyData.horaFin);
+        try {
+          bodyData.horaFin = JSON.parse(bodyData.horaFin);
+        } catch {
+          bodyData.horaFin = bodyData.horaFin ? [bodyData.horaFin] : [];
+        }
       }
 
-      // Parsear variantes si vienen como string (NUEVO SISTEMA)
-      if (typeof bodyData.variantes === 'string') {
-        bodyData.variantes = JSON.parse(bodyData.variantes);
+      // Parsear espacioDeportivo y espaciosComunes (arrays de ObjectId)
+      if (typeof bodyData.espacioDeportivo === 'string') {
+        try {
+          const parsed = JSON.parse(bodyData.espacioDeportivo);
+          bodyData.espacioDeportivo = Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          bodyData.espacioDeportivo = bodyData.espacioDeportivo ? [bodyData.espacioDeportivo] : [];
+        }
       }
-
-      // Parsear espaciosComunes si vienen como string (NUEVO SISTEMA)
       if (typeof bodyData.espaciosComunes === 'string') {
-        bodyData.espaciosComunes = JSON.parse(bodyData.espaciosComunes);
+        try {
+          const parsed = JSON.parse(bodyData.espaciosComunes);
+          bodyData.espaciosComunes = Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          bodyData.espaciosComunes = bodyData.espaciosComunes ? [bodyData.espaciosComunes] : [];
+        }
       }
 
-      // Parsear fechas si vienen como strings ISO
+      // Parsear fechas
       if (typeof bodyData.fechaInicio === 'string') {
         bodyData.fechaInicio = new Date(bodyData.fechaInicio);
       }
@@ -445,134 +470,43 @@ const talleresDeportivosPteAltoController = {
         bodyData.fechaFin = new Date(bodyData.fechaFin);
       }
 
-      console.log('🔵 Body data parseado:', JSON.stringify(bodyData, null, 2));
-
+      // Campos del modelo: nombre, descripcion, imgUrl, video, link, categoria, complejo, sede, deporte,
+      // espaciosComunes, precioCompleto, capacidadTotal, fechaInicio, fechaFin, horaInicio, horaFin, dias,
+      // fechaPublicacion, espacioDeportivo, capacidad, valor, pago, usuarios, sesiones, profesores, status
       const nuevoTallerDeportivoPteAlto = new TalleresDeportivos(bodyData);
 
-      // Subir una o hasta 5 imágenes al campo galeria del taller deportivo
-      if (req.files && req.files.length > 0) {
-        const galeria = [];
-        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
+      // Subir imágenes al campo imgUrl del modelo (req.files desde multer con campo "galeria")
+if (req.file) {
+  try {
+    const key = await uploadMulterFile(req.file);
+    const fileUrl = `${cloudfrontUrl}/${key}`;
+    nuevoTallerDeportivoPteAlto.imgUrl = fileUrl;
+  } catch (uploadError) {
+    console.error('❌ Error al subir imagen:', uploadError);
+    return res.status(500).json({
+      message: 'Error al subir imagen',
+      error: uploadError.message,
+      success: false,
+    });
+  }
+}
 
-        for (const file of req.files) {
-          const extension = file.originalname.split('.').pop().toLowerCase();
-
-          // Validar extensión
-          if (!allowedExtensions.includes(extension)) {
-            return res.status(400).json({
-              message: `Tipo de archivo no permitido: ${extension}. Solo se permiten imágenes (jpg, jpeg, png, gif, webp)`,
-              success: false,
-            });
-          }
-
-          // Validar tamaño
-          if (file.size > maxSize) {
-            return res.status(400).json({
-              message: `El archivo ${file.originalname} excede el tamaño máximo de 5MB`,
-              success: false,
-            });
-          }
-
-          try {
-            // Generar key personalizado sin prefijo "galeria-"
-            const crypto = require('crypto');
-            const extension = file.originalname.split('.').pop().toLowerCase();
-            const random = crypto.randomBytes(32).toString('hex');
-            const customKey = `${random}.${extension}`;
-
-            // Subir archivo a S3 usando helper con key personalizado
-            const key = await uploadMulterFile(file, customKey);
-            const fileUrl = `${cloudfrontUrl}/${key}`;
-            galeria.push(fileUrl);
-          } catch (uploadError) {
-            console.error(`Error al subir archivo ${file.originalname}:`, uploadError);
-            return res.status(500).json({
-              message: `Error al subir el archivo ${file.originalname}`,
-              error: uploadError.message,
-              success: false,
-            });
-          }
-        }
-
-        nuevoTallerDeportivoPteAlto.galeria = galeria;
-        console.log(`✅ ${galeria.length} imágenes subidas a la galería`);
-      } else {
-        console.log('⚠️ No se recibieron archivos en req.files');
-      }
-
-      // Detectar si es taller con variantes (nuevo sistema) o legacy
-      const esVariantes = bodyData.variantes && Array.isArray(bodyData.variantes) && bodyData.variantes.length > 0;
-
-      if (esVariantes) {
-        console.log('🟢 SISTEMA NUEVO: Taller con variantes');
-        // Generar sesiones por variante
-        const variantesConSesiones = generarSesionesPorVariante(nuevoTallerDeportivoPteAlto);
-        nuevoTallerDeportivoPteAlto.variantes = variantesConSesiones;
-      } else {
-        console.log('🟡 SISTEMA LEGACY: Taller sin variantes');
-        // Generar sesiones globales (legacy)
-        const sesionesGeneradas = generarSesionesTaller(nuevoTallerDeportivoPteAlto);
-        nuevoTallerDeportivoPteAlto.sesiones = sesionesGeneradas;
-      }
-
-      // Guardar taller con sesiones
       await nuevoTallerDeportivoPteAlto.save();
 
-      // Si viene espacioDeportivo por query, se asocia
-      if (req.query.espacioDeportivo) {
-        const espacioDeportivoEncontrado = await EspaciosDeportivos.findById(
-          req.query.espacioDeportivo
-        );
-        if (!espacioDeportivoEncontrado) {
-          return res.status(404).json({
-            message: 'Espacio deportivo no encontrado',
-            success: false,
-          });
-        }
-
-        espacioDeportivoEncontrado.talleres.push(
-          nuevoTallerDeportivoPteAlto._id
-        );
-        await espacioDeportivoEncontrado.save();
-
-        nuevoTallerDeportivoPteAlto.espacioDeportivo =
-          espacioDeportivoEncontrado._id;
-        await nuevoTallerDeportivoPteAlto.save();
-      } else {
-        nuevoTallerDeportivoPteAlto.espacioDeportivo = null;
-        await nuevoTallerDeportivoPteAlto.save();
-      }
-
-      // CREAR RESERVAS INTERNAS AUTOMÁTICAMENTE
+      // Crear reservas internas por días, horarios y espacios (o complejo si no hay espacios)
+      let reservasInternas = [];
       try {
         const adminId = req.user?.id || req.user?.userId || bodyData.reservadoPor || null;
-        let reservasInternas = [];
-
-        if (esVariantes) {
-          // Nuevo sistema: crear reservas por variante en espacios comunes
-          console.log('🟢 Creando reservas internas con sistema de variantes');
-          reservasInternas = await crearReservasInternasConVariantes(nuevoTallerDeportivoPteAlto, adminId);
-        } else {
-          // Legacy: crear reservas en espacio único
-          console.log('🟡 Creando reservas internas con sistema legacy');
-          reservasInternas = await crearReservasInternasTaller(nuevoTallerDeportivoPteAlto, adminId);
-        }
-
+        reservasInternas = await crearReservasInternasTaller(nuevoTallerDeportivoPteAlto, adminId);
         console.log(`✅ ${reservasInternas.length} reservas internas creadas para el taller`);
       } catch (reservaError) {
-        console.error('⚠️ Error al crear reservas internas (el taller se creó pero sin reservas):', reservaError);
-        // No retornar error, el taller ya fue creado
+        console.error('⚠️ Error al crear reservas (el taller ya se guardó):', reservaError);
       }
-
-      console.log(
-        '✅ Taller creado con galería:',
-        nuevoTallerDeportivoPteAlto.galeria
-      );
 
       res.status(201).json({
         message: 'Taller deportivo PTE Alto creado correctamente',
         response: nuevoTallerDeportivoPteAlto,
+        reservasInternasCreadas: reservasInternas.length,
         success: true,
       });
     } catch (error) {
@@ -590,10 +524,9 @@ const talleresDeportivosPteAltoController = {
       const talleresDeportivosPteAlto = await TalleresDeportivos.find()
         .populate('espacioDeportivo', 'nombre deporte')
         .populate('complejo', 'nombre direccion')
-        .populate('espaciosComunes', 'nombre deporte')
-        .populate('variantes.espaciosAdicionales', 'nombre deporte')
-        .populate('variantes.usuariosInscritos', 'nombre apellido email')
-        .populate('usuarios', 'nombre apellido email');
+        .populate('sede', 'nombre direccion')
+        .populate('profesores', 'nombre apellido email')
+        .populate('coordinadores', 'nombre apellido email');
 
       res.status(200).json({
         message: 'Talleres deportivos PTE Alto obtenidos correctamente',
@@ -672,84 +605,19 @@ const talleresDeportivosPteAltoController = {
         updateData.fechaFin = new Date(updateData.fechaFin);
       }
 
-      // Si se suben nuevas imágenes, procesarlas
-      if (req.files && req.files.length > 0) {
-        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
-
-        // galeria puede venir como JSON string desde el front
-        const galeriaExistente = updateData.galeria
-          ? JSON.parse(updateData.galeria)
-          : [];
-
-        const nuevasImagenes = [];
-
-        console.log(`📸 Procesando ${req.files.length} nuevas imágenes`);
-
-        for (const file of req.files) {
-          const extension = file.originalname.split('.').pop().toLowerCase();
-
-          if (!allowedExtensions.includes(extension)) {
-            return res.status(400).json({
-              message: `Tipo de archivo no permitido: ${extension}`,
-              success: false,
-            });
-          }
-
-          if (file.size > maxSize) {
-            return res.status(400).json({
-              message: `El archivo ${file.originalname} excede 5MB`,
-              success: false,
-            });
-          }
-
-          try {
-            // Generar key personalizado sin prefijo "galeria-"
-            const crypto = require('crypto');
-            const random = crypto.randomBytes(32).toString('hex');
-            const customKey = `${random}.${extension}`;
-
-            // Subir archivo a S3 usando helper con key personalizado
-            const key = await uploadMulterFile(file, customKey);
-            const fileUrl = `${cloudfrontUrl}/${key}`;
-            nuevasImagenes.push(fileUrl);
-            console.log('✅ Imagen subida:', fileUrl);
-          } catch (uploadError) {
-            console.error(`Error al subir ${file.originalname}:`, uploadError);
-            return res.status(500).json({
-              message: `Error al subir ${file.originalname}`,
-              error: uploadError.message,
-              success: false,
-            });
-          }
-        }
-
-        // Combinar galería existente con nuevas imágenes (máximo 5)
-        const galeriaCompleta = [...galeriaExistente, ...nuevasImagenes].slice(
-          0,
-          5
-        );
-        updateData.galeria = galeriaCompleta;
-        console.log(
-          `📚 Galería actualizada con ${galeriaCompleta.length} imágenes`
-        );
-      }
-
-      // Detectar si es taller con variantes (nuevo sistema) o legacy
-      const esVariantes = updateData.variantes && Array.isArray(updateData.variantes) && updateData.variantes.length > 0;
-
-      // Si es nuevo sistema con variantes, regenerar sesiones por variante antes de actualizar
-      if (esVariantes) {
-        console.log('🟢 SISTEMA NUEVO: Regenerando sesiones por variante');
-        // Crear objeto temporal con los datos actualizados para generar sesiones
-        const tallerTemp = {
-          ...updateData,
-          fechaInicio: updateData.fechaInicio || (await TalleresDeportivos.findById(id)).fechaInicio,
-          fechaFin: updateData.fechaFin || (await TalleresDeportivos.findById(id)).fechaFin,
-          dias: updateData.dias || (await TalleresDeportivos.findById(id)).dias,
-        };
-        const variantesConSesiones = generarSesionesPorVariante(tallerTemp);
-        updateData.variantes = variantesConSesiones;
+      if (req.file) {
+        try {
+          const key = await uploadMulterFile(req.file);
+          const fileUrl = `${cloudfrontUrl}/${key}`;
+          updateData.imgUrl = fileUrl;
+        } catch (uploadError) {
+          console.error('❌ Error al subir imagen:', uploadError);
+          return res.status(500).json({
+            message: 'Error al subir imagen',
+            error: uploadError.message,
+            success: false,
+          });
+        } 
       }
 
       // Actualizar el taller
