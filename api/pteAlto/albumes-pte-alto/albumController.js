@@ -29,7 +29,7 @@ exports.getAlbumesPublicos = async (req, res) => {
 
     let albumesQuery = Album.find(query)
       .sort({ orden: 1, createdAt: -1 })
-      .select('-imagenes'); // No enviar todas las imágenes en el listado
+
 
     if (limit) {
       albumesQuery = albumesQuery.limit(parseInt(limit));
@@ -41,9 +41,17 @@ exports.getAlbumesPublicos = async (req, res) => {
     const albumes = await albumesQuery;
     const total = await Album.countDocuments(query);
 
+    // Mapear álbumes para incluir totalImagenes y excluir las imágenes completas
+    const albumesConTotal = albumes.map(album => {
+      const albumObj = album.toObject();
+      albumObj.totalImagenes = album.imagenes ? album.imagenes.length : 0;
+      delete albumObj.imagenes; // No enviar todas las imágenes
+      return albumObj;
+    });
+
     res.status(200).json({
       success: true,
-      data: albumes,
+      data: albumesConTotal,
       pagination: {
         total,
         limit: parseInt(limit) || total,
