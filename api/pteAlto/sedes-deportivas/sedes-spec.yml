@@ -1,0 +1,434 @@
+openapi: 3.0.3
+info:
+  title: Sedes Deportivas Puente Alto API
+  description: |
+    API para la gestión de sedes deportivas del módulo Puente Alto.
+    Documenta el modelo, controladores y rutas del recurso Sedes Deportivas.
+  version: 1.0.0
+
+servers:
+  - url: /sedes-pte-alto
+    description: Base path para Sedes Deportivas Puente Alto
+
+tags:
+  - name: Sedes Deportivas
+    description: CRUD de sedes deportivas Puente Alto
+
+# =============================================================================
+# MODELO - SedesDeportivasPteAlto (Mongoose Schema)
+# =============================================================================
+# Colección: sedesDeportivasPteAlto
+# Referencias: talleresDeportivosPteAlto, eventosPteAlto
+# =============================================================================
+
+components:
+  schemas:
+    SedeDeportivaPteAlto:
+      type: object
+      required:
+        - nombre
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: ID generado por MongoDB
+          example: "507f1f77bcf86cd799439011"
+        nombre:
+          type: string
+          required: true
+          description: Nombre de la sede deportiva
+        descripcion:
+          type: string
+          description: Descripción de la sede
+        imgUrl:
+          type: string
+          format: uri
+          description: URL de la imagen (CloudFront) — se puede subir vía multipart en crear
+        direccion:
+          type: string
+          description: Dirección de la sede
+        ciudad:
+          type: string
+          description: Ciudad
+        comuna:
+          type: string
+          description: Comuna
+        region:
+          type: string
+          description: Región
+        talleres:
+          type: array
+          items:
+            type: string
+            format: objectid
+            description: Referencia a talleresDeportivosPteAlto
+        eventos:
+          type: array
+          items:
+            type: string
+            format: objectid
+            description: Referencia a eventosPteAlto
+        status:
+          type: string
+          enum: [activo, interno, mantencion, desactivado]
+          default: activo
+          description: Estado de la sede
+        dias:
+          type: array
+          description: Días de atención (estructura definida en app)
+        horarioApertura:
+          type: string
+          description: Hora de apertura
+        horarioCierre:
+          type: string
+          description: Hora de cierre
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación (timestamps)
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de última actualización (timestamps)
+
+    ApiResponseSede:
+      type: object
+      properties:
+        message:
+          type: string
+        response:
+          $ref: '#/components/schemas/SedeDeportivaPteAlto'
+        success:
+          type: boolean
+
+    ApiResponseListaSedes:
+      type: object
+      properties:
+        message:
+          type: string
+        response:
+          type: array
+          items:
+            $ref: '#/components/schemas/SedeDeportivaPteAlto'
+        success:
+          type: boolean
+
+    ApiResponseError:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+        success:
+          type: boolean
+          example: false
+
+    ApiResponseDelete:
+      type: object
+      properties:
+        message:
+          type: string
+        success:
+          type: boolean
+
+  requestBodies:
+    SedeDeportivaCrear:
+      description: Cuerpo para crear sede (campos opcionales según schema). Imagen opcional vía multipart.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SedeDeportivaPteAlto'
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              nombre:
+                type: string
+              descripcion:
+                type: string
+              imgUrl:
+                type: string
+                format: binary
+                description: Archivo de imagen (nombre del campo en upload)
+              direccion:
+                type: string
+              ciudad:
+                type: string
+              comuna:
+                type: string
+              region:
+                type: string
+              talleres:
+                type: array
+                items:
+                  type: string
+              eventos:
+                type: array
+                items:
+                  type: string
+              status:
+                type: string
+                enum: [activo, interno, mantencion, desactivado]
+              dias:
+                type: array
+              horarioApertura:
+                type: string
+              horarioCierre:
+                type: string
+    SedeDeportivaActualizar:
+      description: Cuerpo para actualizar sede (parcial)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              nombre:
+                type: string
+              descripcion:
+                type: string
+              imgUrl:
+                type: string
+              direccion:
+                type: string
+              ciudad:
+                type: string
+              comuna:
+                type: string
+              region:
+                type: string
+              talleres:
+                type: array
+                items:
+                  type: string
+              eventos:
+                type: array
+                items:
+                  type: string
+              status:
+                type: string
+                enum: [activo, interno, mantencion, desactivado]
+              dias:
+                type: array
+              horarioApertura:
+                type: string
+              horarioCierre:
+                type: string
+
+# =============================================================================
+# RUTAS Y CONTROLADORES
+# =============================================================================
+
+paths:
+  /crear-sede-deportiva:
+    post:
+      tags:
+        - Sedes Deportivas
+      summary: Crear sede deportiva
+      description: |
+        **Controlador:** `crearSedeDeportivaPteAlto`
+        Crea una nueva sede y opcionalmente sube una imagen (multer + S3/CloudFront).
+        Campo de archivo en multipart: `imgUrl`.
+      operationId: crearSedeDeportivaPteAlto
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SedeDeportivaPteAlto'
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - nombre
+              properties:
+                nombre:
+                  type: string
+                descripcion:
+                  type: string
+                imgUrl:
+                  type: string
+                  format: binary
+                direccion:
+                  type: string
+                ciudad:
+                  type: string
+                comuna:
+                  type: string
+                region:
+                  type: string
+                talleres:
+                  type: array
+                  items:
+                    type: string
+                eventos:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: string
+                  enum: [activo, interno, mantencion, desactivado]
+                dias:
+                  type: array
+                horarioApertura:
+                  type: string
+                horarioCierre:
+                  type: string
+      responses:
+        '201':
+          description: Sede creada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSede'
+              example:
+                message: Sede deportiva creada correctamente
+                response:
+                  _id: "507f1f77bcf86cd799439011"
+                  nombre: "Sede Central"
+                  status: activo
+                  createdAt: "2025-01-27T12:00:00.000Z"
+                  updatedAt: "2025-01-27T12:00:00.000Z"
+                success: true
+        '500':
+          description: Error al crear la sede deportiva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /obtener-sedes-deportivas:
+    get:
+      tags:
+        - Sedes Deportivas
+      summary: Listar todas las sedes deportivas
+      description: |
+        **Controlador:** `obtenerTodasLasSedesDeportivasPteAlto`
+        Devuelve todas las sedes sin paginación.
+      operationId: obtenerTodasLasSedesDeportivasPteAlto
+      responses:
+        '200':
+          description: Lista de sedes obtenida correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListaSedes'
+              example:
+                message: Sedes deportivas obtenidas correctamente
+                response: []
+                success: true
+        '500':
+          description: Error al obtener las sedes deportivas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /obtener-sede-deportiva/{id}:
+    get:
+      tags:
+        - Sedes Deportivas
+      summary: Obtener sede por ID
+      description: |
+        **Controlador:** `obtenerSedeDeportivaPteAltoPorId`
+      operationId: obtenerSedeDeportivaPteAltoPorId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+          description: ID de la sede (MongoDB ObjectId)
+      responses:
+        '200':
+          description: Sede obtenida correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSede'
+        '500':
+          description: Error al obtener la sede deportiva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /actualizar-sede-deportiva/{id}:
+    put:
+      tags:
+        - Sedes Deportivas
+      summary: Actualizar sede por ID
+      description: |
+        **Controlador:** `actualizarSedeDeportivaPteAltoPorId`
+        Actualización parcial con `findByIdAndUpdate(..., { new: true })`.
+      operationId: actualizarSedeDeportivaPteAltoPorId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+      requestBody:
+        $ref: '#/components/requestBodies/SedeDeportivaActualizar'
+      responses:
+        '200':
+          description: Sede actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSede'
+        '500':
+          description: Error al actualizar la sede deportiva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+  /eliminar-sede-deportiva/{id}:
+    delete:
+      tags:
+        - Sedes Deportivas
+      summary: Eliminar sede por ID
+      description: |
+        **Controlador:** `eliminarSedeDeportivaPteAltoPorId`
+        Usa `findByIdAndDelete`. No devuelve el documento eliminado.
+      operationId: eliminarSedeDeportivaPteAltoPorId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: objectid
+      responses:
+        '200':
+          description: Sede eliminada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDelete'
+              example:
+                message: Sede deportiva eliminada correctamente
+                success: true
+        '500':
+          description: Error al eliminar la sede deportiva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+
+# =============================================================================
+# MAPEO RUTA -> CONTROLADOR (referencia rápida)
+# =============================================================================
+# Archivo de rutas: sedesDeportivasPteAlto.routes.js
+# Montaje en app: app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
+#
+# | Método | Ruta (relativa a /sedes-pte-alto)     | Controlador                               |
+# |--------|---------------------------------------|-------------------------------------------|
+# | POST   | /crear-sede-deportiva                 | crearSedeDeportivaPteAlto (upload single) |
+# | GET    | /obtener-sedes-deportivas             | obtenerTodasLasSedesDeportivasPteAlto     |
+# | GET    | /obtener-sede-deportiva/:id            | obtenerSedeDeportivaPteAltoPorId          |
+# | PUT    | /actualizar-sede-deportiva/:id         | actualizarSedeDeportivaPteAltoPorId       |
+# | DELETE | /eliminar-sede-deportiva/:id           | eliminarSedeDeportivaPteAltoPorId         |
+# =============================================================================
