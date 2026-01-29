@@ -1,30 +1,5 @@
 const mongoose = require('mongoose');
 
-// Sub-esquema para variantes del taller
-const varianteTallerSchema = new mongoose.Schema({
-    nombre: { type: String, required: true }, // Ej: "8 a 12 años"
-    descripcion: { type: String },
-    edadMin: { type: Number },
-    edadMax: { type: Number },
-    genero: { type: String, enum: ['M', 'F', 'M/F', 'Todos'], default: 'Todos' },
-    capacidad: { type: Number, required: true },
-    horaInicio: { type: String, required: true },
-    horaFin: { type: String, required: true },
-    espaciosAdicionales: [{ type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' }], // Espacios específicos para esta variante
-    complejo: { type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' },
-    precioIndividual: { type: Number }, // Precio si se inscribe solo a esta variante
-    usuariosInscritos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
-    sesiones: [{
-        fecha: { type: Date, required: true },
-        dia: { type: String },
-        usuariosInscritos: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
-        estado: { type: String, enum: ['activa', 'cancelada', 'completada'], default: 'activa' },
-        notas: { type: String }
-    }]
-}, {
-    timestamps: true
-});
-
 // Sub-esquema para sesiones individuales del taller (DEPRECATED - mantener por compatibilidad)
 const sesionTallerSchema = new mongoose.Schema({
     fecha: { type: Date, required: true },
@@ -54,6 +29,8 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     deporte: { type: String }, // futbol, padel, tenis, etc.
     precioCompleto: { type: Number }, // Precio si se inscribe a todas las variantes (inscripción completa)
     capacidadTotal: { type: Number }, // Suma de capacidades de todas las variantes
+    edadMin: { type: Number },
+    edadMax: { type: Number },
     fechaInicio: { type: Date },
     fechaFin: { type: Date },
     horaInicio: { type: Array },
@@ -69,6 +46,10 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     coordinadores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     status: { type: Boolean, default: true },
+    destacada: { type: Boolean, default: false },
+    creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
+    informacionHorarios: { type: Array }, // aqui se van a mostrar los dias y horarios seleccionados para el taller
+    sexo: { type: String, enum: ['masculino', 'femenino', 'ambos'], default: 'ambos' },
 
 }, {
     timestamps: true

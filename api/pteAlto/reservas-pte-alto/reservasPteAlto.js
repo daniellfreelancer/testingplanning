@@ -4,6 +4,7 @@ const reservasPteAltoSchema = new mongoose.Schema({
     usuario: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     taller: { type: mongoose.Types.ObjectId, ref: 'talleresDeportivosPteAlto' },
     espacioDeportivo: { type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' },
+    sede: { type: mongoose.Types.ObjectId, ref: 'sedesDeportivasPteAlto' },
     status: { type: Boolean },
     dia: { type: String },
     hora: { type: String },

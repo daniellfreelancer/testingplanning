@@ -52,5 +52,9 @@ router.post('/admin/crear-reserva-interna', reservasPteAltoController.crearReser
 
 // Validar reserva
 router.get('/validar-reserva/:idReserva', reservasPteAltoController.validarReserva);
+
+// Consultar disponibilidad de espacios para talleres (bloques de 15 minutos)
+router.post('/disponibilidad-espacios-taller', reservasPteAltoController.consultarDisponibilidadEspaciosTaller);
+
 module.exports = router;
 
