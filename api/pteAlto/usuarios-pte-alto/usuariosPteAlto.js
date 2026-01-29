@@ -21,6 +21,7 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     estadoValidacion: { type: String, enum: ['pendiente', 'validado', 'rechazado'], default: 'pendiente' },
     motivoValidacion: { type: String },
     motivoRechazo: { type: String },
+    talleresInscritos: [{ type: mongoose.Types.ObjectId, ref: 'talleresDeportivosPteAlto' }],
 },
 {
     timestamps: true

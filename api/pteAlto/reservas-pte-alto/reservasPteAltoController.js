@@ -1320,6 +1320,173 @@ const reservasPteAltoController = {
         } catch (error) {
             console.log(error);
         }
+    },
+
+    /**
+     * Consultar disponibilidad de espacios deportivos para crear talleres
+     * POST /reservas-pte-alto/disponibilidad-espacios-taller
+     * Body: { 
+     *   espaciosDeportivos: [ObjectId], 
+     *   fechaInicio: Date, 
+     *   fechaFin: Date, 
+     *   diasSeleccionados: [0-6] // 0=Domingo, 1=Lunes, etc.
+     * }
+     * Retorna disponibilidad en bloques de 15 minutos
+     */
+    consultarDisponibilidadEspaciosTaller: async (req, res) => {
+        try {
+            const { espaciosDeportivos, fechaInicio, fechaFin, diasSeleccionados } = req.body;
+
+            // Validar campos requeridos
+            if (!espaciosDeportivos || !Array.isArray(espaciosDeportivos) || espaciosDeportivos.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El campo 'espaciosDeportivos' es requerido y debe ser un array con al menos un ID"
+                });
+            }
+
+            if (!fechaInicio || !fechaFin) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Los campos 'fechaInicio' y 'fechaFin' son requeridos"
+                });
+            }
+
+            if (!diasSeleccionados || !Array.isArray(diasSeleccionados) || diasSeleccionados.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El campo 'diasSeleccionados' es requerido y debe ser un array con al menos un día"
+                });
+            }
+
+            const inicio = new Date(fechaInicio);
+            const fin = new Date(fechaFin);
+            inicio.setHours(0, 0, 0, 0);
+            fin.setHours(23, 59, 59, 999);
+
+            // Procesar cada espacio deportivo
+            const espaciosConDisponibilidad = await Promise.all(
+                espaciosDeportivos.map(async (espacioId) => {
+                    // Obtener información del espacio
+                    const espacio = await EspaciosDeportivosPteAlto.findById(espacioId);
+                    if (!espacio) {
+                        return {
+                            espacioId,
+                            error: "Espacio no encontrado",
+                            disponibilidad: []
+                        };
+                    }
+
+                    // Obtener todas las reservas activas del espacio en el rango de fechas
+                    const reservasEspacio = await ReservasPteAlto.find({
+                        espacioDeportivo: espacioId,
+                        estado: 'activa',
+                        $or: [
+                            { fechaInicio: { $gte: inicio, $lte: fin } },
+                            { fechaFin: { $gte: inicio, $lte: fin } },
+                            { fechaInicio: { $lte: inicio }, fechaFin: { $gte: fin } }
+                        ]
+                    }).lean();
+
+                    // Horarios del espacio (o valores por defecto)
+                    const horarioApertura = espacio.horarioApertura || '08:00';
+                    const horarioCierre = espacio.horarioCierre || '22:00';
+                    const [horaApertura, minutoApertura] = horarioApertura.split(':').map(Number);
+                    const [horaCierre, minutoCierre] = horarioCierre.split(':').map(Number);
+
+                    // Generar disponibilidad por día de la semana
+                    const disponibilidadPorDia = diasSeleccionados.map(diaSemana => {
+                        const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                        
+                        // Generar slots de 15 minutos
+                        const slots = [];
+                        for (let hora = horaApertura; hora < horaCierre; hora++) {
+                            for (let minuto = 0; minuto < 60; minuto += 15) {
+                                // No generar slots después del cierre
+                                if (hora === horaCierre - 1 && minuto + 15 > 60) continue;
+                                
+                                const horaStr = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`;
+                                const horaFinMinuto = minuto + 15;
+                                const horaFinHora = horaFinMinuto >= 60 ? hora + 1 : hora;
+                                const horaFinMinutoAjustado = horaFinMinuto >= 60 ? 0 : horaFinMinuto;
+                                const horaFinStr = `${horaFinHora.toString().padStart(2, '0')}:${horaFinMinutoAjustado.toString().padStart(2, '0')}`;
+
+                                // Verificar si este slot está ocupado en alguna fecha del rango para este día de la semana
+                                let estaOcupado = false;
+                                let motivoOcupacion = null;
+
+                                // Iterar por todas las fechas en el rango que coincidan con este día de la semana
+                                const fechaActual = new Date(inicio);
+                                while (fechaActual <= fin) {
+                                    if (fechaActual.getDay() === diaSemana) {
+                                        // Crear fecha/hora del slot
+                                        const slotInicio = new Date(fechaActual);
+                                        slotInicio.setHours(hora, minuto, 0, 0);
+                                        const slotFin = new Date(fechaActual);
+                                        slotFin.setHours(horaFinHora, horaFinMinutoAjustado, 0, 0);
+
+                                        // Verificar si hay alguna reserva que se solape con este slot
+                                        const reservaConflicto = reservasEspacio.find(reserva => {
+                                            const reservaInicio = new Date(reserva.fechaInicio);
+                                            const reservaFin = new Date(reserva.fechaFin);
+                                            
+                                            // Verificar solapamiento
+                                            return (slotInicio < reservaFin && slotFin > reservaInicio);
+                                        });
+
+                                        if (reservaConflicto) {
+                                            estaOcupado = true;
+                                            motivoOcupacion = reservaConflicto.reservadoPara || 
+                                                (reservaConflicto.tipoReserva === 'taller' ? 'Taller' : 'Reserva');
+                                            break;
+                                        }
+                                    }
+                                    fechaActual.setDate(fechaActual.getDate() + 1);
+                                }
+
+                                slots.push({
+                                    hora: horaStr,
+                                    horaFin: horaFinStr,
+                                    disponible: !estaOcupado,
+                                    motivo: motivoOcupacion
+                                });
+                            }
+                        }
+
+                        return {
+                            dia: diaSemana,
+                            nombreDia: nombresDias[diaSemana],
+                            slots
+                        };
+                    });
+
+                    return {
+                        espacioId: espacio._id,
+                        espacioNombre: espacio.nombre,
+                        espacioDeporte: espacio.deporte,
+                        horarioApertura,
+                        horarioCierre,
+                        disponibilidadPorDia
+                    };
+                })
+            );
+
+            res.status(200).json({
+                success: true,
+                fechaInicio: inicio,
+                fechaFin: fin,
+                diasConsultados: diasSeleccionados,
+                espacios: espaciosConDisponibilidad
+            });
+
+        } catch (error) {
+            console.error('Error al consultar disponibilidad de espacios:', error);
+            res.status(500).json({
+                success: false,
+                message: "Error al consultar disponibilidad de espacios",
+                error: error.message
+            });
+        }
     }
 };
 

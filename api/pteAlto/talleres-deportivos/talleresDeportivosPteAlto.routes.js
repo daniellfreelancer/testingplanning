@@ -14,4 +14,7 @@ router.get('/obtener-sesiones/:tallerId', talleresDeportivosPteAltoController.ob
 router.post('/inscribir-sesion/:tallerId/:sesionId', talleresDeportivosPteAltoController.inscribirUsuarioASesion);
 router.delete('/desinscribir-sesion/:tallerId/:sesionId', talleresDeportivosPteAltoController.desinscribirUsuarioDeSesion);
 
+// Rutas para inscripcion y desinscripcion de talleres
+router.post('/inscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.inscribirseATaller);
+router.post('/desinscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.desinscribirseATaller);
 module.exports = router;
