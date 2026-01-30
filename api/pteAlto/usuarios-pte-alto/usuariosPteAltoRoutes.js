@@ -21,5 +21,5 @@ router.post("/crear-usuario-form-pte-alto", upload.single('certificadoDomicilio'
 router.get("/obtener-colaboradores", usuariosPteAltoController.obtenerUsuariosInternosPteAlto);
 router.put("/usuarios-pte-alto/:id/certificado-domicilio",upload.single("certificadoDomicilio"),usuariosPteAltoController.actualizarCertificadoDomicilioPteAlto);
 router.get("/obtener-colaboradores-pte-alto", usuariosPteAltoController.obtenerColaboradoresPteAlto);
-
+router.put("/cambiar-contrasena-usuario-pte-alto/:id", usuariosPteAltoController.cambiarContraseñaUsuarioPteAlto);
 module.exports = router;

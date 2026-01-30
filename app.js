@@ -91,7 +91,7 @@ const secciones = require('./routes/seccion.routes')
 const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
 const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
 const sedesDeportivasPteAlto = require('./api/pteAlto/sedes-deportivas/sedesDeportivasPteAlto.routes')
-
+const clubesPteAlto = require('./api/pteAlto/clubes-pte-alto/clubesPteAlto.routes')
 
 //Rutas para gestion de usuarios UCAD
 const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
@@ -256,7 +256,7 @@ app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
 app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
-
+app.use('/clubes-pte-alto', clubesPteAlto)
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
