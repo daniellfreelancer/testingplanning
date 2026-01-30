@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const usuariosComplejosController = require("./usuariosComplejosController");
 const upload = require('../../libs/docsStorage');
+const uploadPiscina = require('../../libs/piscinaDocsStorage'); // Middleware específico para Piscina Santiago (3 archivos)
 
 router.post("/crear-usuario", usuariosComplejosController.crearUsuarioComplejo); //tested
 router.put("/actualizar-usuario/:id", usuariosComplejosController.actualizarUsuarioComplejo); //tested
@@ -15,8 +16,8 @@ router.post("/asignar-alumnos-a-entrenador", usuariosComplejosController.asignar
 router.post("/desasignar-alumno-de-entrenador", usuariosComplejosController.desasignarAlumnoDeEntrenador); //tested
 
 
-// Usuarios de piscina
-router.post("/crear-usuario-piscina/:institucion", upload.fields([
+// Usuarios de piscina (usa uploadPiscina que permite hasta 3 archivos)
+router.post("/crear-usuario-piscina/:institucion", uploadPiscina.fields([
     { name: 'fotoCedulaFrontal', maxCount: 1 },
     { name: 'fotoCedulaReverso', maxCount: 1 },
     { name: 'firma', maxCount: 1 }
@@ -27,7 +28,7 @@ router.get("/obtener-todos-usuarios-piscina-tipo-plan-gym/:institucion", usuario
 router.get("/obtener-todos-usuarios-piscina-arrendatario/:institucion", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorArrendatario);
 router.get("/obtener-todos-usuarios-piscina-centro/:centroDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorCentroDeportivo);
 router.get("/obtener-todos-usuarios-piscina-espacio/:espacioDeportivo", usuariosComplejosController.obtenerTodosLosUsuariosComplejosPiscinaPorEspacioDeportivo);
-router.put("/actualizar-usuario-piscina/:id", upload.fields([
+router.put("/actualizar-usuario-piscina/:id", uploadPiscina.fields([
     { name: 'fotoCedulaFrontal', maxCount: 1 },
     { name: 'fotoCedulaReverso', maxCount: 1 }
 ]), usuariosComplejosController.actualizarUsuarioComplejoPiscina);
