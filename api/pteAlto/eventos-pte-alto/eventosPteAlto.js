@@ -11,10 +11,15 @@ const eventosPteAltoSchema = new mongoose.Schema({
     direccion: { type: String, required: false },
     capacidad: { type: Number, required: false },
     status: { type: Boolean, default: true },
+    destacado: { type: Boolean, default: false },
     creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     imgUrl: { type: String, required: false },
     variantes: [{ type: mongoose.Types.ObjectId, ref: 'eventosVariantesPteAlto' }],
-    
+
+    // Campo para eventos externos
+    linkExterno: { type: String, required: false },
+    esEventoExterno: { type: Boolean, default: false },
+
 },
 {
     timestamps: true
