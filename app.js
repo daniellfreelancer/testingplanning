@@ -91,7 +91,7 @@ const secciones = require('./routes/seccion.routes')
 const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
 const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
 const sedesDeportivasPteAlto = require('./api/pteAlto/sedes-deportivas/sedesDeportivasPteAlto.routes')
-
+const clubesPteAlto = require('./api/pteAlto/clubes-pte-alto/clubesPteAlto.routes')
 
 //Rutas para gestion de usuarios UCAD
 const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
@@ -115,8 +115,22 @@ app.use(cors());
 // app.use(express.urlencoded({ extended: false }));
 // app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())
+// Body parser solo para rutas que no son multipart/form-data
+app.use((req, res, next) => {
+  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    // Saltar body-parser para multipart/form-data, multer lo manejará
+    return next();
+  }
+  bodyParser.urlencoded({ extended: false, limit: '50mb' })(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    return next();
+  }
+  bodyParser.json({ limit: '50mb' })(req, res, next);
+});
+
 app.use('/public', express.static(`${__dirname}/storage/assets`))
 app.use(cookieParser());
 
@@ -147,7 +161,9 @@ app.use((req, res, next) => {
     '/td-pte-alto/actualizar-taller',
     '/noticias-pte-alto',
     '/noticias-pte-alto/actualizar-noticia',
-
+    '/eventos-pte-alto/crear-evento',
+    '/eventos-pte-alto/editar-evento',
+    '/albumes-pte-alto',
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
@@ -256,7 +272,7 @@ app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
 app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
-
+app.use('/clubes-pte-alto', clubesPteAlto)
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
@@ -288,11 +304,20 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
+  console.error('Error capturado por handler global:', err);
+
+  // Si es una solicitud API (JSON), devolver JSON
+  if (req.originalUrl.startsWith('/api') || req.originalUrl.includes('pte-alto') || req.originalUrl.includes('ucad')) {
+    return res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+
+  // Para otras rutas, renderizar página de error
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
   res.render('error');
 });

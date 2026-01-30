@@ -81,10 +81,10 @@ router.get('/:id', noticiaController.getNoticiaById);
 router.post('/', fileUploadMiddleware, noticiaController.createNoticia);
 
 /**
- * PUT /api/noticias-pte-alto/:id
+ * PUT /api/noticias-pte-alto/actualizar-noticia/:id
  * Actualizar noticia
  */
-router.put('actualizar-noticia/:id', fileUploadMiddleware, noticiaController.updateNoticia);
+router.put('/actualizar-noticia/:id', fileUploadMiddleware, noticiaController.updateNoticia);
 
 /**
  * PATCH /api/noticias-pte-alto/:id/toggle-destacada

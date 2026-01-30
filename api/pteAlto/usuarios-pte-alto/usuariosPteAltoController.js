@@ -172,7 +172,21 @@ const usuariosPteAltoController = {
   actualizarUsuarioPteAlto: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nombre, apellido, email, rut, rol, status } = req.body;
+      const { 
+        nombre, 
+        apellido, 
+        email, 
+        rut, 
+        rol, 
+        status,
+        fechaNacimiento,
+        sexo,
+        telefono,
+        direccion,
+        region,
+        comuna
+      } = req.body;
+      
       const updateData = {};
       if (nombre !== undefined) updateData.nombre = nombre;
       if (apellido !== undefined) updateData.apellido = apellido;
@@ -180,6 +194,12 @@ const usuariosPteAltoController = {
       if (rut !== undefined) updateData.rut = rut;
       if (rol !== undefined) updateData.rol = rol;
       if (status !== undefined) updateData.status = status;
+      if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento;
+      if (sexo !== undefined) updateData.sexo = sexo;
+      if (telefono !== undefined) updateData.telefono = telefono;
+      if (direccion !== undefined) updateData.direccion = direccion;
+      if (region !== undefined) updateData.region = region;
+      if (comuna !== undefined) updateData.comuna = comuna;
       
       const usuarioPteAlto = await UsuariosPteAlto.findByIdAndUpdate(
         id,
@@ -581,6 +601,54 @@ const usuariosPteAltoController = {
       console.log(error);
       res.status(500).json({
         message: "Error al obtener colaboradores PTE Alto",
+        error: error.message,
+      });
+    }
+  },
+  cambiarContraseñaUsuarioPteAlto: async (req, res) => {
+
+    /**
+     * el controlador debe recibir el id del usuario, la contraseña actual y la nueva contraseña
+     * el controlador debe validar si la contraseña actual es correcta
+     * el controlador debe actualizar la contraseña del usuario
+     * el controlador debe devolver un mensaje de éxito o error
+     */
+
+    try {
+      const { id } = req.params;
+      const { contrasenaActual, nuevaContrasena } = req.body;
+      
+      // Validar que se envíen los campos requeridos
+      if (!contrasenaActual || !nuevaContrasena) {
+        return res.status(400).json({ message: "La contraseña actual y la nueva contraseña son requeridas" });
+      }
+      
+      const usuarioPteAlto = await UsuariosPteAlto.findById(id);
+      if (!usuarioPteAlto) {
+        return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+      }
+
+      // validar si la contraseña actual es correcta
+      const isMatch = usuarioPteAlto.password.filter((userpassword) =>
+        bcryptjs.compareSync(contrasenaActual, userpassword)
+      );
+
+      if (isMatch.length === 0) {
+        return res.status(401).json({ message: "La contraseña actual es incorrecta" });
+      }
+
+      // Actualizar la contraseña
+      usuarioPteAlto.password = [bcryptjs.hashSync(nuevaContrasena, 10)];
+      await usuarioPteAlto.save();
+      
+      return res.status(200).json({
+        message: "Contraseña actualizada correctamente",
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al cambiar contraseña usuario PTE Alto",
         error: error.message,
       });
     }

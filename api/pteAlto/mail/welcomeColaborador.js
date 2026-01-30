@@ -130,8 +130,8 @@ const sendWelcomeColaboradorPuenteAlto = async (email, password, name) => {
                 <table class="content-table" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
                     <td class="header">
-                      <a href="https://vitalmoveglobal.com" target="_blank">
-                        <img class="Vitalmove" src="https://gestion.vitalmove.cl/static/media/logoVMDark.bfb629aa47764b494994.png" alt="VitalMove Logo">
+                      <a href="https://www.deportespuentealto.cl/" target="_blank">
+                        <img class="Vitalmove" src="https://deportespte.vitalmoveglobal.com/logos/ptealto.webp" alt="VitalMove Logo">
                       </a>
                     </td>
                   </tr>
