@@ -9,7 +9,13 @@ const storage = multer.memoryStorage({
       cb(null, `${file.fieldname}-${Date.now()}.${extension}`) // Usar la extensión original en el nombre del archivo
     }
   })
-  
-const uploadDocs = multer({storage})
+
+const uploadDocs = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB máximo
+    files: 1
+  }
+})
 
 module.exports = uploadDocs
