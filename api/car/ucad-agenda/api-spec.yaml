@@ -1,0 +1,434 @@
+openapi: 3.0.3
+info:
+  title: UCAD Agenda API
+  description: |
+    API para gestionar las agendas de profesionales (UCAD - Unidad de Citas y Agenda Deportiva).
+    Permite crear y actualizar agendas, consultar la agenda de un profesional y obtener
+    la disponibilidad de horarios en una fecha específica.
+  version: 1.0.0
+  contact:
+    name: VitalMove Backend
+
+servers:
+  - url: /ucad-agenda
+    description: Ruta base de la API de agenda UCAD
+
+tags:
+  - name: Agenda
+    description: Operaciones CRUD de agendas de profesionales
+  - name: Disponibilidad
+    description: Consulta de horarios disponibles
+
+paths:
+  /crear-agenda:
+    post:
+      tags:
+        - Agenda
+      summary: Crear agenda para un profesional
+      description: |
+        Crea una nueva agenda para un profesional. El profesional debe existir en el sistema
+        y tener rol `profesional`. No puede existir ya una agenda para ese profesional
+        (en ese caso usar actualizar-agenda).
+      operationId: crearAgenda
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearAgendaRequest'
+            examples:
+              ejemplo:
+                value:
+                  profesional: "507f1f77bcf86cd799439011"
+                  dias:
+                    - dia: lunes
+                      horarios: ["09:00", "09:30", "10:00", "10:30"]
+                      status: true
+                    - dia: martes
+                      horarios: ["09:00", "09:30", "10:00"]
+                      status: true
+                  horaInicio: "09:00"
+                  horaFin: "17:00"
+                  bloque: 30
+                  status: true
+      responses:
+        '201':
+          description: Agenda creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrearAgendaResponse'
+        '400':
+          description: Datos inválidos o ya existe agenda para el profesional
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '404':
+          description: Profesional no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+  /actualizar-agenda/{id}:
+    put:
+      tags:
+        - Agenda
+      summary: Actualizar agenda existente
+      description: |
+        Actualiza una agenda por su ID. Se pueden enviar solo los campos a modificar.
+        Si se cambia `bloque`, `horaInicio` o `horaFin` sin enviar `dias`, se regeneran
+        automáticamente los horarios de todos los días según el nuevo bloque.
+      operationId: actualizarAgenda
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la agenda (MongoDB ObjectId)
+          schema:
+            type: string
+            pattern: '^[a-fA-F0-9]{24}$'
+            example: "507f1f77bcf86cd799439012"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarAgendaRequest'
+      responses:
+        '200':
+          description: Agenda actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActualizarAgendaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '404':
+          description: Agenda no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+  /agenda-profesional/{profesionalId}:
+    get:
+      tags:
+        - Agenda
+      summary: Obtener agenda de un profesional
+      description: |
+        Devuelve la agenda configurada para un profesional por su ID.
+        Incluye datos poblados del profesional (nombre, apellido, email, especialidad).
+      operationId: obtenerAgendaProfesional
+      parameters:
+        - name: profesionalId
+          in: path
+          required: true
+          description: ID del profesional (MongoDB ObjectId)
+          schema:
+            type: string
+            pattern: '^[a-fA-F0-9]{24}$'
+            example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Agenda del profesional
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgendaProfesionalResponse'
+        '404':
+          description: No se encontró agenda para este profesional
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+  /disponibilidad/{profesionalId}/{fecha}:
+    get:
+      tags:
+        - Disponibilidad
+      summary: Obtener disponibilidad de horarios
+      description: |
+        Devuelve los horarios disponibles y ocupados de un profesional en una fecha
+        específica. La fecha debe estar en formato YYYY-MM-DD. Excluye citas canceladas.
+      operationId: obtenerDisponibilidad
+      parameters:
+        - name: profesionalId
+          in: path
+          required: true
+          description: ID del profesional (MongoDB ObjectId)
+          schema:
+            type: string
+            pattern: '^[a-fA-F0-9]{24}$'
+            example: "507f1f77bcf86cd799439011"
+        - name: fecha
+          in: path
+          required: true
+          description: Fecha en formato YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+            example: "2025-02-15"
+      responses:
+        '200':
+          description: Disponibilidad del profesional en la fecha
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisponibilidadResponse'
+        '400':
+          description: Fecha inválida o profesional no atiende ese día
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '404':
+          description: Profesional no encontrado o sin agenda configurada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+components:
+  schemas:
+    # --- Request bodies ---
+    CrearAgendaRequest:
+      type: object
+      required:
+        - profesional
+        - dias
+        - horaInicio
+        - horaFin
+        - bloque
+      properties:
+        profesional:
+          type: string
+          description: ID del profesional (ObjectId). Debe existir y tener rol 'profesional'
+          example: "507f1f77bcf86cd799439011"
+        dias:
+          type: array
+          minItems: 1
+          description: "Array de días con sus horarios. Días válidos: lunes, martes, miércoles, jueves, viernes, sábado, domingo"
+          items:
+            $ref: '#/components/schemas/DiaAgenda'
+        horaInicio:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          description: Hora de inicio del rango (HH:mm). Debe ser menor que horaFin
+          example: "09:00"
+        horaFin:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          description: Hora de fin del rango (HH:mm)
+          example: "17:00"
+        bloque:
+          type: number
+          minimum: 1
+          maximum: 1440
+          description: Duración de cada bloque en minutos. Los horarios deben estar separados por este valor
+          example: 30
+        status:
+          type: boolean
+          default: true
+          description: Si la agenda está activa
+
+    DiaAgenda:
+      type: object
+      required:
+        - dia
+        - horarios
+        - status
+      properties:
+        dia:
+          type: string
+          enum: [lunes, martes, miércoles, miercoles, jueves, viernes, sábado, sabado, domingo]
+          description: Día de la semana (se acepta con o sin tilde)
+        horarios:
+          type: array
+          items:
+            type: string
+            pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          description: Array de horarios (HH:mm) dentro del rango horaInicio-horaFin, separados por 'bloque' minutos
+        status:
+          type: boolean
+          description: Si el día está activo en la agenda
+
+    ActualizarAgendaRequest:
+      type: object
+      description: Todos los campos son opcionales. Solo se actualizan los enviados.
+      properties:
+        dias:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/DiaAgenda'
+        horaInicio:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: "09:00"
+        horaFin:
+          type: string
+          pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+          example: "18:00"
+        bloque:
+          type: number
+          minimum: 1
+          maximum: 1440
+          example: 60
+        status:
+          type: boolean
+
+    # --- Response bodies ---
+    CrearAgendaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Agenda creada exitosamente"
+        agenda:
+          $ref: '#/components/schemas/Agenda'
+
+    ActualizarAgendaResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Agenda actualizada exitosamente"
+        agenda:
+          $ref: '#/components/schemas/Agenda'
+
+    AgendaProfesionalResponse:
+      type: object
+      properties:
+        agenda:
+          $ref: '#/components/schemas/AgendaConProfesional'
+
+    DisponibilidadResponse:
+      type: object
+      properties:
+        profesional:
+          type: object
+          properties:
+            id:
+              type: string
+              description: ID del profesional
+            nombre:
+              type: string
+              description: Nombre completo (nombre + apellido)
+            especialidad:
+              type: string
+        fecha:
+          type: string
+          format: date
+          example: "2025-02-15"
+        diaSemana:
+          type: string
+          example: "sábado"
+        horariosDisponibles:
+          type: array
+          items:
+            type: string
+          description: Lista de horarios (HH:mm) disponibles para agendar
+        horariosOcupados:
+          type: array
+          items:
+            type: string
+          description: Lista de horarios ya ocupados por citas
+        totalDisponibles:
+          type: integer
+        totalOcupados:
+          type: integer
+
+    # --- Modelo Agenda (MongoDB) ---
+    Agenda:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: ID de la agenda (ObjectId)
+        profesional:
+          type: string
+          description: ID del profesional (ObjectId)
+        dias:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiaAgenda'
+        horaInicio:
+          type: string
+        horaFin:
+          type: string
+        bloque:
+          type: number
+        status:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AgendaConProfesional:
+      allOf:
+        - $ref: '#/components/schemas/Agenda'
+        - type: object
+          properties:
+            profesional:
+              type: object
+              description: Objeto poblado del usuario profesional
+              properties:
+                _id:
+                  type: string
+                nombre:
+                  type: string
+                apellido:
+                  type: string
+                email:
+                  type: string
+                especialidad:
+                  type: string
+
+    # --- Errores ---
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje de error descriptivo
+
+    ErrorDetail:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+          description: Detalle del error (p. ej. en desarrollo)

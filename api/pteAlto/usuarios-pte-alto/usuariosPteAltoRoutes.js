@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const usuariosPteAltoController = require("./usuariosPteAltoController");
-const upload = require('../../../libs/docsStorage');
+const upload = require('../../../libs/pteAltoDocStorage');
 
 router.post("/crear-usuario", usuariosPteAltoController.crearUsuarioPteAlto);
 router.post("/crear-usuario-externo", upload.fields([
