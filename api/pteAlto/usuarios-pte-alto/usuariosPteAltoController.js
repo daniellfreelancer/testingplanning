@@ -117,9 +117,22 @@ const usuariosPteAltoController = {
       institucionDoc.usuariosPteAlto.push(nuevoUsuarioPteAlto._id);
       await institucionDoc.save();
 
-      if (req.file.fotoCedulaFrontal) {
+      // if (req.file.fotoCedulaFrontal) {
+      //   try {
+      //     const key = await uploadMulterFile(req.file.fotoCedulaFrontal);
+      //     nuevoUsuarioPteAlto.fotoCedulaFrontal = key;
+      //   } catch (err) {
+      //     console.log("Error subiendo foto de cédula frontal a S3:", err);
+      //     return res.status(500).json({
+      //       message: "Error al subir la foto de la cédula frontal",
+      //       error: err.message,
+      //     });
+      //   }
+      // }
+
+      if (req.files && req.files["fotoCedulaFrontal"]) {
         try {
-          const key = await uploadMulterFile(req.file.fotoCedulaFrontal);
+          const key = await uploadMulterFile(req.files["fotoCedulaFrontal"][0]);
           nuevoUsuarioPteAlto.fotoCedulaFrontal = key;
         } catch (err) {
           console.log("Error subiendo foto de cédula frontal a S3:", err);
@@ -132,13 +145,25 @@ const usuariosPteAltoController = {
 
 
       // ⬇️ Subida de archivo usando helper S3 central
-      if (req.file.certificadoDomicilio) {
+      // if (req.file.certificadoDomicilio) {
+      //   try {
+      //     const key = await uploadMulterFile(req.file.certificadoDomicilio);
+      //     // mantenemos la lógica anterior: guardar solo el key (no URL completa)
+      //     nuevoUsuarioPteAlto.certificadoDomicilio = key;
+      //   } catch (err) {
+      //     console.log("Error subiendo certificado a S3:", err);
+      //     return res.status(500).json({
+      //       message: "Error al subir el certificado de domicilio",
+      //       error: err.message,
+      //     });
+      //   }
+      // }
+      if (req.files && req.files["certificadoDomicilio"]) {
         try {
-          const key = await uploadMulterFile(req.file.certificadoDomicilio);
-          // mantenemos la lógica anterior: guardar solo el key (no URL completa)
+          const key = await uploadMulterFile(req.files["certificadoDomicilio"][0]);
           nuevoUsuarioPteAlto.certificadoDomicilio = key;
         } catch (err) {
-          console.log("Error subiendo certificado a S3:", err);
+          console.log("Error subiendo certificado de domicilio a S3:", err);
           return res.status(500).json({
             message: "Error al subir el certificado de domicilio",
             error: err.message,
@@ -156,7 +181,7 @@ const usuariosPteAltoController = {
       // );
 
       res.status(201).json({
-        message: "Usuario PTE Alto creado correctamente",
+        message: "Cuenta creada correctamente",
         response: nuevoUsuarioPteAlto,
         password,
       });
