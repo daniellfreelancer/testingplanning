@@ -164,6 +164,9 @@ app.use((req, res, next) => {
     '/eventos-pte-alto/crear-evento',
     '/eventos-pte-alto/editar-evento',
     '/albumes-pte-alto',
+    '/pte-alto/crear-usuario-externo',
+    
+
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
