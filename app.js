@@ -156,7 +156,7 @@ app.use((req, res, next) => {
     '/ed-pte-alto/crear-espacio',
     '/ed-pte-alto/actualizar-espacio',
     '/cd-pte-alto/crear-complejo-deportivo',
-   // '/cd-pte-alto/actualizar-complejo-deportivo',
+    '/cd-pte-alto/actualizar-complejo-deportivo',
     '/td-pte-alto/crear-taller',
     '/td-pte-alto/actualizar-taller',
     '/noticias-pte-alto',
@@ -165,6 +165,7 @@ app.use((req, res, next) => {
     '/eventos-pte-alto/editar-evento',
     '/albumes-pte-alto',
     '/pte-alto/crear-usuario-externo',
+    
     
 
   ];
@@ -274,8 +275,7 @@ app.use('/nav-items', navItems)
 app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
-app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
-app.use('/clubes-pte-alto', clubesPteAlto)
+
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
@@ -298,7 +298,8 @@ app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
 app.use('/email-service', emailService)
 app.use('/api/notas-usuarios', notasUsuarios) // notas de usuarios
-
+app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
+app.use('/clubes-pte-alto', clubesPteAlto)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -793,6 +793,21 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
       if (typeof updateData.horaFin === 'string') {
         updateData.horaFin = JSON.parse(updateData.horaFin);
       }
+      // Parsear profesores y coordinadores si vienen como strings JSON
+      if (typeof updateData.profesores === 'string') {
+        try {
+          updateData.profesores = JSON.parse(updateData.profesores);
+        } catch {
+          updateData.profesores = [];
+        }
+      }
+      if (typeof updateData.coordinadores === 'string') {
+        try {
+          updateData.coordinadores = JSON.parse(updateData.coordinadores);
+        } catch {
+          updateData.coordinadores = [];
+        }
+      }
 
       // Parsear variantes si vienen como string (NUEVO SISTEMA)
       if (typeof updateData.variantes === 'string') {

@@ -5,6 +5,7 @@ const reservasPteAltoSchema = new mongoose.Schema({
     taller: { type: mongoose.Types.ObjectId, ref: 'talleresDeportivosPteAlto' },
     espacioDeportivo: { type: mongoose.Types.ObjectId, ref: 'espaciosDeportivosPteAlto' },
     sede: { type: mongoose.Types.ObjectId, ref: 'sedesDeportivasPteAlto' },
+    club: { type: mongoose.Types.ObjectId, ref: 'clubesPteAlto' },
     status: { type: Boolean },
     dia: { type: String },
     hora: { type: String },
@@ -19,7 +20,7 @@ const reservasPteAltoSchema = new mongoose.Schema({
     reservadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }, // Usuario admin que crea la reserva
     reservadoPara: { type: String }, // Descripción o nombre de para quién es la reserva (tercero, convenio, cliente, etc.)
     notas: { type: String },
-    canceladoPor: { type: String, enum: ['USER', 'ADMIN', 'SYSTEM'] },
+    canceladoPor: { type: String},
 }, {
     timestamps: true,
 

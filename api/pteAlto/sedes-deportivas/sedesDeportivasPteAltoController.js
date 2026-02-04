@@ -98,8 +98,59 @@ const sedesDeportivasPteAltoController = {
     actualizarSedeDeportivaPteAltoPorId: async (req, res) => {
         try {
             const { id } = req.params;
-            const updateData = req.body;
+            const body = req.body;
+
+            // Parsear el array de días si viene como string JSON
+            const dias = Array.isArray(body.dias)
+                ? body.dias
+                : (typeof body.dias === 'string' ? (() => { try { const p = JSON.parse(body.dias); return Array.isArray(p) ? p : []; } catch { return []; } })() : []);
+
+            const updateData = {
+                nombre: body.nombre,
+                descripcion: body.descripcion,
+                direccion: body.direccion,
+                ciudad: body.ciudad,
+                comuna: body.comuna,
+                region: body.region,
+                status: body.status,
+                dias,
+                horarioApertura: body.horarioApertura,
+                horarioCierre: body.horarioCierre,
+            };
+
+            // Eliminar campos undefined para no sobrescribir con valores vacíos
+            Object.keys(updateData).forEach(key => {
+                if (updateData[key] === undefined) {
+                    delete updateData[key];
+                }
+            });
+
             const sedeDeportivaPteAlto = await SedesDeportivasPteAlto.findByIdAndUpdate(id, updateData, { new: true });
+
+            if (!sedeDeportivaPteAlto) {
+                return res.status(404).json({
+                    message: 'Sede deportiva no encontrada',
+                    success: false,
+                });
+            }
+
+            // Subir imagen si se proporciona una nueva
+            if (req.file) {
+                try {
+                    const key = await uploadMulterFile(req.file);
+                    const fileUrl = `${cloudfrontUrl}/${key}`;
+                    sedeDeportivaPteAlto.imgUrl = fileUrl;
+                    await sedeDeportivaPteAlto.save(); // Guardar la imagen actualizada
+                } catch (uploadErr) {
+                    console.log('Error al subir imagen:', uploadErr);
+                    return res.status(500).json({
+                        message: 'Error al subir la imagen de la sede deportiva',
+                        error: uploadErr.message,
+                        success: false,
+                    });
+                }
+            }
+
             res.status(200).json({
                 message: 'Sede deportiva actualizada correctamente',
                 response: sedeDeportivaPteAlto,
