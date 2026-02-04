@@ -54,6 +54,15 @@ const citasUcadSchema = new mongoose.Schema({
   },
   motivoDerivacion:{
     type: String,
+  },
+  inicioAtencion:{
+    type: Date,
+  },
+  finAtencion:{
+    type: Date,
+  },
+  tiempoAtencion:{
+    type: Number,
   }
 }, {
   timestamps: true,
