@@ -735,8 +735,49 @@ const citasUcadController = {
   },
 
   /**
+   * Iniciar atención (profesional)
+   * PUT /iniciar-atencion/:citaId
+   * Setea inicioAtencion = ahora. Estado debe ser 'confirmada'.
+   */
+  iniciarAtencion: async (req, res) => {
+    try {
+      const { citaId } = req.params;
+
+      const cita = await CitasUcad.findById(citaId);
+      if (!cita) {
+        return res.status(404).json({ message: "Cita no encontrada" });
+      }
+
+      if (cita.estado !== 'confirmada') {
+        return res.status(400).json({
+          message: `La cita debe estar confirmada para iniciar atención. Estado actual: ${cita.estado}`
+        });
+      }
+
+      // Si ya fue iniciada no la pisamos (idempotente)
+      if (!cita.inicioAtencion) {
+        cita.inicioAtencion = new Date();
+        await cita.save();
+      }
+
+      await cita.populate('deportista', 'nombre apellido email imgUrl');
+      await cita.populate('profesional', 'nombre apellido email especialidad');
+
+      res.status(200).json({
+        message: "Atención iniciada",
+        cita
+      });
+    } catch (error) {
+      console.error('Error al iniciar atención:', error);
+      res.status(500).json({ message: "Error al iniciar atención", error: error.message });
+    }
+  },
+
+  /**
    * Completar cita (profesional)
    * PUT /completar-cita/:citaId
+   * Body: { notas }
+   * Setea finAtencion = ahora, calcula tiempoAtencion en minutos.
    */
   completarCita: async (req, res) => {
     try {
@@ -756,8 +797,17 @@ const citasUcadController = {
         });
       }
 
+      const ahora = new Date();
       cita.estado = 'completada';
-      cita.notas = notas || '';
+      cita.anotaciones = notas || '';
+      cita.finAtencion = ahora;
+
+      // Si ya tenía inicioAtencion, calcular tiempo real en minutos
+      if (cita.inicioAtencion) {
+        const diferencia = (ahora.getTime() - cita.inicioAtencion.getTime()) / 1000 / 60;
+        cita.tiempoAtencion = Math.round(diferencia);
+      }
+
       await cita.save();
 
       await cita.populate('deportista', 'nombre apellido email');

@@ -13,7 +13,8 @@ router.get('/', seccionController.getAllSecciones);
 router.get('/:id', seccionController.getSeccionById);
 router.post('/', seccionController.createSeccion);
 router.put('/:id', seccionController.updateSeccion);
-router.delete('/:id', seccionController.deleteSeccion);
+router.delete('/:id', seccionController.deleteSeccion); // Soft delete (desactivar)
+router.delete('/:id/permanente', seccionController.deleteSeccionPermanente); // Hard delete
 router.post('/reordenar', seccionController.reordenarSecciones);
 
 // Rutas para archivos
