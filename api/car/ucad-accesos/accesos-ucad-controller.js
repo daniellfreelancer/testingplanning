@@ -37,7 +37,7 @@ const calcularFechasPorPeriodo = (periodo, fechaInicio = null, fechaFin = null) 
 
     case "mes":
       inicio.setDate(1);
-      inicio.setHours(0, 0, 0, 0);
+      inicio.setHours(0, 0, 0, 0);x|
       fin.setMonth(ahora.getMonth() + 1, 0);
       fin.setHours(23, 59, 59, 999);
       break;

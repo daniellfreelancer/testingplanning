@@ -182,8 +182,7 @@ exports.createSeccion = async (req, res) => {
     }
 
     const nuevaSeccion = new Seccion(seccionData);
-    await nuevaSeccion.save();
-
+    await nuevaSeccion.save(); 
     res.status(201).json({
       success: true,
       message: 'Sección creada exitosamente',
@@ -238,7 +237,7 @@ exports.updateSeccion = async (req, res) => {
   }
 };
 
-// Eliminar sección (soft delete)
+// Desactivar sección (soft delete)
 exports.deleteSeccion = async (req, res) => {
   try {
     const { id } = req.params;
@@ -248,7 +247,7 @@ exports.deleteSeccion = async (req, res) => {
     if (subsecciones.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'No se puede eliminar una sección que tiene subsecciones'
+        message: 'No se puede desactivar una sección que tiene subsecciones'
       });
     }
 
@@ -267,10 +266,61 @@ exports.deleteSeccion = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Sección eliminada exitosamente'
+      message: 'Sección desactivada exitosamente'
     });
   } catch (error) {
-    console.error('Error al eliminar sección:', error);
+    console.error('Error al desactivar sección:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al desactivar sección',
+      error: error.message
+    });
+  }
+};
+
+// Eliminar sección permanentemente
+exports.deleteSeccionPermanente = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar si hay subsecciones
+    const subsecciones = await Seccion.find({ parentSeccion: id });
+    if (subsecciones.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar una sección que tiene subsecciones'
+      });
+    }
+
+    const seccion = await Seccion.findById(id);
+    if (!seccion) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sección no encontrada'
+      });
+    }
+
+    // Eliminar imagen destacada de S3 si existe
+    if (seccion.imagenDestacada?.key) {
+      await deleteFromS3(seccion.imagenDestacada.key);
+    }
+
+    // Eliminar archivos de S3 si existen
+    for (const archivo of seccion.archivos) {
+      if (archivo.key) {
+        await deleteFromS3(archivo.key);
+      }
+    }
+
+    // Eliminar de la base de datos
+    await Seccion.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Sección eliminada permanentemente'
+    });
+  } catch (error) {
+    console.error('Error al eliminar sección permanentemente:', error);
     res.status(500).json({
       success: false,
       message: 'Error al eliminar sección',

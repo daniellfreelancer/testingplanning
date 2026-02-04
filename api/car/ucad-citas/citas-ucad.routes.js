@@ -32,7 +32,5 @@ router.put("/completar-cita/:citaId", citasUcadController.completarCita);
 // Obtener horarios disponibles para agendar
 router.get("/horarios-disponibles/:profesionalId/:fecha", citasUcadController.obtenerHorariosDisponibles);
 
-// Obtener todas las citas
-router.get("/todas-las-citas", citasUcadController.obtenerTodasLasCitas);
 module.exports = router;
 

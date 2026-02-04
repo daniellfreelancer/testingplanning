@@ -630,6 +630,7 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
       const usuario = await UsuariosUcad.findById(_id);
 
       let usuarioCompleto = {
+        _id: usuario._id,
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         email: usuario.email,
@@ -643,7 +644,8 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         direccion: usuario.direccion,
         comuna: usuario.comuna,
         region: usuario.region,
-
+        especialidad: usuario.especialidad,
+        createdAt: usuario.createdAt,
       }
       res.status(200).json({
         message: "Usuario encontrado correctamente",
