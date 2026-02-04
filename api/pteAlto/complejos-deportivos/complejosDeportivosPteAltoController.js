@@ -123,6 +123,7 @@ const complejosDeportivosPteAltoController = {
                     const key = await uploadMulterFile(req.file);
                     const fileUrl = `${cloudfrontUrl}/${key}`;
                     complejoDeportivoPteAlto.imgUrl = fileUrl;
+                    console.log(fileUrl);
                 } catch (error) {
                     console.log(error);
                 }
