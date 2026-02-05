@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 
 const clubesPteAltoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
+    rut: { type: String, required: true },
     imgUrl: { type: String, },
     direccion: { type: String, required: true },
     telefono: { type: String, required: true },
@@ -20,9 +21,9 @@ const clubesPteAltoSchema = new mongoose.Schema({
     creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     responsable:[{type: Object}], //array de objetos con los datos del responsable del club
     contacto:[{type: Object}], //array de objetos con los datos del contacto del club
-    documentos:[{type: Object}], //array de objetos con los datos de los documentos del club
-    certificados:[{type: Object}], //array de objetos con los datos de los certificados del club
-    certificados:[{type: Object}], //array de objetos con los datos de los certificados del club
+    documento:{type: String}, //url del documento del club (pdf)
+    notas:{type: String}, //notas del club
+
 });
 
 const ClubesPteAlto = mongoose.model('clubesPteAlto', clubesPteAltoSchema);
