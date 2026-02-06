@@ -437,15 +437,19 @@ exports.deleteImagen = async (req, res) => {
       });
     }
 
+    const imagenUrlEliminada = imagen.url;
+
     // Eliminar de S3
     await deleteFile(imagen.key);
 
-    // Eliminar del array
-    imagen.remove();
+    // Eliminar del array (Mongoose 6+ no tiene subdocument.remove(); usar pull)
+    album.imagenes.pull(imagenId);
 
-    // Actualizar imagen de portada si era la primera
-    if (album.imagenPortada === imagen.url && album.imagenes.length > 0) {
+    // Actualizar imagen de portada si era la que estaba como portada
+    if (album.imagenPortada === imagenUrlEliminada && album.imagenes.length > 0) {
       album.imagenPortada = album.imagenes[0].url;
+    } else if (album.imagenes.length === 0) {
+      album.imagenPortada = undefined;
     }
 
     await album.save();
