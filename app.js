@@ -163,7 +163,6 @@ app.use((req, res, next) => {
     '/noticias-pte-alto/actualizar-noticia',
     '/eventos-pte-alto/crear-evento',
     '/eventos-pte-alto/editar-evento',
-    '/albumes-pte-alto',
     '/pte-alto/crear-usuario-externo',
     '/clubes-pte-alto/crear-club-pte-alto',
     '/clubes-pte-alto/actualizar-club-pte-alto',
