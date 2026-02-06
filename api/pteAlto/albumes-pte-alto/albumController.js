@@ -345,6 +345,7 @@ exports.reordenarAlbumes = async (req, res) => {
 exports.uploadImagenes = async (req, res) => {
   try {
     const { id } = req.params;
+    const body = req.body != null ? req.body : {};
 
     if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).json({
@@ -370,6 +371,7 @@ exports.uploadImagenes = async (req, res) => {
     // Carpeta específica para este álbum
     const carpeta = album.getCarpetaS3();
 
+    const descripcionImagen = typeof body.descripcion === 'string' ? body.descripcion : '';
     const imagenesSubidas = [];
     const files = Array.isArray(req.files.imagenes)
       ? req.files.imagenes
@@ -377,7 +379,7 @@ exports.uploadImagenes = async (req, res) => {
 
     for (const file of files) {
       // Validar que sea imagen
-      if (!file.mimetype.startsWith('image/')) {
+      if (!file || !file.mimetype || !file.mimetype.startsWith('image/')) {
         continue;
       }
 
@@ -387,8 +389,8 @@ exports.uploadImagenes = async (req, res) => {
       const imagenData = {
         url: result.url,
         key: result.key,
-        nombre: file.name,
-        descripcion: req.body.descripcion || '',
+        nombre: file.name || '',
+        descripcion: descripcionImagen,
         orden: album.imagenes.length + imagenesSubidas.length,
         tamaño: file.size
       };
