@@ -352,6 +352,12 @@ exports.uploadImagenes = async (req, res) => {
         message: 'No se han proporcionado imágenes'
       });
     }
+    if (!req.files.imagenes) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe enviar los archivos en el campo "imagenes"'
+      });
+    }
 
     const album = await Album.findById(id);
     if (!album) {
