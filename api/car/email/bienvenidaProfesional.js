@@ -70,6 +70,19 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
             .content-table { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
             .header { padding: 30px 20px; text-align: center; }
+            .header-logos {
+              display: flex;
+              flex-wrap: nowrap;
+              align-items: center;
+              justify-content: center;
+              gap: 24px;
+            }
+            .header-logos img {
+              height: 96px;
+              width: auto;
+              max-width: 280px;
+              object-fit: contain;
+            }
 
             .body-content { padding: 20px 40px 40px 40px; text-align: center; color: #333333; }
             .welcome-title { font-size: 28px; font-weight: 700; color: #1a1a1a; margin-bottom: 20px; line-height: 1.2; }
@@ -106,17 +119,21 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
         <body style="margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Montserrat', sans-serif;">
           <center class="email-wrapper">
             <table class="content-table" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0">
-              <tr>
+             
+            <tr>
                 <td class="header">
-                  <a href="https://vitalmoveglobal.com" target="_blank">
-                    <img class="Vitalmove" src="https://gestion.vitalmove.cl/static/media/logoVMDark.bfb629aa47764b494994.png" alt="VitalMove Logo">
-                  </a>
+                  <div class="header-logos">
+                    <a href="https://vitalmoveglobal.com" target="_blank" style="display: flex; align-items: center;">
+                      <img class="Vitalmove" src="https://gestion.vitalmove.cl/static/media/logoVMDark.bfb629aa47764b494994.png" alt="VitalMove Logo">
+                    </a>
+                    <img class="Vitalmove" src="https://ucad.vitalmoveglobal.com/logos/carLogo.png" alt="UCAD Logo">
+                  </div>
                 </td>
               </tr>
 
               <tr>
                 <td class="body-content">
-                  <p class="welcome-title">¡Bienvenido/a! Acceso Profesional</p>
+                  <p class="welcome-title">¡Bienvenido/a!</p>
 
                   <p class="greeting-text">
                     Hola <span style="font-weight: 600;">${safeName}</span>,
@@ -151,22 +168,8 @@ const sendWelcomeProfesionalMail = async (email, password, name, rol) => {
               <tr>
                 <td>
                   <p style="margin: 0; padding: 20px;">
-                    Visítanos en <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a>
+                   Powered by <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a>
                   </p>
-                  <p style="margin: 0;">© 2025 VitalMove. Todos los derechos reservados.</p>
-                </td>
-              </tr>
-               <tr>
-                <td class="app-download-section">
-                  <p class="app-download-title">Descarga la app de VM UCAD en tu dispositivo:</p>
-                  <div class="app-badges-wrapper">
-                    <a href="https://apps.apple.com" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Available_on_the_App_Store_%28black%29.png" alt="Descargar en App Store">
-                    </a>
-                 <a href="https://play.google.com/store/apps/details?id=com.vitalmovecar&pcampaignid=web_share" class="app-badge-link" target="_blank">
-                      <img class="app-badge-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Google_Play_logo.png" alt="Descargar en Google Play">
-                    </a>
-                  </div>
                 </td>
               </tr>
             </table>

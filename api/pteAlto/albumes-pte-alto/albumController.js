@@ -345,11 +345,18 @@ exports.reordenarAlbumes = async (req, res) => {
 exports.uploadImagenes = async (req, res) => {
   try {
     const { id } = req.params;
+    const body = req.body != null ? req.body : {};
 
     if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No se han proporcionado imágenes'
+      });
+    }
+    if (!req.files.imagenes) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe enviar los archivos en el campo "imagenes"'
       });
     }
 
@@ -364,6 +371,7 @@ exports.uploadImagenes = async (req, res) => {
     // Carpeta específica para este álbum
     const carpeta = album.getCarpetaS3();
 
+    const descripcionImagen = typeof body.descripcion === 'string' ? body.descripcion : '';
     const imagenesSubidas = [];
     const files = Array.isArray(req.files.imagenes)
       ? req.files.imagenes
@@ -371,7 +379,7 @@ exports.uploadImagenes = async (req, res) => {
 
     for (const file of files) {
       // Validar que sea imagen
-      if (!file.mimetype.startsWith('image/')) {
+      if (!file || !file.mimetype || !file.mimetype.startsWith('image/')) {
         continue;
       }
 
@@ -381,8 +389,8 @@ exports.uploadImagenes = async (req, res) => {
       const imagenData = {
         url: result.url,
         key: result.key,
-        nombre: file.name,
-        descripcion: req.body.descripcion || '',
+        nombre: file.name || '',
+        descripcion: descripcionImagen,
         orden: album.imagenes.length + imagenesSubidas.length,
         tamaño: file.size
       };
@@ -437,15 +445,19 @@ exports.deleteImagen = async (req, res) => {
       });
     }
 
+    const imagenUrlEliminada = imagen.url;
+
     // Eliminar de S3
     await deleteFile(imagen.key);
 
-    // Eliminar del array
-    imagen.remove();
+    // Eliminar del array (Mongoose 6+ no tiene subdocument.remove(); usar pull)
+    album.imagenes.pull(imagenId);
 
-    // Actualizar imagen de portada si era la primera
-    if (album.imagenPortada === imagen.url && album.imagenes.length > 0) {
+    // Actualizar imagen de portada si era la que estaba como portada
+    if (album.imagenPortada === imagenUrlEliminada && album.imagenes.length > 0) {
       album.imagenPortada = album.imagenes[0].url;
+    } else if (album.imagenes.length === 0) {
+      album.imagenPortada = undefined;
     }
 
     await album.save();
