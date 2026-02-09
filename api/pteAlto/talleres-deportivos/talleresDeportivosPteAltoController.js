@@ -540,16 +540,16 @@ const queryTalleresPopulate = [
   },
   {
     path: 'profesores',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
 
   },
   {
     path: 'coordinadores',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
   },
   {
     path:'usuarios',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
   },
   {
     path:'creadoPor',
