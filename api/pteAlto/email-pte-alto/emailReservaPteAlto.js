@@ -11,20 +11,14 @@ const {
     GOOGLE_ACCESS,
 } = process.env;
 
+const { formatForDisplay } = require("../../../utils/dateUtils");
+
 /**
- * Formatea una fecha a formato legible en español
+ * Formatea una fecha a formato legible (DD/MM/YYYY HH:mm) de forma consistente
  */
 const formatearFecha = (fecha) => {
     if (!fecha) return "No especificada";
-    const fechaObj = new Date(fecha);
-    const opciones = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return fechaObj.toLocaleString('es-CL', opciones);
+    return formatForDisplay(fecha, true);
 };
 
 /**

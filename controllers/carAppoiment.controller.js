@@ -1,4 +1,5 @@
 const Appointment = require("../models/carAppoiment");
+const { getStartOfDayUTC, getEndOfDayUTC } = require("../utils/dateUtils");
 
 const appointmentController = {
   createAppointment: async (req, res) => {
@@ -25,24 +26,23 @@ const appointmentController = {
   getAvailableDates: async (req, res) => {
     const { evaluationType, date } = req.params;
     try {
-        // Convertir la fecha recibida a un objeto Date
-        const targetDate = new Date(date);
-    
-        // Obtener el inicio y el final del día
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
-    
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
-    
+        // Inicio y fin del día en UTC (consistente)
+        let startOfDay, endOfDay;
+        try {
+          startOfDay = getStartOfDayUTC(date);
+          endOfDay = getEndOfDayUTC(date);
+        } catch (err) {
+          return res.status(400).json({ message: 'Fecha inválida' });
+        }
+
         // Buscar las citas agendadas para el tipo de evaluación y la fecha específica
         const appointments = await Appointment.find({
           evaluationType,
           date: {
-            $gte: startOfDay, // Mayor o igual al inicio del día
-            $lte: endOfDay,   // Menor o igual al final del día
+            $gte: startOfDay,
+            $lte: endOfDay,
           },
-        }).select('date evaluationType'); // Seleccionar solo el campo 'time'
+        }).select('date evaluationType');
     
         // Extraer las horas ocupadas
         const occupiedTimes = appointments.map(appointment => [appointment.date, appointment.evaluationType]);
