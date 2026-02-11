@@ -15,17 +15,11 @@ const {
   CITA_QR_BASE_URL, // ej: https://api.vitalmoveglobal.com/citas/validar-cita
 } = process.env;
 
+const { formatForDisplay } = require("../../../utils/dateUtils");
+
 const formatearFecha = (fecha) => {
   if (!fecha) return "No especificada";
-  const fechaObj = new Date(fecha);
-  const opciones = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return fechaObj.toLocaleString("es-CL", opciones);
+  return formatForDisplay(fecha, true);
 };
 
 const generarQRCode = async (texto) => {
