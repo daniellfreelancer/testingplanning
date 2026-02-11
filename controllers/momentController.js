@@ -2,6 +2,7 @@ const Moments = require('../models/moments');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const { nowUTC } = require('../utils/dateUtils');
 
 // usamos el helper centralizado
 const { s3Client, uploadMulterFile } = require('../utils/s3Client');
@@ -103,9 +104,10 @@ const momentscontroller = {
 
       await newMoment.save();
 
-      // Buscar momentos del usuario creados hace 7 días o más y eliminarlos
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      // Buscar momentos del usuario creados hace 7 días o más y eliminarlos (UTC consistente)
+      const now = nowUTC();
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
 
       const oldMoments = await Moments.find({
         user,
