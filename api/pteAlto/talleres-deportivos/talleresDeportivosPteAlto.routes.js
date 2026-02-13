@@ -17,4 +17,5 @@ router.delete('/desinscribir-sesion/:tallerId/:sesionId', talleresDeportivosPteA
 // Rutas para inscripcion y desinscripcion de talleres
 router.post('/inscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.inscribirseATaller);
 router.post('/desinscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.desinscribirseATaller);
+router.post('/reactivar-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.reactivarEnTaller);
 module.exports = router;
