@@ -11,14 +11,25 @@ const {
     GOOGLE_ACCESS,
 } = process.env;
 
-const { formatForDisplay } = require("../../../utils/dateUtils");
-
 /**
- * Formatea una fecha a formato legible (DD/MM/YYYY HH:mm) de forma consistente
+ * Formatea una fecha UTC a hora Chile (America/Santiago) en 24h.
+ * Entrada: ISO string UTC (ej. 2026-02-16T13:30:00.000+00:00)
+ * Salida: DD/MM/YYYY HH:mm (ej. 16/02/2026 10:30)
  */
 const formatearFecha = (fecha) => {
     if (!fecha) return "No especificada";
-    return formatForDisplay(fecha, true);
+    const date = new Date(fecha);
+    if (isNaN(date.getTime())) return "No especificada";
+    const formatted = new Intl.DateTimeFormat("es-CL", {
+        timeZone: "America/Santiago",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(date);
+    return formatted.replace(",", ""); // "16/02/2026 10:30"
 };
 
 /**
@@ -243,12 +254,7 @@ const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
                           <span class="detail-label">Estado:</span>
                           <span class="detail-value" style="color: #00d09c; font-weight: 600;">${reserva.estado === 'activa' ? 'Activa' : reserva.estado}</span>
                         </div>
-                        ${reserva.notas ? `
-                        <div class="detail-row">
-                          <span class="detail-label">Notas:</span>
-                          <span class="detail-value">${reserva.notas}</span>
-                        </div>
-                        ` : ''}
+
                       </div>
                       
                       <!-- QR Code Section -->
@@ -277,8 +283,8 @@ const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
                 <table class="footer" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
                   <tr>
                     <td>
-                      <p style="margin: 0; padding: 10px 0;">Visítanos en <a href="https://vitalmoveglobal.com" class="footer-link" target="_blank">www.vitalmoveglobal.com</a></p>
-                      <p style="margin: 0; padding: 10px 0;">© 2025 VitalMove. Todos los derechos reservados.</p>
+                      <p style="margin: 0; padding: 10px 0;">Visítanos en <a href="https://www.deportespuentealto.cl" class="footer-link" target="_blank">www.vitalmoveglobal.com</a></p>
+                      <p style="margin: 0; padding: 10px 0;">Powered by <a href="https://www.vitalmoveglobal.com" class="footer-link" target="_blank">VitalMove</a></p>
                       <p style="margin: 15px 0 0 0; padding: 10px 0; font-size: 11px; color: #aaaaaa;">
                         Si tienes alguna pregunta sobre tu reserva, por favor contacta con nuestro equipo de soporte.
                       </p>
