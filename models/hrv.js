@@ -5,6 +5,7 @@ const hrvSchema = new mongoose.Schema({
     student: { type: mongoose.Types.ObjectId, ref:'student', required: false },
     user: { type: mongoose.Types.ObjectId, ref:'user', required: false },
     hrData : {type: Array},
+    fcMin : {type: Number},
     rRData : {type: Array},
     rmssd : {type: Number},
     sdnn: {type: Number},
