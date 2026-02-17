@@ -1814,7 +1814,33 @@ const hrvController = {
       });
     }
   },
-  
+  /**
+   * Obtener la última medición HRV de un usuario o estudiante (la más reciente por createdAt).
+   */
+  getLastHrvMeasurement: async (req, res) => {
+    try {
+      const { idUser, userType } = req.params;
+      if (!idUser || !userType) {
+        return res.status(400).json({ success: false, message: "Se requieren los parámetros idUser y userType." });
+      }
+      if (userType !== 'user' && userType !== 'student') {
+        return res.status(400).json({ success: false, message: "El parámetro userType debe ser 'user' o 'student'." });
+      }
+
+      const filter = userType === 'user' ? { user: idUser } : { student: idUser };
+      const lastHrv = await HRV.findOne(filter).sort({ createdAt: -1 });
+
+      return res.status(200).json({ success: true, data: lastHrv });
+    } catch (error) {
+      console.error("Error en getLastHrvMeasurement:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error interno del servidor",
+      });
+    }
+  },
+    
+
 
 
 
