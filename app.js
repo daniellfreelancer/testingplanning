@@ -62,6 +62,7 @@ const rekoAWS = require('./routes/awsRekonitionRoutes')
 const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
 const encuestaGymRoutes = require('./routes/encuestaGymRoutes');
+const metricasPiscinaRoutes = require('./routes/metricasPiscinaRoutes');
 
 //SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
@@ -252,6 +253,7 @@ app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
 app.use('/api/encuestas', encuestaGymRoutes);
+app.use('/metricas-piscina', metricasPiscinaRoutes);
 app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
 app.use('/suscripciones-piscinas', suscripcionesPiscinas)
