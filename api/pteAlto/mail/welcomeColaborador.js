@@ -174,7 +174,7 @@ const sendWelcomeColaboradorPuenteAlto = async (email, password, name) => {
                         </v:roundrect>
                         <![endif]-->
                         <!--[if !mso]><!-->
-                        <a href="https://deportespuentealto.vitalmoveglobal.com/login" class="button" target="_blank">
+                        <a href="https://deportespte.vitalmoveglobal.com/login" class="button" target="_blank">
                           INICIAR SESIÓN
                         </a>
                         <!--<![endif]-->
