@@ -81,14 +81,14 @@ const agendaUcadController = {
         }
 
         // Validar propiedades requeridas
-        if (!diaObj.dia || !diaObj.horarios || diaObj.status === undefined) {
+        if (!diaObj.dia || diaObj.status === undefined) {
           return res.status(400).json({
-            message: "Cada día debe tener las propiedades: dia, horarios (array), y status (boolean)"
+            message: "Cada día debe tener las propiedades: dia y status (boolean). Opcionalmente: horarios (array), horaInicio, horaFin"
           });
         }
 
-        // Validar que horarios sea un array
-        if (!Array.isArray(diaObj.horarios)) {
+        // Validar que horarios sea un array si se proporciona
+        if (diaObj.horarios && !Array.isArray(diaObj.horarios)) {
           return res.status(400).json({
             message: "La propiedad 'horarios' debe ser un array"
           });
@@ -120,30 +120,60 @@ const agendaUcadController = {
         }
         diasUnicos.add(diaNormalizado);
 
+        // Determinar rango horario para este día (puede ser específico del día o global)
+        const horaInicioDia = diaObj.horaInicio || horaInicio;
+        const horaFinDia = diaObj.horaFin || horaFin;
+
+        // Validar formato de horas específicas del día si existen
+        if (diaObj.horaInicio && !horaRegex.test(diaObj.horaInicio)) {
+          return res.status(400).json({
+            message: `Formato de horaInicio inválido para ${diaNormalizado}: ${diaObj.horaInicio}. Use HH:mm`
+          });
+        }
+        if (diaObj.horaFin && !horaRegex.test(diaObj.horaFin)) {
+          return res.status(400).json({
+            message: `Formato de horaFin inválido para ${diaNormalizado}: ${diaObj.horaFin}. Use HH:mm`
+          });
+        }
+
+        const [horaInicioDiaNum, minutoInicioDiaNum] = horaInicioDia.split(':').map(Number);
+        const [horaFinDiaNum, minutoFinDiaNum] = horaFinDia.split(':').map(Number);
+        const inicioDiaTotal = horaInicioDiaNum * 60 + minutoInicioDiaNum;
+        const finDiaTotal = horaFinDiaNum * 60 + minutoFinDiaNum;
+
+        // Validar que horaInicio < horaFin del día
+        if (inicioDiaTotal >= finDiaTotal) {
+          return res.status(400).json({
+            message: `La hora de inicio debe ser menor que la hora de fin para ${diaNormalizado} (${horaInicioDia} - ${horaFinDia})`
+          });
+        }
+
         // Validar formato y rango de horarios
         const horariosNormalizados = [];
-        for (const horario of diaObj.horarios) {
-          // Validar formato de hora
-          if (!horaRegex.test(horario)) {
-            return res.status(400).json({
-              message: `Formato de horario inválido: ${horario}. Use HH:mm (ej: 09:00)`
-            });
+        if (diaObj.horarios && diaObj.horarios.length > 0) {
+          for (const horario of diaObj.horarios) {
+            // Validar formato de hora
+            if (!horaRegex.test(horario)) {
+              return res.status(400).json({
+                message: `Formato de horario inválido: ${horario}. Use HH:mm (ej: 09:00)`
+              });
+            }
+
+            // Convertir a minutos totales
+            const [horaNum, minutoNum] = horario.split(':').map(Number);
+            const horarioTotal = horaNum * 60 + minutoNum;
+
+            // Validar que esté dentro del rango horaInicio - horaFin del día
+            if (horarioTotal < inicioDiaTotal || horarioTotal >= finDiaTotal) {
+              return res.status(400).json({
+                message: `El horario ${horario} está fuera del rango permitido para ${diaNormalizado} (${horaInicioDia} - ${horaFinDia})`
+              });
+            }
+
+            // Normalizar formato (asegurar HH:mm)
+            const horarioFormateado = `${String(horaNum).padStart(2, '0')}:${String(minutoNum).padStart(2, '0')}`;
+            horariosNormalizados.push(horarioFormateado);
           }
-
-          // Convertir a minutos totales
-          const [horaNum, minutoNum] = horario.split(':').map(Number);
-          const horarioTotal = horaNum * 60 + minutoNum;
-
-          // Validar que esté dentro del rango horaInicio - horaFin
-          if (horarioTotal < inicioTotal || horarioTotal >= finTotal) {
-            return res.status(400).json({
-              message: `El horario ${horario} está fuera del rango permitido (${horaInicio} - ${horaFin})`
-            });
-          }
-
-          // Normalizar formato (asegurar HH:mm)
-          const horarioFormateado = `${String(horaNum).padStart(2, '0')}:${String(minutoNum).padStart(2, '0')}`;
-          horariosNormalizados.push(horarioFormateado);
         }
 
         // Validar que los horarios sigan el patrón del bloque
@@ -174,11 +204,17 @@ const agendaUcadController = {
           });
         }
 
-        diasNormalizados.push({
+        const diaFinal = {
           dia: diaNormalizado,
           horarios: horariosNormalizados,
           status: diaObj.status
-        });
+        };
+
+        // Agregar horaInicio y horaFin específicos del día si existen
+        if (diaObj.horaInicio) diaFinal.horaInicio = diaObj.horaInicio;
+        if (diaObj.horaFin) diaFinal.horaFin = diaObj.horaFin;
+
+        diasNormalizados.push(diaFinal);
       }
 
       // Verificar si ya existe una agenda para este profesional
@@ -377,14 +413,14 @@ const agendaUcadController = {
           }
 
           // Validar propiedades requeridas
-          if (!diaObj.dia || !diaObj.horarios || diaObj.status === undefined) {
+          if (!diaObj.dia || diaObj.status === undefined) {
             return res.status(400).json({
-              message: "Cada día debe tener las propiedades: dia, horarios (array), y status (boolean)"
+              message: "Cada día debe tener las propiedades: dia y status (boolean). Opcionalmente: horarios (array), horaInicio, horaFin"
             });
           }
 
-          // Validar que horarios sea un array
-          if (!Array.isArray(diaObj.horarios)) {
+          // Validar que horarios sea un array si se proporciona
+          if (diaObj.horarios && !Array.isArray(diaObj.horarios)) {
             return res.status(400).json({
               message: "La propiedad 'horarios' debe ser un array"
             });
@@ -416,30 +452,60 @@ const agendaUcadController = {
           }
           diasUnicos.add(diaNormalizado);
 
+          // Determinar rango horario para este día (puede ser específico del día o global)
+          const horaInicioDia = diaObj.horaInicio || horaInicioFinal;
+          const horaFinDia = diaObj.horaFin || horaFinFinal;
+
+          // Validar formato de horas específicas del día si existen
+          if (diaObj.horaInicio && !horaRegex.test(diaObj.horaInicio)) {
+            return res.status(400).json({
+              message: `Formato de horaInicio inválido para ${diaNormalizado}: ${diaObj.horaInicio}. Use HH:mm`
+            });
+          }
+          if (diaObj.horaFin && !horaRegex.test(diaObj.horaFin)) {
+            return res.status(400).json({
+              message: `Formato de horaFin inválido para ${diaNormalizado}: ${diaObj.horaFin}. Use HH:mm`
+            });
+          }
+
+          const [horaInicioDiaNum, minutoInicioDiaNum] = horaInicioDia.split(':').map(Number);
+          const [horaFinDiaNum, minutoFinDiaNum] = horaFinDia.split(':').map(Number);
+          const inicioDiaTotal = horaInicioDiaNum * 60 + minutoInicioDiaNum;
+          const finDiaTotal = horaFinDiaNum * 60 + minutoFinDiaNum;
+
+          // Validar que horaInicio < horaFin del día
+          if (inicioDiaTotal >= finDiaTotal) {
+            return res.status(400).json({
+              message: `La hora de inicio debe ser menor que la hora de fin para ${diaNormalizado} (${horaInicioDia} - ${horaFinDia})`
+            });
+          }
+
           // Validar formato y rango de horarios
           const horariosNormalizados = [];
-          for (const horario of diaObj.horarios) {
-            // Validar formato de hora
-            if (!horaRegex.test(horario)) {
-              return res.status(400).json({
-                message: `Formato de horario inválido: ${horario}. Use HH:mm (ej: 09:00)`
-              });
+          if (diaObj.horarios && diaObj.horarios.length > 0) {
+            for (const horario of diaObj.horarios) {
+              // Validar formato de hora
+              if (!horaRegex.test(horario)) {
+                return res.status(400).json({
+                  message: `Formato de horario inválido: ${horario}. Use HH:mm (ej: 09:00)`
+                });
+              }
+
+              // Convertir a minutos totales
+              const [horaNum, minutoNum] = horario.split(':').map(Number);
+              const horarioTotal = horaNum * 60 + minutoNum;
+
+              // Validar que esté dentro del rango horaInicio - horaFin del día
+              if (horarioTotal < inicioDiaTotal || horarioTotal >= finDiaTotal) {
+                return res.status(400).json({
+                  message: `El horario ${horario} está fuera del rango permitido para ${diaNormalizado} (${horaInicioDia} - ${horaFinDia})`
+                });
+              }
+
+              // Normalizar formato (asegurar HH:mm)
+              const horarioFormateado = `${String(horaNum).padStart(2, '0')}:${String(minutoNum).padStart(2, '0')}`;
+              horariosNormalizados.push(horarioFormateado);
             }
-
-            // Convertir a minutos totales
-            const [horaNum, minutoNum] = horario.split(':').map(Number);
-            const horarioTotal = horaNum * 60 + minutoNum;
-
-            // Validar que esté dentro del rango horaInicio - horaFin
-            if (horarioTotal < inicioTotal || horarioTotal >= finTotal) {
-              return res.status(400).json({
-                message: `El horario ${horario} está fuera del rango permitido (${horaInicioFinal} - ${horaFinFinal})`
-              });
-            }
-
-            // Normalizar formato (asegurar HH:mm)
-            const horarioFormateado = `${String(horaNum).padStart(2, '0')}:${String(minutoNum).padStart(2, '0')}`;
-            horariosNormalizados.push(horarioFormateado);
           }
 
           // Validar que los horarios sigan el patrón del bloque
@@ -470,11 +536,17 @@ const agendaUcadController = {
             });
           }
 
-          diasNormalizados.push({
+          const diaFinal = {
             dia: diaNormalizado,
             horarios: horariosNormalizados,
             status: diaObj.status
-          });
+          };
+
+          // Agregar horaInicio y horaFin específicos del día si existen
+          if (diaObj.horaInicio) diaFinal.horaInicio = diaObj.horaInicio;
+          if (diaObj.horaFin) diaFinal.horaFin = diaObj.horaFin;
+
+          diasNormalizados.push(diaFinal);
         }
 
         agenda.dias = diasNormalizados;

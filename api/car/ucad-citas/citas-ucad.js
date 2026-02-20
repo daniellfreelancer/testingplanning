@@ -63,7 +63,26 @@ const citasUcadSchema = new mongoose.Schema({
   },
   tiempoAtencion:{
     type: Number,
-  }
+  },
+  // Sobre cupo: permite agendar en un horario ya ocupado por otra cita
+  sobreCupo: {
+    type: Boolean,
+    default: false,
+  },
+  motivoSobreCupo: {
+    type: String,
+    maxlength: 500,
+  },
+  // Atención múltiple (mesa de trabajo)
+  atencionMultiple: {
+    type: Boolean,
+    default: false,
+  },
+  cantidadAtendidos: {
+    type: Number,
+    min: 1,
+    max: 10,
+  },
 }, {
   timestamps: true,
 });
