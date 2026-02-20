@@ -5,6 +5,12 @@ const citasUcadController = require("./citas-ucad-controller");
 // Crear nueva cita
 router.post("/crear-cita", citasUcadController.crearCita);
 
+// Crear cita sobre cupo (omite validación de horario ocupado, requiere motivoSobreCupo)
+router.post("/crear-cita-sobre-cupo", citasUcadController.crearCitaSobreCupo);
+
+// Obtener citas sobre cupo (admin) — Query: ?profesional=id&fecha=YYYY-MM-DD&estado=pendiente
+router.get("/sobre-cupos", citasUcadController.obtenerSobreCupos);
+
 // Derivar cita a otro profesional
 router.post("/derivar-cita", citasUcadController.derivarCita);
 
