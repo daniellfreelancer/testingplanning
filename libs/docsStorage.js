@@ -18,4 +18,14 @@ const uploadDocs = multer({
   }
 })
 
+// Hasta 10 archivos por request (mismo límite 10MB por archivo)
+const uploadDocsMultiple = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB por archivo
+    files: 10
+  }
+})
+
 module.exports = uploadDocs
+module.exports.uploadDocsMultiple = uploadDocsMultiple

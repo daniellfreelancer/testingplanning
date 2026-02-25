@@ -3,7 +3,9 @@ const { uploadMulterFile } = require('../../../utils/s3Client');
 
 const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT;
 
-// Normalizar body cuando viene de multipart (FormData): parsear JSON en responsable/contacto y status
+const DOCUMENTOS_MAX = 10;
+
+// Normalizar body cuando viene de multipart (FormData): parsear JSON en responsable/contacto/status/documentosExistentes
 function normalizeBody(body) {
     const normalized = { ...body };
     if (typeof normalized.responsable === 'string') {
@@ -23,6 +25,13 @@ function normalizeBody(body) {
     if (typeof normalized.status === 'string') {
         normalized.status = normalized.status === 'true';
     }
+    if (typeof normalized.documentosExistentes === 'string') {
+        try {
+            normalized.documentosExistentes = JSON.parse(normalized.documentosExistentes);
+        } catch (_) {
+            normalized.documentosExistentes = [];
+        }
+    }
     return normalized;
 }
 
@@ -32,16 +41,19 @@ const clubesPteAltoController = {
     crearClubPteAlto: async (req, res) => {
         try {
             const body = normalizeBody(req.body);
-            const clubPteAlto = new ClubesPteAlto(body);
+            const clubPteAlto = new ClubesPteAlto({ ...body, documentos: [] });
             await clubPteAlto.save();
 
-            //subir documento del club a s3
-            if (req.file) {
-                const key = await uploadMulterFile(req.file);
-                const fileUrl = `${cloudfrontUrl}/${key}`;
-                clubPteAlto.documento = fileUrl;
+            const files = req.files && Array.isArray(req.files) ? req.files : [];
+            if (files.length > 0) {
+                const urls = [];
+                for (const file of files.slice(0, DOCUMENTOS_MAX)) {
+                    const key = await uploadMulterFile(file);
+                    urls.push(`${cloudfrontUrl}/${key}`);
+                }
+                clubPteAlto.documentos = urls;
                 await clubPteAlto.save();
-            } 
+            }
 
             res.status(201).json({ message: 'Club PTE Alto creado correctamente', clubPteAlto });
         } catch (error) {
@@ -70,15 +82,18 @@ const clubesPteAltoController = {
     actualizarClubPteAltoPorId: async (req, res) => {
         try {
             const body = normalizeBody(req.body);
+            const documentosExistentes = Array.isArray(body.documentosExistentes) ? body.documentosExistentes : [];
+            delete body.documentosExistentes;
+
             const clubPteAlto = await ClubesPteAlto.findByIdAndUpdate(req.params.id, body, { new: true });
-            //subir documento del club a s3
-            
-            if (req.file) {
-                const key = await uploadMulterFile(req.file);
-                const fileUrl = `${cloudfrontUrl}/${key}`;
-                clubPteAlto.documento = fileUrl;
-                await clubPteAlto.save();
+            const files = req.files && Array.isArray(req.files) ? req.files : [];
+            const newUrls = [];
+            for (const file of files.slice(0, DOCUMENTOS_MAX - documentosExistentes.length)) {
+                const key = await uploadMulterFile(file);
+                newUrls.push(`${cloudfrontUrl}/${key}`);
             }
+            clubPteAlto.documentos = [...documentosExistentes, ...newUrls].slice(0, DOCUMENTOS_MAX);
+            await clubPteAlto.save();
 
             res.status(200).json({ message: 'Club PTE Alto actualizado correctamente', clubPteAlto });
         } catch (error) {
