@@ -144,7 +144,7 @@ const citasUcadController = {
           }
         } else {
           // Estructura antigua: validar que el horario esté en bloques según el campo 'bloque'
-          const bloqueMinutos = agenda.bloque || 30;
+          const bloqueMinutos = agenda.bloque || 15;
 
           // Calcular minutos desde el inicio del día
           const minutosDesdeInicio = horaCitaTotal - inicioTotal;

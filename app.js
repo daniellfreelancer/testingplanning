@@ -93,6 +93,8 @@ const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
 const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
 const sedesDeportivasPteAlto = require('./api/pteAlto/sedes-deportivas/sedesDeportivasPteAlto.routes')
 const clubesPteAlto = require('./api/pteAlto/clubes-pte-alto/clubesPteAlto.routes')
+const historicoPteAlto = require('./api/pteAlto/historico-pte-alto/historicoPteAlto.routes')
+const supervisionPteAlto = require('./api/pteAlto/supervision-pte-alto/supervisionPteAlto.routes')
 
 //Rutas para gestion de usuarios UCAD
 const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
@@ -278,6 +280,7 @@ app.use('/nav-items', navItems)
 app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
+app.use('/supervision-pte-alto', supervisionPteAlto)
 
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
@@ -303,6 +306,7 @@ app.use('/email-service', emailService)
 app.use('/api/notas-usuarios', notasUsuarios) // notas de usuarios
 app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
 app.use('/clubes-pte-alto', clubesPteAlto)
+app.use('/historico-pte-alto', historicoPteAlto)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
