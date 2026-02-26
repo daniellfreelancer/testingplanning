@@ -76,6 +76,7 @@ const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
 const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRoutes')
 const emailService = require('./api/email/emailServiceRoutes')
 const notasUsuarios = require('./api/notas-usuarios/notasUsuariosRoutes')
+const patentesPiscina = require('./api/patentes-piscina/patentesPiscinaRoutes')
 
 //Rutas para gestion de usuarios PTE Alto
 const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
@@ -300,7 +301,8 @@ app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
 app.use('/email-service', emailService)
-app.use('/api/notas-usuarios', notasUsuarios) // notas de usuarios
+app.use('/api/notas-usuarios', notasUsuarios)
+app.use('/patentes-piscina', patentesPiscina) // notas de usuarios
 app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
 app.use('/clubes-pte-alto', clubesPteAlto)
 
