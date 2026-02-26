@@ -516,6 +516,11 @@ const usuariosComplejosController = {
         }
       }
 
+      // Asegurar que nacionalidad se persista (req.body con FormData puede variar)
+      if (req.body.nacionalidad !== undefined && req.body.nacionalidad !== null) {
+        userData.nacionalidad = String(req.body.nacionalidad).trim();
+      }
+
       const newUser = new UsuariosComplejos({
         ...userData,
         institucion: [institucion],
@@ -734,6 +739,11 @@ const usuariosComplejosController = {
       }
       if (updateData.tutores && typeof updateData.tutores === "string") {
         updateData.tutores = JSON.parse(updateData.tutores);
+      }
+
+      // Asegurar que nacionalidad se persista en base de datos
+      if (req.body.nacionalidad !== undefined && req.body.nacionalidad !== null) {
+        updateData.nacionalidad = String(req.body.nacionalidad).trim();
       }
 
       // ⬇️ Subida de archivos usando helper S3
