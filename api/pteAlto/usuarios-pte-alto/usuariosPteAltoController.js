@@ -61,6 +61,7 @@ const usuariosPteAltoController = {
       || nuevoUsuarioPteAlto.rol === "COORDINADOR"
       || nuevoUsuarioPteAlto.rol === "MONITOR"
       || nuevoUsuarioPteAlto.rol === "COMUNICACIONES"
+      || nuevoUsuarioPteAlto.rol === "TERRITORIO_DEPORTIVO"
     ) {
       await sendWelcomeColaboradorPuenteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
     }
@@ -599,7 +600,7 @@ const usuariosPteAltoController = {
     try {
 
       // obtener los usuarios con rol ADMIN, EMPLOYED, TRAINER
-      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES'] } });
+      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES', 'TERRITORIO_DEPORTIVO'] } });
       res.status(200).json({
         message: "Usuarios internos PTE Alto encontrados correctamente",
         response: usuariosInternosPteAlto,
@@ -676,6 +677,19 @@ const usuariosPteAltoController = {
         message: "Error al cambiar contraseña usuario PTE Alto",
         error: error.message,
       });
+    }
+  },
+  actualizarColaboradorPteAlto : async (req, res) => {
+
+    try {
+      const {idColaborador} = req.params;
+      const { nombre, apellido, email, rut, rol } = req.body;
+      const colaboradorPteAlto = await UsuariosPteAlto.findByIdAndUpdate(idColaborador, { nombre, apellido, email, rut, rol }, { new: true });
+      
+      res.status(200).json({ message: "Colaborador PTE Alto actualizado correctamente", colaboradorPteAlto });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error al actualizar colaborador PTE Alto", error: error.message });
     }
   }
 };
