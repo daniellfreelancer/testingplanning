@@ -42,7 +42,7 @@
     "yarn": "^1.22.22"
   },
 "engines": {
-  "node": "22.14.0"
+  "node": "22.x"
 },
   "devDependencies": {
     "@types/uuid": "^10.0.0"
