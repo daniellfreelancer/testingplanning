@@ -41,9 +41,9 @@
     "uuid": "^11.1.0",
     "yarn": "^1.22.22"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
+"engines": {
+  "node": "22.14.0"
+},
   "devDependencies": {
     "@types/uuid": "^10.0.0"
   }
