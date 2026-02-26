@@ -22,4 +22,5 @@ router.get("/obtener-colaboradores", usuariosPteAltoController.obtenerUsuariosIn
 router.put("/usuarios-pte-alto/:id/certificado-domicilio",upload.single("certificadoDomicilio"),usuariosPteAltoController.actualizarCertificadoDomicilioPteAlto);
 router.get("/obtener-colaboradores-pte-alto", usuariosPteAltoController.obtenerColaboradoresPteAlto);
 router.put("/cambiar-contrasena-usuario-pte-alto/:id", usuariosPteAltoController.cambiarContraseñaUsuarioPteAlto);
+router.put("/actualizar-colaborador-pte-alto/:idColaborador", usuariosPteAltoController.actualizarColaboradorPteAlto);
 module.exports = router;
