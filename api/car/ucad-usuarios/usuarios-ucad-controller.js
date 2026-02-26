@@ -659,6 +659,17 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         error: error.message
       });
     }
+  },
+  enviarEmailBienvenidaAdmin: async (req, res) => {
+    try {
+      const { email, password, name, rol } = req.body;
+      await bienvenidaProfesionalMail(email, password, name, rol);
+      res.status(200).json({
+        message: "Email de bienvenida enviado correctamente",
+      });
+    } catch (error) {
+      console.log(error);
+    }
   }
 
 }

@@ -39,5 +39,8 @@ router.post("/citas/enviar-email-qr", usuariosUcadController.enviarEmailCitaQR);
 // Obtener usuario UCAD
 router.get("/obtener-usuario/:_id", usuariosUcadController.obtenerUsuarioUCAD);
 
+// Enviar email de bienvenida admin
+router.post("/enviar-email-bienvenida-admin", usuariosUcadController.enviarEmailBienvenidaAdmin);
+
 
 module.exports = router;
