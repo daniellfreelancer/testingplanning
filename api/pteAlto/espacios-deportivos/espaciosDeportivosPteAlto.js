@@ -19,6 +19,7 @@ const espaciosDeportivosPteAltoSchema = new mongoose.Schema({
     imgUrl: { type: String },
     capacidad: { type: Number },
     tiempoReserva: { type: Number },
+    supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
 }, {
     timestamps: true
 });

@@ -51,6 +51,7 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     informacionHorarios: { type: Array }, // aqui se van a mostrar los dias y horarios seleccionados para el taller
     sexo: { type: String, enum: ['masculino', 'femenino', 'ambos'], default: 'ambos' },
+    supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
 
 
 }, {
