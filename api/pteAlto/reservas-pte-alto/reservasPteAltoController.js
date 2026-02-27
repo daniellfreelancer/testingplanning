@@ -3,6 +3,7 @@ const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeport
 const TalleresDeportivosPteAlto = require('../talleres-deportivos/talleresDeportivosPteAlto');
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
 const sendEmailReservaPteAlto = require('../email-pte-alto/emailReservaPteAlto');
+const { normalizeToUTC, getStartOfDayUTC, getEndOfDayUTC } = require('../../../utils/dateUtils');
 
 // ============================================
 // FUNCIONES HELPER
@@ -153,8 +154,14 @@ const reservasPteAltoController = {
                 });
             }
 
-            const inicio = fechaInicio ? new Date(fechaInicio) : new Date();
-            const fin = fechaFin ? new Date(fechaFin) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 días
+            let inicio, fin;
+            try {
+                inicio = fechaInicio ? normalizeToUTC(fechaInicio) : new Date();
+                fin = fechaFin ? normalizeToUTC(fechaFin) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            } catch (err) {
+                inicio = new Date();
+                fin = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            }
 
             // Buscar espacios con el deporte especificado y activos
             const espacios = await EspaciosDeportivosPteAlto.find({
@@ -217,9 +224,16 @@ const reservasPteAltoController = {
                 });
             }
 
-            const fechaConsulta = new Date(fecha);
-            const inicioDia = new Date(fechaConsulta.setHours(0, 0, 0, 0));
-            const finDia = new Date(fechaConsulta.setHours(23, 59, 59, 999));
+            let inicioDia, finDia;
+            try {
+                inicioDia = getStartOfDayUTC(fecha);
+                finDia = getEndOfDayUTC(fecha);
+            } catch (err) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El parámetro 'fecha' no es válido"
+                });
+            }
 
             // Construir query de filtros
             const filtros = { status: true };
@@ -307,8 +321,16 @@ const reservasPteAltoController = {
                 });
             }
 
-            const inicio = new Date(fechaInicio);
-            const fin = new Date(fechaFin);
+            let inicio, fin;
+            try {
+                inicio = normalizeToUTC(fechaInicio);
+                fin = normalizeToUTC(fechaFin);
+            } catch (err) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Las fechas 'fechaInicio' o 'fechaFin' no son válidas"
+                });
+            }
 
             if (inicio >= fin) {
                 return res.status(400).json({
@@ -395,11 +417,11 @@ const reservasPteAltoController = {
             //     });
             // }
 
-            const inicio = new Date(fechaInicio);
-            const fin = new Date(fechaFin);
-
-            // Validar que las fechas sean válidas
-            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+            let inicio, fin;
+            try {
+                inicio = normalizeToUTC(fechaInicio);
+                fin = normalizeToUTC(fechaFin);
+            } catch (err) {
                 return res.status(400).json({
                     success: false,
                     message: "Las fechas proporcionadas no son válidas"

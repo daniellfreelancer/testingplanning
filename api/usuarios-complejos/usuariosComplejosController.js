@@ -305,55 +305,59 @@ const usuariosComplejosController = {
         return res
           .status(401)
           .json({ message: "Cuenta no encontrada, verifica tu correo." });
-      } else {
-        const isMatch = user.password.filter((userpassword) =>
-          bcryptjs.compareSync(password, userpassword)
+      }
+      if (user.status !== true) {
+        return res.status(403).json({
+          message: "Tu cuenta está desactivada. Contacta al administrador.",
+        });
+      }
+      const isMatch = user.password.filter((userpassword) =>
+        bcryptjs.compareSync(password, userpassword)
+      );
+      if (isMatch.length > 0) {
+        const token = jwt.sign(
+          {
+            id: user._id,
+            role: user.rol,
+          },
+          process.env.KEY_JWT,
+          {
+            expiresIn: 60 * 60 * 24,
+          }
         );
-        if (isMatch.length > 0) {
-          const token = jwt.sign(
-            {
-              id: user._id,
-              role: user.rol,
-            },
-            process.env.KEY_JWT,
-            {
-              expiresIn: 60 * 60 * 24,
-            }
-          );
 
-          user.logeado = true;
-          await user.save();
+        user.logeado = true;
+        await user.save();
 
-          res.status(200).json({
-            message: "Inicio de sesión exitoso.",
-            token,
-            user: {
-              id: user._id,
-              nombre: user.nombre,
-              apellido: user.apellido,
-              email: user.email,
-              rol: user.rol,
-              rut: user.rut,
-              status: user.status,
-              telefono: user.telefono,
-              institucion: user.institucion,
-              centroDeportivo: user.centroDeportivo,
-              espacioDeportivo: user.espacioDeportivo,
-              taller: user.taller,
-              misreservas: user.misreservas,
-              logeado: user.logeado,
-              fechaNacimiento: user.fechaNacimiento,
-              sexo: user.sexo,
-              direccion: user.direccion,
-              numeroDireccion: user.numeroDireccion,
-              imgUrl: user.imgUrl,
-            },
-          });
-        } else {
-          return res.status(401).json({
-            message: "El password es incorrecto, intenta nuevamente.",
-          });
-        }
+        res.status(200).json({
+          message: "Inicio de sesión exitoso.",
+          token,
+          user: {
+            id: user._id,
+            nombre: user.nombre,
+            apellido: user.apellido,
+            email: user.email,
+            rol: user.rol,
+            rut: user.rut,
+            status: user.status,
+            telefono: user.telefono,
+            institucion: user.institucion,
+            centroDeportivo: user.centroDeportivo,
+            espacioDeportivo: user.espacioDeportivo,
+            taller: user.taller,
+            misreservas: user.misreservas,
+            logeado: user.logeado,
+            fechaNacimiento: user.fechaNacimiento,
+            sexo: user.sexo,
+            direccion: user.direccion,
+            numeroDireccion: user.numeroDireccion,
+            imgUrl: user.imgUrl,
+          },
+        });
+      } else {
+        return res.status(401).json({
+          message: "El password es incorrecto, intenta nuevamente.",
+        });
       }
     } catch (error) {
       console.log(error);
@@ -510,6 +514,11 @@ const usuariosComplejosController = {
             error: err.message,
           });
         }
+      }
+
+      // Asegurar que nacionalidad se persista (req.body con FormData puede variar)
+      if (req.body.nacionalidad !== undefined && req.body.nacionalidad !== null) {
+        userData.nacionalidad = String(req.body.nacionalidad).trim();
       }
 
       const newUser = new UsuariosComplejos({
@@ -730,6 +739,11 @@ const usuariosComplejosController = {
       }
       if (updateData.tutores && typeof updateData.tutores === "string") {
         updateData.tutores = JSON.parse(updateData.tutores);
+      }
+
+      // Asegurar que nacionalidad se persista en base de datos
+      if (req.body.nacionalidad !== undefined && req.body.nacionalidad !== null) {
+        updateData.nacionalidad = String(req.body.nacionalidad).trim();
       }
 
       // ⬇️ Subida de archivos usando helper S3

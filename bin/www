@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Configurar timezone del servidor a America/Santiago para fechas consistentes
+process.env.TZ = process.env.TZ || 'America/Santiago';
+
 // Cron
 const { registerCronJobs } = require('../cron/scheduler');
 

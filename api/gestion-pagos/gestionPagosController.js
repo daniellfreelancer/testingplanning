@@ -17,6 +17,8 @@ const populateOptions = [
 
 
 
+const { normalizeToUTC } = require('../../utils/dateUtils');
+
 const gestionPagosController = {
     registrarPago: async (req, res) => {
 
@@ -47,13 +49,15 @@ const gestionPagosController = {
         const { planId, varianteId, usuarioId, institucionId } = req.params;
 
         try {
+            const fechaPagoNorm = fechaPago ? normalizeToUTC(fechaPago) : null;
+            const fechaFinNorm = fechaFin ? normalizeToUTC(fechaFin) : null;
             const pago = new GestionPagos({
                 usuario: usuarioId,
                 institucion: institucionId,
                 transaccion: transaccion,
                 voucher: voucher,
                 monto: monto,
-                fechaPago: fechaPago,
+                fechaPago: fechaPagoNorm || fechaPago,
                 recepcion: recepcion,
                 planId: planId,
                 beneficio: beneficio,
@@ -64,8 +68,8 @@ const gestionPagosController = {
                 usuario: usuarioId,
                 planId: planId,
                 varianteId: varianteId,
-                fechaInicio: fechaPago,
-                fechaFin: fechaFin,
+                fechaInicio: fechaPagoNorm || fechaPago,
+                fechaFin: fechaFinNorm || fechaFin,
                 pago: pagoGuardado._id,
                 tipoConsumo: tipoConsumo,
                 horasDisponibles: horasDisponibles,

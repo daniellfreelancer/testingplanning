@@ -4,6 +4,7 @@ const EspaciosDeportivos = require('../espacios-deportivos/espaciosDeportivosPte
 const ReservasPteAlto = require('../reservas-pte-alto/reservasPteAlto');
 const ComplejosDeportivos = require('../complejos-deportivos/complejosDeportivosPteAlto');
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
+const sendEmailInscripcionTallerPteAlto = require('../email-pte-alto/mailInsripcionTallerPteAlto');
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const bucketRegion = process.env.AWS_BUCKET_REGION;
 const bucketName = process.env.AWS_BUCKET_NAME;
@@ -92,6 +93,16 @@ const generarSesionesPorVariante = (taller) => {
   }
 };
 
+/**
+ * funcion para calcular la edad del usuario con la fecha de nacimiento  que viene en este formato ejemplo
+ * 1985-10-21T12:00:00.000+00:00
+ */
+const calcularEdad = (fechaNacimiento) => {
+  const fechaActual = new Date();
+  const fechaNacimientoDate = new Date(fechaNacimiento);
+  const edad = fechaActual.getFullYear() - fechaNacimientoDate.getFullYear();
+  return edad;
+}
 /**
  * Genera sesiones individuales para el taller basado en días, horarios y rango de fechas
  * LEGACY - Para talleres sin variantes
@@ -540,16 +551,20 @@ const queryTalleresPopulate = [
   },
   {
     path: 'profesores',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
 
   },
   {
     path: 'coordinadores',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
   },
   {
     path:'usuarios',
-    select: 'nombre apellido email',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
+  },
+  {
+    path:'usuariosBaja',
+    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
   },
   {
     path:'creadoPor',
@@ -1005,20 +1020,49 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         });
       }
       
+      /**
+       * Las validaciones deben ser independientes
+       */
       
-      if (usuario.comuna !== 'Puente Alto' || usuario.estadoValidacion !== 'validado' || usuario.status !== true) {
+      if (usuario.status !== true) {
         return res.status(400).json({
-          message: 'El usuario no pertenece a la comuna de Puente Alto o no esta validado o no esta activo, debe ser de Puente Alto, validado y activo para inscribirse a este taller',
+          message: 'su cuenta no esta activa, debe ser activa para inscribirse a este taller',
           success: false,
         });
       }
-      
+
+      if (usuario.comuna !== 'Puente Alto' ) {
+        return res.status(400).json({
+          message: 'El usuario no pertenece a la comuna de Puente Alto, no puede inscribirse a este taller',
+          success: false,
+        });
+      }
+
+      if (usuario.estadoValidacion !== 'validado' ) {
+        return res.status(400).json({
+          message: 'El usuario no esta validado, debe ser validado para inscribirse a este taller',
+          success: false,
+        });
+      }
+
       if (taller.sexo !== 'ambos' && taller.sexo !== usuario.sexo) {
         return res.status(400).json({
-          message: 'El taller solo acepta inscripciones para el sexo indicado, no',
+          message: 'El taller solo acepta inscripciones para el sexo indicado, no puede inscribirse a este taller',
           success: false,
         });
       }
+
+
+
+      //validacion de edad calcular la edad del usuario con la fecha de nacimiento completa tomando en cuenta el dia, mes y año
+      const edadUsuario = calcularEdad(usuario.fechaNacimiento);
+      if (edadUsuario < taller.edadMin || edadUsuario > taller.edadMax) {
+        return res.status(400).json({
+          message: 'El usuario no cumple con la edad requerida para inscribirse a este taller',
+          success: false,
+        });
+      }
+
       
       if (taller.capacidad <= taller.usuarios.length) {
         return res.status(400).json({
@@ -1028,7 +1072,14 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
       }
       if (taller.usuarios.some(id => id.toString() === usuarioId.toString())) {
         return res.status(400).json({
-          message: 'Ya estás inscrito a este taller, no puedes inscribirte nuevamente',
+          message: 'Ya estás inscrito a este taller o has dado de baja de este taller, comunica con el administrador para que te inscriba nuevamente',
+          success: false,
+        });
+      }
+
+      if (taller.usuariosBaja.some(id => id.toString() === usuarioId.toString())) {
+        return res.status(400).json({
+          message: 'Ya has dado de baja de este taller, no puedes inscribirte nuevamente',
           success: false,
         });
       }
@@ -1036,9 +1087,27 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
       // Inscribir el usuario al taller
       taller.usuarios.push(usuarioId);
       await taller.save();
-      // agregar el taller al usuario 
+      // agregar el taller al usuario
       usuario.talleresInscritos.push(tallerId);
       await usuario.save();
+
+      // Enviar email de confirmación de inscripción (resumen + link para darse de baja)
+      try {
+        await taller.populate([
+          { path: 'complejo', select: 'nombre direccion' },
+          { path: 'sede', select: 'nombre direccion' },
+          { path: 'espacioDeportivo', select: 'nombre direccion' },
+        ]);
+        const nombreUsuario = [usuario.nombre, usuario.apellido].filter(Boolean).join(' ') || 'Usuario';
+        await sendEmailInscripcionTallerPteAlto(
+          usuario.email,
+          nombreUsuario,
+          taller,
+          usuarioId
+        );
+      } catch (emailError) {
+        console.error('Error al enviar email de confirmación de inscripción al taller (no crítico):', emailError);
+      }
 
       return res.status(200).json({
         message: 'Te has inscrito correctamente a este taller, recibiras un email de confirmacion de inscripcion',
@@ -1073,7 +1142,7 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         });
       }
 
-      // Verificar que el usuario este inscrito al taller
+      // Verificar que el usuario esté inscrito al taller
       if (!usuario.talleresInscritos.some(id => id.toString() === tallerId.toString())) {
         return res.status(400).json({
           message: 'No estás inscrito a este taller, no puedes desinscribirte',
@@ -1081,15 +1150,18 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         });
       }
 
-      // Desinscribir el usuario del taller
-      usuario.talleresInscritos = usuario.talleresInscritos.filter(id => id.toString() !== tallerId.toString());
-      await usuario.save();
-      // remover el taller del usuario
+      // Mover el usuario de usuarios (activos) a usuariosBaja (historial)
       taller.usuarios = taller.usuarios.filter(id => id.toString() !== usuarioId.toString());
+      if (!taller.usuariosBaja) taller.usuariosBaja = [];
+      taller.usuariosBaja.push(usuarioId);
       await taller.save();
 
+      // Quitar el taller de la lista de inscritos del usuario
+      usuario.talleresInscritos = usuario.talleresInscritos.filter(id => id.toString() !== tallerId.toString());
+      await usuario.save();
+
       return res.status(200).json({
-        message: 'Te has desinscrito correctamente de este taller, recibiras un email de confirmacion de desinscripcion',
+        message: 'Te has dado de baja correctamente de este taller',
         success: true,
       });
 
@@ -1101,6 +1173,61 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         success: false,
       });
     }
+  },
+  /**
+   * Reactivar en el taller: mueve un usuario de usuariosBaja a usuarios (solo admin).
+   */
+  reactivarEnTaller: async (req, res) => {
+    try {
+      const { tallerId, usuarioId } = req.params;
+      const taller = await TalleresDeportivos.findById(tallerId);
+      if (!taller) {
+        return res.status(404).json({
+          message: 'Taller no encontrado',
+          success: false,
+        });
+      }
+      const usuario = await UsuariosPteAlto.findById(usuarioId);
+      if (!usuario) {
+        return res.status(404).json({
+          message: 'Usuario no encontrado',
+          success: false,
+        });
+      }
+      if (!taller.usuariosBaja || !taller.usuariosBaja.some(id => id.toString() === usuarioId.toString())) {
+        return res.status(400).json({
+          message: 'El usuario no está dado de baja en este taller',
+          success: false,
+        })
+      }
+
+      if (taller.capacidad <= taller.usuarios.length) {
+        return res.status(400).json({
+          message: 'El taller ha alcanzado su capacidad máxima',
+          success: false,
+        });
+      }
+      // Quitar de usuariosBaja y agregar a usuarios
+      taller.usuariosBaja = taller.usuariosBaja.filter(id => id.toString() !== usuarioId.toString());
+      taller.usuarios.push(usuarioId);
+      await taller.save();
+      // Asegurar que el taller esté en talleresInscritos del usuario
+      if (!usuario.talleresInscritos.some(id => id.toString() === tallerId.toString())) {
+        usuario.talleresInscritos.push(tallerId);
+        await usuario.save();
+      }
+      return res.status(200).json({
+        message: 'Usuario reactivado en el taller correctamente',
+        success: true,
+      });
+    } catch (error) {
+      console.error('Error al reactivar en taller:', error);
+      return res.status(500).json({
+        message: 'Error al reactivar en el taller',
+        error: error.message,
+        success: false,
+      });
+    } 
   },
   // ============================================
   // GESTIÓN DE SESIONES DE TALLERES

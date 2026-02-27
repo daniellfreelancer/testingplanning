@@ -7,6 +7,7 @@ const Club = require('../models/club');
 const Player = require('../models/student');
 const { uploadMulterFile } = require('../utils/s3Client'); // helper centralizado S3
 const Student = require('../models/student');
+const Representative = require('../models/representative');
 
 const membershipController = {
   async createMembershipNewMembers(req, res) {
@@ -371,19 +372,14 @@ const membershipController = {
     try {
 
       // primero buscamos el estudiante por rut
-
       const { rut } = req.params;
-
 
       // en caso de que el rut tenga puntos o guiones, se debe remover
       const cleanRut = rut.replace(/[.\-\s]/g, '');
-
       const student = await Student.findOne({ rut: cleanRut });
-
       if (!student) {
         return res.status(404).json({ message: 'El rut no se encuentra registrado en la base de datos, o contacte con el administrador para verificar esta informacion' });
       }
-
       // luego buscamos la membresia del estudiante
       const membership = await Membership.findOne({ student: student._id });
 
@@ -405,15 +401,53 @@ const membershipController = {
         return res.status(404).json({ message: 'El mes actual no se encuentra registrado en la base de datos, o contacte con el administrador para verificar esta informacion' });
       }
     
+      let studentData = {
+        name: student.name,
+        lastName: student.lastName,
+        rut: student.rut,
+      }
+
+      const isPaid = currentMonthMembership.status === 'pagado';
+      //popular la informacion del school_representative que es el apoderado del estudiante, name, lastName, rut, phone, email
+      const schoolRepresentative = await Representative.findById(student.school_representative)
+      const schoolRepresentativeData = {
+        name: schoolRepresentative.name,
+        lastName: schoolRepresentative.lastName,
+        rut: schoolRepresentative.rut,
+        phone: schoolRepresentative.phone,
+        email: schoolRepresentative.email,
+      }
+
+
+
+      if (isPaid) {
+        return res.status(200).json({
+          message: 'El estudiante tiene su cuota al día.',
+          student: studentData,
+          schoolRepresentative: schoolRepresentativeData,
+          month: currentMonth,
+          amount: currentMonthMembership.paymentPrice,
+          status: currentMonthMembership.status,
+          recipe: currentMonthMembership.recipe,
+          paymentType: currentMonthMembership.paymentType,
+          paymentDate: currentMonthMembership.paymentDate,
+          futbolSchool: student?.program[0],
+          membershipId: membership._id
+        });
+      }
+
       return res.status(200).json({
         message: 'El mes actual para poder pagar la membresía es: ',
+        student: studentData,
+        schoolRepresentative: schoolRepresentativeData,
         month: currentMonth,
         amount: currentMonthMembership.paymentPrice,
         status: currentMonthMembership.status,
         recipe: currentMonthMembership.recipe,
         paymentType: currentMonthMembership.paymentType,
         paymentDate: currentMonthMembership.paymentDate,
-        futbolSchool: student?.program[0]
+        futbolSchool: student?.program[0],
+        membershipId: membership._id
       });
 
     } catch (error) {

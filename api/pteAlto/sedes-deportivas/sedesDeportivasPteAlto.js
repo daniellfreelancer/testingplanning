@@ -14,6 +14,7 @@ const sedesDeportivasPteAltoSchema = new mongoose.Schema({
     dias: { type: Array },
     horarioApertura: { type: String },
     horarioCierre: { type: String },
+    supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
 },
 {
     timestamps: true

@@ -19,6 +19,8 @@ const complejosDeportivosPteAltoSchema = new mongoose.Schema({
     horarioAtencionFin: { type: String },
     status: { type: Boolean, default: true },
     imgUrl: { type: String, required: false },
+    supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
+    admins: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
 
 }, {
     timestamps: true

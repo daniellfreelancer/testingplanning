@@ -5,6 +5,8 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
 const sendWelcomeColaboradorPuenteAlto = require("../mail/welcomeColaborador");
+const ReservasPteAlto = require("../reservas-pte-alto/reservasPteAlto");
+const ComplejosDeportivosPteAlto = require("../complejos-deportivos/complejosDeportivosPteAlto");
 
 // 👇 nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require("../../../utils/s3Client");
@@ -61,6 +63,7 @@ const usuariosPteAltoController = {
       || nuevoUsuarioPteAlto.rol === "COORDINADOR"
       || nuevoUsuarioPteAlto.rol === "MONITOR"
       || nuevoUsuarioPteAlto.rol === "COMUNICACIONES"
+      || nuevoUsuarioPteAlto.rol === "TERRITORIO_DEPORTIVO"
     ) {
       await sendWelcomeColaboradorPuenteAlto(nuevoUsuarioPteAlto.email, password, nuevoUsuarioPteAlto.nombre);
     }
@@ -368,11 +371,21 @@ const usuariosPteAltoController = {
         .sort({ createAt: -1 })
         .select(
           "nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio fotoCedulaFrontal motivoValidacion motivoRechazo comuna ciudad region fechaNacimiento sexo direccion telefono"
-        );
+        ).populate("talleresInscritos", "nombre");
+        const reservasPteAlto = await ReservasPteAlto.find({ usuario: { $in: usuariosPteAlto.map(usuario => usuario._id) } }).populate("espacioDeportivo", {nombre: 1} , {fechaInicio: 1});
 
-      if (usuariosPteAlto?.length > 0) {
+        // retornar las reservas de cada usuario en la lista de los usuarios encontrados
+
+        let usuariosPteAltoConReservas = usuariosPteAlto.map(usuario => {
+          return {
+            ...usuario._doc,
+            reservas: reservasPteAlto.filter(reserva => reserva.usuario._id.equals(usuario._id)),
+          };
+        });
+
+      if (usuariosPteAltoConReservas?.length > 0) {
         res.status(200).json({
-          response: usuariosPteAlto,
+          response: usuariosPteAltoConReservas,
           message: "Usuarios PTE Alto encontrados",
           success: true,
         });
@@ -599,7 +612,7 @@ const usuariosPteAltoController = {
     try {
 
       // obtener los usuarios con rol ADMIN, EMPLOYED, TRAINER
-      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES'] } });
+      const usuariosInternosPteAlto = await UsuariosPteAlto.find({ rol: { $in: ['ADMIN', 'SUPERVISOR', 'AGENDAMIENTO', 'ADMIN_RECINTO', 'COORDINADOR', 'MONITOR', 'COMUNICACIONES', 'TERRITORIO_DEPORTIVO'] } });
       res.status(200).json({
         message: "Usuarios internos PTE Alto encontrados correctamente",
         response: usuariosInternosPteAlto,
@@ -677,7 +690,80 @@ const usuariosPteAltoController = {
         error: error.message,
       });
     }
-  }
+  },
+  actualizarColaboradorPteAlto : async (req, res) => {
+
+    try {
+      const {idColaborador} = req.params;
+      const { nombre, apellido, email, rut, rol } = req.body;
+      const colaboradorPteAlto = await UsuariosPteAlto.findByIdAndUpdate(idColaborador, { nombre, apellido, email, rut, rol }, { new: true });
+      
+      res.status(200).json({ message: "Colaborador PTE Alto actualizado correctamente", colaboradorPteAlto });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error al actualizar colaborador PTE Alto", error: error.message });
+    }
+  },
+  adminsComplejosPteAlto: async (req, res) => {
+    try {
+      const { idUsuario } = req.params;
+      const { complejosArray } = req.body;
+
+      if (!Array.isArray(complejosArray)) {
+        return res.status(400).json({ message: "complejosArray debe ser un array de IDs" });
+      }
+
+      const usuarioPteAlto = await UsuariosPteAlto.findById(idUsuario);
+      if (!usuarioPteAlto) {
+        return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+      }
+
+      const idsDeseados = complejosArray.map((id) => id.toString());
+      const idsActuales = (usuarioPteAlto.complejosAdmin || []).map((id) => id.toString());
+
+      const idsAgregar = idsDeseados.filter((id) => !idsActuales.includes(id));
+      const idsQuitar = idsActuales.filter((id) => !idsDeseados.includes(id));
+
+      if (idsAgregar.length > 0) {
+        const complejosAgregar = await ComplejosDeportivosPteAlto.find({ _id: { $in: idsAgregar } });
+        for (const complejo of complejosAgregar) {
+          if (!complejo.admins.some((id) => id.toString() === usuarioPteAlto._id.toString())) {
+            complejo.admins.push(usuarioPteAlto._id);
+            await complejo.save();
+          }
+        }
+        for (const complejo of complejosAgregar) {
+          usuarioPteAlto.complejosAdmin.push(complejo._id);
+        }
+      }
+
+      if (idsQuitar.length > 0) {
+        const complejosQuitar = await ComplejosDeportivosPteAlto.find({ _id: { $in: idsQuitar } });
+        for (const complejo of complejosQuitar) {
+          complejo.admins = complejo.admins.filter(
+            (id) => id.toString() !== usuarioPteAlto._id.toString()
+          );
+          await complejo.save();
+        }
+        usuarioPteAlto.complejosAdmin = usuarioPteAlto.complejosAdmin.filter(
+          (id) => !idsQuitar.includes(id.toString())
+        );
+      }
+
+      await usuarioPteAlto.save();
+
+      res.status(200).json({
+        message: "Complejos deportivos del usuario actualizados correctamente",
+        usuarioPteAlto,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al actualizar los complejos deportivos del usuario",
+        error: error.message,
+      });
+    }
+  },
 };
 
 module.exports = usuariosPteAltoController;

@@ -73,6 +73,7 @@ const usuariosComplejosSchema = new mongoose.Schema({
 
   //campos para formulario evaluacion -> formulario inicial
   
+  nacionalidad: { type: String },
   tipoCurso: {type: String},
   fechaEvaluacion: {type: Date},
   suscripcion_activa: {type: Boolean},

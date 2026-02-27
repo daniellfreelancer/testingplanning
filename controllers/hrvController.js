@@ -1,5 +1,6 @@
 const HRV = require('../models/hrv')
 const INSTI = require('../models/institution')
+const { getStartOfDayUTC, getEndOfDayUTC, normalizeToUTC, nowUTC } = require('../utils/dateUtils')
 
 
 
@@ -290,29 +291,19 @@ const hrvController = {
     try {
       const { userType, date } = req.params;
 
-      // 1. Convertir la fecha de cadena a objeto Date
-      const targetDate = new Date(date);
-      // Verificar si se pudo convertir correctamente
-      if (isNaN(targetDate.getTime())) {
+      // 1. Convertir la fecha y obtener inicio/fin del día en UTC (consistente en cualquier servidor)
+      let startOfDay, endOfDay;
+      try {
+        startOfDay = getStartOfDayUTC(date);
+        endOfDay = getEndOfDayUTC(date);
+      } catch (err) {
         return res.status(400).json({
-          message: "Fecha inválida. Formato esperado: YYYY-MM-DDTHH:mm:ss.sssZ",
+          message: "Fecha inválida. Formato esperado: YYYY-MM-DD o ISO",
           success: false,
         });
       }
 
-      // 2. Obtener el inicio y fin del día de la fecha proporcionada
-      //   const startOfDay = new Date(targetDate);
-      //   startOfDay.setUTCHours(0, 0, 0, 0);
-
-      //   const endOfDay = new Date(targetDate);
-      //   endOfDay.setUTCHours(23, 59, 59, 999);
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(targetDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      // 3. Construir la query dinámicamente según el userType
+      // 2. Construir la query dinámicamente según el userType
       let query = {
         createdAt: {
           $gte: startOfDay,
@@ -361,12 +352,10 @@ const hrvController = {
     try {
       const { userType, userId } = req.params;
 
-      // 1. Definir el inicio y fin del día en horario local
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
+      // 1. Definir el inicio y fin del día en UTC (consistente)
+      const now = nowUTC();
+      const startOfDay = getStartOfDayUTC(now);
+      const endOfDay = getEndOfDayUTC(now);
 
       // 2. Obtener TODOS los documentos de la colección HRV
       //    (para saber todas las combinaciones user-student y encontrar su última medición)
@@ -446,12 +435,10 @@ const hrvController = {
   },
   getHrvListUser: async (req, res) => {
     try {
-      // 1. Definir el inicio y fin del día en horario local
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
+      // 1. Definir el inicio y fin del día en UTC (consistente)
+      const now = nowUTC();
+      const startOfDay = getStartOfDayUTC(now);
+      const endOfDay = getEndOfDayUTC(now);
 
       // 2. Buscar todas las mediciones del día actual y ordenar por fecha de creación desc
       const hrvList = await HRV.find({
@@ -518,12 +505,10 @@ const hrvController = {
   },
   getHrvListComplete: async (req, res) => {
     try {
-      // Definir el inicio y fin del día en horario local
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Definir el inicio y fin del día en UTC (consistente)
+      const now = nowUTC();
+      const startOfDay = getStartOfDayUTC(now);
+      const endOfDay = getEndOfDayUTC(now);
 
       // 1. Obtener *todos* los documentos de la colección HRV (para saber qué user/student existen).
       //    Populamos user y student para tener la info (name, lastname, imgUrl) disponible.
@@ -747,20 +732,9 @@ const hrvController = {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
 
-      let zone = adminDate.getTimezoneOffset() / 60
-
-      // Mantener la fecha en la zona horaria local
-      const year = adminDate.getFullYear();
-      const month = adminDate.getMonth();
-      const day = adminDate.getDate();
-  
-      // Definir el inicio y fin del día en **horario local**
-       const startOfDay = new Date(year, month, day, 0 - zone, 0, 0, 0).toISOString();
-       const endOfDay = new Date(year, month, day, 23 - zone, 59, 59, 999).toISOString();
-  
-      console.log("startOfDay (local):", startOfDay);
-      console.log("endOfDay (local):", endOfDay);
-
+      // Inicio y fin del día en UTC (consistente en cualquier servidor)
+      const startOfDay = getStartOfDayUTC(adminDate);
+      const endOfDay = getEndOfDayUTC(adminDate);
 
       // Obtener TODAS las mediciones del sistema
       const allHrvDocs = await HRV.find()
@@ -768,7 +742,7 @@ const hrvController = {
         .populate("user", "name lastName imgUrl vitalmoveCategory age")
         .populate("student", "name lastName imgUrl vitalmoveCategory age");
   
-      // Obtener SOLO las mediciones del día específico (sin conversión UTC)
+      // Obtener SOLO las mediciones del día específico
       const hrvToday = await HRV.find({
         time: { $gte: startOfDay, $lte: endOfDay }, // Filtrar por `time`
       })
@@ -1016,12 +990,10 @@ const hrvController = {
         });
       }
 
-      // 4. Definir el inicio y fin del día actual (horario local)
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
+      // 4. Definir el inicio y fin del día actual en UTC (consistente)
+      const now = nowUTC();
+      const startOfDay = getStartOfDayUTC(now);
+      const endOfDay = getEndOfDayUTC(now);
 
       // 5. Construir el filtro base: mediciones de hoy de los estudiantes de la institución
       let filter = {
@@ -1073,22 +1045,14 @@ const hrvController = {
       if (!date) {
         return res.status(400).json({ success: false, message: "Fecha requerida" });
       }
-      // 2. Convertir la fecha proporcionada a UTC
-      const userDate = new Date(date);
-      if (isNaN(userDate.getTime())) {
+      // 2. Convertir la fecha y obtener inicio/fin del día en UTC
+      let startOfDay, endOfDay;
+      try {
+        startOfDay = getStartOfDayUTC(date);
+        endOfDay = getEndOfDayUTC(date);
+      } catch (err) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
-      let zone = userDate.getTimezoneOffset() / 60
-      const year = userDate.getFullYear();
-      const month = userDate.getMonth();
-      const day = userDate.getDate();
-  
-      // Definir el inicio y fin del día en **horario local**
-       const startOfDay = new Date(year, month, day, 0 - zone, 0, 0, 0).toISOString();
-       const endOfDay = new Date(year, month, day, 23 - zone, 59, 59, 999).toISOString();
-  
-      console.log("startOfDay (local):", startOfDay);
-      console.log("endOfDay (local):", endOfDay);
 
       // 3. Buscar la institución y poblar programas con estudiantes
       const institution = await INSTI.findById(institutionId).populate({
@@ -1201,23 +1165,15 @@ const hrvController = {
         return res.status(400).json({ success: false, message: "Fecha requerida" });
       }
   
-      // 2. Convertir la fecha a UTC respetando el huso horario
-      const userDate = new Date(date);
-      if (isNaN(userDate.getTime())) {
+      // 2. Convertir la fecha y obtener inicio/fin del día en UTC
+      let startOfDay, endOfDay;
+      try {
+        startOfDay = getStartOfDayUTC(date);
+        endOfDay = getEndOfDayUTC(date);
+      } catch (err) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
-  
-      let zone = userDate.getTimezoneOffset() / 60;
-      const year = userDate.getFullYear();
-      const month = userDate.getMonth();
-      const day = userDate.getDate();
-  
-      const startOfDay = new Date(year, month, day, 0 - zone, 0, 0, 0).toISOString();
-      const endOfDay = new Date(year, month, day, 23 - zone, 59, 59, 999).toISOString();
-  
-      console.log("startOfDay:", startOfDay);
-      console.log("endOfDay:", endOfDay);
-  
+
       // 3. Buscar la institución y obtener los programas con estudiantes
       const institution = await INSTI.findById(institutionId).populate({
         path: "programs",
@@ -1655,24 +1611,13 @@ const hrvController = {
         return res.status(400).json({ success: false, message: "Fecha requerida" });
       }
 
-      const adminDate = new Date(date);
-      if (isNaN(adminDate.getTime())) {
+      let startOfDay, endOfDay;
+      try {
+        startOfDay = getStartOfDayUTC(date);
+        endOfDay = getEndOfDayUTC(date);
+      } catch (err) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
-
-      let zone = adminDate.getTimezoneOffset() / 60
-
-      // Mantener la fecha en la zona horaria local
-      const year = adminDate.getFullYear();
-      const month = adminDate.getMonth();
-      const day = adminDate.getDate();
-  
-      // Definir el inicio y fin del día en **horario local**
-       const startOfDay = new Date(year, month, day, 0 - zone, 0, 0, 0).toISOString();
-       const endOfDay = new Date(year, month, day, 23 - zone, 59, 59, 999).toISOString();
-  
-      console.log("startOfDay (local):", startOfDay);
-      console.log("endOfDay (local):", endOfDay);
 
       if (!id) {
         return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
@@ -1723,24 +1668,17 @@ const hrvController = {
         return res.status(400).json({ success: false, message: "Fecha requerida" });
       }
   
-      const todayDate = new Date(date);
-      if (isNaN(todayDate.getTime())) {
+      let startOfPeriod, endOfPeriod;
+      try {
+        const todayDate = normalizeToUTC(date);
+        const pastDate = new Date(todayDate);
+        pastDate.setUTCDate(pastDate.getUTCDate() - 6); // hace 7 días (inclusive)
+        startOfPeriod = getStartOfDayUTC(pastDate);
+        endOfPeriod = getEndOfDayUTC(todayDate);
+      } catch (err) {
         return res.status(400).json({ success: false, message: "Fecha inválida" });
       }
-  
-      let zone = todayDate.getTimezoneOffset() / 60;
-  
-      // Obtener la fecha de hace 7 días a partir de la fecha recibida
-      const pastDate = new Date(todayDate);
-      pastDate.setDate(todayDate.getDate() - 7);
-  
-      // Definir los límites del período en horario local
-      const startOfPeriod = new Date(pastDate.getFullYear(), pastDate.getMonth(), pastDate.getDate(), 0 - zone, 0, 0, 0).toISOString();
-      const endOfPeriod = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23 - zone, 59, 59, 999).toISOString();
-  
-      console.log("startOfPeriod (local 7 days):", startOfPeriod);
-      console.log("endOfPeriod (local 7 days):", endOfPeriod);
-  
+
       if (!id) {
         return res.status(400).json({ success: false, message: `ID de ${userType === "user" ? "usuario" : "estudiante"} requerido` });
       }
@@ -1876,7 +1814,33 @@ const hrvController = {
       });
     }
   },
-  
+  /**
+   * Obtener la última medición HRV de un usuario o estudiante (la más reciente por createdAt).
+   */
+  getLastHrvMeasurement: async (req, res) => {
+    try {
+      const { idUser, userType } = req.params;
+      if (!idUser || !userType) {
+        return res.status(400).json({ success: false, message: "Se requieren los parámetros idUser y userType." });
+      }
+      if (userType !== 'user' && userType !== 'student') {
+        return res.status(400).json({ success: false, message: "El parámetro userType debe ser 'user' o 'student'." });
+      }
+
+      const filter = userType === 'user' ? { user: idUser } : { student: idUser };
+      const lastHrv = await HRV.findOne(filter).sort({ createdAt: -1 });
+
+      return res.status(200).json({ success: true, data: lastHrv });
+    } catch (error) {
+      console.error("Error en getLastHrvMeasurement:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error interno del servidor",
+      });
+    }
+  },
+    
+
 
 
 

@@ -62,6 +62,7 @@ const rekoAWS = require('./routes/awsRekonitionRoutes')
 const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
 const encuestaGymRoutes = require('./routes/encuestaGymRoutes');
+const metricasPiscinaRoutes = require('./routes/metricasPiscinaRoutes');
 
 //SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
@@ -75,6 +76,7 @@ const pagosPiscinas = require('./api/gestion-pagos/gestionPagosRoutes')
 const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRoutes')
 const emailService = require('./api/email/emailServiceRoutes')
 const notasUsuarios = require('./api/notas-usuarios/notasUsuariosRoutes')
+const patentesPiscina = require('./api/patentes-piscina/patentesPiscinaRoutes')
 
 //Rutas para gestion de usuarios PTE Alto
 const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
@@ -92,6 +94,8 @@ const albumesPteAlto = require('./api/pteAlto/albumes-pte-alto/albumRoutes')
 const videosPteAlto = require('./api/pteAlto/videos-pte-alto/videoRoutes')
 const sedesDeportivasPteAlto = require('./api/pteAlto/sedes-deportivas/sedesDeportivasPteAlto.routes')
 const clubesPteAlto = require('./api/pteAlto/clubes-pte-alto/clubesPteAlto.routes')
+const historicoPteAlto = require('./api/pteAlto/historico-pte-alto/historicoPteAlto.routes')
+const supervisionPteAlto = require('./api/pteAlto/supervision-pte-alto/supervisionPteAlto.routes')
 
 //Rutas para gestion de usuarios UCAD
 const usuariosUCAD = require('./api/car/ucad-usuarios/usuarios-ucad.routes')
@@ -166,9 +170,7 @@ app.use((req, res, next) => {
     '/pte-alto/crear-usuario-externo',
     '/clubes-pte-alto/crear-club-pte-alto',
     '/clubes-pte-alto/actualizar-club-pte-alto',
-    
-    
-
+    '/student', // create/update usan multer (upload.single)
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
@@ -252,6 +254,7 @@ app.use('/gym', userGym)
 app.use('/gym-admin', gym)
 app.use('/aws-vm', rekoAWS)
 app.use('/api/encuestas', encuestaGymRoutes);
+app.use('/metricas-piscina', metricasPiscinaRoutes);
 app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
 app.use('/suscripciones-piscinas', suscripcionesPiscinas)
@@ -276,6 +279,7 @@ app.use('/nav-items', navItems)
 app.use('/secciones', secciones)
 app.use('/albumes-pte-alto', albumesPteAlto)
 app.use('/videos-pte-alto', videosPteAlto)
+app.use('/supervision-pte-alto', supervisionPteAlto)
 
 //Rutas para gestion de usuarios UCAD
 app.use('/usuarios-ucad', usuariosUCAD)
@@ -298,9 +302,11 @@ app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
 app.use('/acceso-usuarios-complejos', accesoUsuariosComplejos) // acceso usuarios complejos
 app.use('/email-service', emailService)
-app.use('/api/notas-usuarios', notasUsuarios) // notas de usuarios
+app.use('/api/notas-usuarios', notasUsuarios)
+app.use('/patentes-piscina', patentesPiscina) // notas de usuarios
 app.use('/sedes-pte-alto', sedesDeportivasPteAlto)
 app.use('/clubes-pte-alto', clubesPteAlto)
+app.use('/historico-pte-alto', historicoPteAlto)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

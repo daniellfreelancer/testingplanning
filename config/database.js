@@ -17,6 +17,24 @@ switch (process.env.NODE_ENV) {
         dbUri = process.env.MONGO_CONNECT;
 }
 
+// Fallback: si no hay variable por entorno, usar MONGO_CONNECT (p. ej. en DO con una sola variable)
+if (!dbUri || typeof dbUri !== 'string') {
+    dbUri = process.env.MONGO_CONNECT;
+}
+
+if (!dbUri || typeof dbUri !== 'string') {
+    const varName = process.env.NODE_ENV === 'production'
+        ? 'MONGO_CONNECT_PROD'
+        : process.env.NODE_ENV === 'development'
+            ? 'MONGO_CONNECT_DEV'
+            : process.env.NODE_ENV === 'test'
+                ? 'MONGO_CONNECT_TEST'
+                : 'MONGO_CONNECT';
+    throw new Error(
+        `MongoDB URI no configurada: define la variable de entorno "${varName}" (NODE_ENV=${process.env.NODE_ENV || 'no definido'}).`
+    );
+}
+
 // Opciones de conexión robustas para producción
 const connectionOptions = {
     useNewUrlParser: true,

@@ -21,8 +21,9 @@ const clubesPteAltoSchema = new mongoose.Schema({
     creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     responsable:[{type: Object}], //array de objetos con los datos del responsable del club
     contacto:[{type: Object}], //array de objetos con los datos del contacto del club
-    documento:{type: String}, //url del documento del club (pdf)
+    documentos: [{ type: String }], // array de URLs de documentos del club (pdf, imágenes, etc.). Máximo 10.
     notas:{type: String}, //notas del club
+    personaJuridica: { type: Boolean, default: false },
 
 });
 

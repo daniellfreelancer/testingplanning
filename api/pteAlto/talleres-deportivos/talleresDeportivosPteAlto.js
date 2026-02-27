@@ -42,6 +42,7 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     valor: { type: Number },
     pago: { type: Boolean },
     usuarios: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
+    usuariosBaja: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     sesiones: [sesionTallerSchema], //  estas van a ser las clases / sesiones que se van a crear para el taller
     profesores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
     coordinadores: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
@@ -50,6 +51,8 @@ const talleresDeportivosPteAltoSchema = new mongoose.Schema({
     creadoPor: { type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' },
     informacionHorarios: { type: Array }, // aqui se van a mostrar los dias y horarios seleccionados para el taller
     sexo: { type: String, enum: ['masculino', 'femenino', 'ambos'], default: 'ambos' },
+    supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
+
 
 }, {
     timestamps: true
