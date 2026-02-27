@@ -199,6 +199,68 @@ const metricasPiscinaController = {
       });
     }
   },
+  nacionalidad: async (req, res) => {
+    try {
+      const institutionId = '6877f7f9c1f4bd360cce0496';
+
+      if (!mongoose.Types.ObjectId.isValid(institutionId)) {
+        return res.status(400).json({
+          message: 'ID de institución inválido',
+          success: false,
+        });
+      }
+
+      const institutionObjectId = new mongoose.Types.ObjectId(institutionId);
+
+      const metricasPorNacionalidad = await UsuariosComplejos.aggregate([
+        {
+          $match: {
+            institucion: { $in: [institutionObjectId] }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $cond: {
+                if: {
+                  $or: [
+                    { $eq: [{ $ifNull: ['$nacionalidad', null] }, null] },
+                    { $eq: ['$nacionalidad', ''] }
+                  ]
+                },
+                then: 'Sin nacionalidad registrada',
+                else: '$nacionalidad'
+              }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            nacionalidad: '$_id',
+            cantidad: '$count'
+          }
+        },
+        {
+          $sort: { cantidad: -1 }
+        }
+      ]);
+
+      res.status(200).json({
+        message: 'Métricas por nacionalidad obtenidas exitosamente',
+        success: true,
+        data: metricasPorNacionalidad,
+        total: metricasPorNacionalidad.reduce((sum, item) => sum + item.cantidad, 0)
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: error.message,
+        success: false,
+      });
+    }
+  },
 };
 
 module.exports = metricasPiscinaController;
