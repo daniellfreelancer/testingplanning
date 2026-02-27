@@ -22,6 +22,7 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     motivoValidacion: { type: String },
     motivoRechazo: { type: String },
     talleresInscritos: [{ type: mongoose.Types.ObjectId, ref: 'talleresDeportivosPteAlto' }],
+    complejosAdmin: [{ type: mongoose.Types.ObjectId, ref: 'complejosDeportivosPteAlto' }],
 },
 {
     timestamps: true

@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
 const sendWelcomeColaboradorPuenteAlto = require("../mail/welcomeColaborador");
 const ReservasPteAlto = require("../reservas-pte-alto/reservasPteAlto");
+const ComplejosDeportivosPteAlto = require("../complejos-deportivos/complejosDeportivosPteAlto");
 
 // 👇 nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require("../../../utils/s3Client");
@@ -702,7 +703,67 @@ const usuariosPteAltoController = {
       console.log(error);
       res.status(500).json({ message: "Error al actualizar colaborador PTE Alto", error: error.message });
     }
-  }
+  },
+  adminsComplejosPteAlto: async (req, res) => {
+    try {
+      const { idUsuario } = req.params;
+      const { complejosArray } = req.body;
+
+      if (!Array.isArray(complejosArray)) {
+        return res.status(400).json({ message: "complejosArray debe ser un array de IDs" });
+      }
+
+      const usuarioPteAlto = await UsuariosPteAlto.findById(idUsuario);
+      if (!usuarioPteAlto) {
+        return res.status(404).json({ message: "Usuario PTE Alto no encontrado" });
+      }
+
+      const idsDeseados = complejosArray.map((id) => id.toString());
+      const idsActuales = (usuarioPteAlto.complejosAdmin || []).map((id) => id.toString());
+
+      const idsAgregar = idsDeseados.filter((id) => !idsActuales.includes(id));
+      const idsQuitar = idsActuales.filter((id) => !idsDeseados.includes(id));
+
+      if (idsAgregar.length > 0) {
+        const complejosAgregar = await ComplejosDeportivosPteAlto.find({ _id: { $in: idsAgregar } });
+        for (const complejo of complejosAgregar) {
+          if (!complejo.admins.some((id) => id.toString() === usuarioPteAlto._id.toString())) {
+            complejo.admins.push(usuarioPteAlto._id);
+            await complejo.save();
+          }
+        }
+        for (const complejo of complejosAgregar) {
+          usuarioPteAlto.complejosAdmin.push(complejo._id);
+        }
+      }
+
+      if (idsQuitar.length > 0) {
+        const complejosQuitar = await ComplejosDeportivosPteAlto.find({ _id: { $in: idsQuitar } });
+        for (const complejo of complejosQuitar) {
+          complejo.admins = complejo.admins.filter(
+            (id) => id.toString() !== usuarioPteAlto._id.toString()
+          );
+          await complejo.save();
+        }
+        usuarioPteAlto.complejosAdmin = usuarioPteAlto.complejosAdmin.filter(
+          (id) => !idsQuitar.includes(id.toString())
+        );
+      }
+
+      await usuarioPteAlto.save();
+
+      res.status(200).json({
+        message: "Complejos deportivos del usuario actualizados correctamente",
+        usuarioPteAlto,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al actualizar los complejos deportivos del usuario",
+        error: error.message,
+      });
+    }
+  },
 };
 
 module.exports = usuariosPteAltoController;

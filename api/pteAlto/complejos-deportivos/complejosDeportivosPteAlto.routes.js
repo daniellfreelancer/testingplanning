@@ -7,5 +7,6 @@ router.get('/complejos-deportivos', complejosDeportivosPteAltoController.obtener
 router.get('/obtener-complejo-deportivo/:id', complejosDeportivosPteAltoController.obtenerComplejoDeportivoPteAltoPorId);
 router.put('/actualizar-complejo-deportivo/:id', upload.single('imgUrl'), complejosDeportivosPteAltoController.actualizarComplejoDeportivoPteAltoPorId);
 router.delete('/eliminar-complejo-deportivo/:id', complejosDeportivosPteAltoController.eliminarComplejoDeportivoPteAltoPorId);
+router.get('/obtener-complejos-deportivos-solo-nombre', complejosDeportivosPteAltoController.obtenerComplejosDeportivosSoloNombre);
 
 module.exports = router;
