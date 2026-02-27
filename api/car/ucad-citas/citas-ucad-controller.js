@@ -849,8 +849,10 @@ const citasUcadController = {
         });
       }
 
-      // Validar fecha
-      const fechaDate = new Date(fecha);
+      // Validar fecha y crear objeto Date en zona horaria local
+      const [year, month, day] = fecha.split('-').map(Number);
+      const fechaDate = new Date(year, month - 1, day);
+
       if (isNaN(fechaDate.getTime())) {
         return res.status(400).json({
           message: "Formato de fecha inválido. Use YYYY-MM-DD"
@@ -861,63 +863,32 @@ const citasUcadController = {
       const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
       const diaSemana = diasSemana[fechaDate.getDay()];
 
-      // Buscar el día en la agenda (ahora es un array de objetos)
-      const diaAgenda = Array.isArray(agenda.dias) && agenda.dias.length > 0 && typeof agenda.dias[0] === 'object'
-        ? agenda.dias.find(d => d.dia === diaSemana)
-        : null;
+      // Verificar que el día esté en los días habilitados
+      const diasArray = Array.isArray(agenda.dias) ? agenda.dias : [];
+      if (!diasArray.includes(diaSemana)) {
+        return res.status(400).json({
+          message: `El profesional no atiende los ${diaSemana}s`,
+          horariosDisponibles: []
+        });
+      }
 
-      // Si la estructura es antigua (array de strings), mantener compatibilidad
+      // Obtener horarios disponibles para este día desde horariosDisponibles
       let bloquesDisponibles = [];
-      if (!diaAgenda) {
-        const diasArray = Array.isArray(agenda.dias) ? agenda.dias : [];
-        const esEstructuraAntigua = diasArray.length > 0 && typeof diasArray[0] === 'string';
-        
-        if (esEstructuraAntigua && !diasArray.includes(diaSemana)) {
-          return res.status(400).json({
-            message: `El profesional no atiende los ${diaSemana}s`,
-            horariosDisponibles: []
+      if (agenda.horariosDisponibles && Array.isArray(agenda.horariosDisponibles)) {
+        const diaConfig = agenda.horariosDisponibles.find(d => d.dia === diaSemana);
+        if (diaConfig && Array.isArray(diaConfig.horarios)) {
+          bloquesDisponibles = diaConfig.horarios.map(horario => {
+            const [hora, minuto] = horario.split(':').map(Number);
+            return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
           });
         }
+      }
 
-        // Si es estructura antigua, generar bloques automáticamente
-        if (esEstructuraAntigua) {
-          const [horaInicioNum, minutoInicioNum] = agenda.horaInicio.split(':').map(Number);
-          const [horaFinNum, minutoFinNum] = agenda.horaFin.split(':').map(Number);
-          const bloqueMinutos = agenda.bloque || 30;
-
-          let horaActual = horaInicioNum;
-          let minutoActual = minutoInicioNum;
-
-          while (horaActual < horaFinNum || (horaActual === horaFinNum && minutoActual < minutoFinNum)) {
-            const horaFormato = `${String(horaActual).padStart(2, '0')}:${String(minutoActual).padStart(2, '0')}`;
-            bloquesDisponibles.push(horaFormato);
-
-            // Avanzar según el bloque
-            minutoActual += bloqueMinutos;
-            if (minutoActual >= 60) {
-              horaActual += 1;
-              minutoActual = minutoActual % 60;
-            }
-          }
-        } else {
-          return res.status(400).json({
-            message: `El profesional no atiende los ${diaSemana}s`,
-            horariosDisponibles: []
-          });
-        }
-      } else {
-        // Verificar que el día esté activo (status = true)
-        if (!diaAgenda.status) {
-          return res.status(400).json({
-            message: `El profesional no está disponible los ${diaSemana}s (día inactivo)`,
-            horariosDisponibles: []
-          });
-        }
-
-        // Usar los horarios específicos del día (normalizar formato HH:mm)
-        bloquesDisponibles = (diaAgenda.horarios || []).map(horario => {
-          const [hora, minuto] = horario.split(':').map(Number);
-          return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+      // Si no hay horarios disponibles configurados, retornar mensaje
+      if (bloquesDisponibles.length === 0) {
+        return res.status(400).json({
+          message: `El profesional no tiene horarios disponibles configurados para los ${diaSemana}s`,
+          horariosDisponibles: []
         });
       }
 
@@ -936,7 +907,7 @@ const citasUcadController = {
         estado: { $nin: ['cancelada'] }
       }).select('fecha duracion');
 
-      // Marcar bloques ocupados
+      // Marcar bloques ocupados por citas
       const bloquesOcupados = new Set();
       citasExistentes.forEach(cita => {
         const fechaCita = new Date(cita.fecha);
@@ -944,7 +915,19 @@ const citasUcadController = {
         bloquesOcupados.add(horaCita);
       });
 
-      // Filtrar bloques disponibles
+      // Agregar horarios bloqueados por el profesional (horariosOcupados)
+      if (agenda.horariosOcupados && Array.isArray(agenda.horariosOcupados)) {
+        const diaOcupado = agenda.horariosOcupados.find(d => d.dia === diaSemana);
+        if (diaOcupado && Array.isArray(diaOcupado.horarios)) {
+          diaOcupado.horarios.forEach(item => {
+            if (item.hora) {
+              bloquesOcupados.add(item.hora);
+            }
+          });
+        }
+      }
+
+      // Filtrar bloques disponibles (excluir ocupados y bloqueados)
       const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.has(bloque));
 
       res.status(200).json({

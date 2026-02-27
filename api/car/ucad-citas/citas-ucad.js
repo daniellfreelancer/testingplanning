@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
 const citasUcadSchema = new mongoose.Schema({
-  deportista: { 
-    type: mongoose.Types.ObjectId, 
+  deportista: {
+    type: mongoose.Types.ObjectId,
     ref: 'usuariosUcad',
-    required: true
+    required: false // no requerido para citas internas
   },
   profesional: { 
     type: mongoose.Types.ObjectId, 
@@ -82,6 +82,15 @@ const citasUcadSchema = new mongoose.Schema({
     type: Number,
     min: 1,
     max: 10,
+  },
+  // Citas internas (para bloqueos de reunión, almuerzo, etc.)
+  esCitaInterna: {
+    type: Boolean,
+    default: false,
+  },
+  motivoBloqueo: {
+    type: String,
+    enum: ['Reunión', 'Almuerzo', 'Personal', 'Otro'],
   },
 }, {
   timestamps: true,

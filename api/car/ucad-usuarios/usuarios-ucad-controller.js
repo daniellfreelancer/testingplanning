@@ -500,7 +500,10 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
 
     try {
       const profesionales = await UsuariosUcad.find({ rol: 'profesional' })
-      .populate('agenda')
+      .populate({
+        path: 'agenda',
+        select: 'dias horaInicio horaFin bloque status horariosDisponibles habilitadaPor fechaHabilitacion'
+      })
       .select('nombre apellido email especialidad imgUrl agenda rol rut telefono');
       res.status(200).json({
         message: "Profesionales encontrados correctamente",
