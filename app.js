@@ -170,9 +170,7 @@ app.use((req, res, next) => {
     '/pte-alto/crear-usuario-externo',
     '/clubes-pte-alto/crear-club-pte-alto',
     '/clubes-pte-alto/actualizar-club-pte-alto',
-    
-    
-
+    '/student', // create/update usan multer (upload.single)
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));
