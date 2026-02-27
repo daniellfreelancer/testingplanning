@@ -160,6 +160,15 @@ const complejosDeportivosPteAltoController = {
             console.log(error);
             res.status(500).json({ message: "Error al eliminar el complejo deportivo PTE Alto", error: error });
         }
+    },
+    obtenerComplejosDeportivosSoloNombre: async (req, res) => {
+        try {
+            const complejosDeportivosPteAlto = await ComplejosDeportivosPteAlto.find({ status: true }, { nombre: 1 });
+            res.status(200).json({ message: "Complejos deportivos PTE Alto obtenidos correctamente", response: complejosDeportivosPteAlto, success: true });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ message: "Error al obtener los complejos deportivos PTE Alto", error: error });
+        }
     }
 }
 

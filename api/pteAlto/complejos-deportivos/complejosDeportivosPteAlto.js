@@ -20,6 +20,7 @@ const complejosDeportivosPteAltoSchema = new mongoose.Schema({
     status: { type: Boolean, default: true },
     imgUrl: { type: String, required: false },
     supervision: [{ type: mongoose.Types.ObjectId, ref: 'supervisionPteAlto' }],
+    admins: [{ type: mongoose.Types.ObjectId, ref: 'usuariosPteAlto' }],
 
 }, {
     timestamps: true

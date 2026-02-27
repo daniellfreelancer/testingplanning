@@ -2,6 +2,30 @@ const AgendaUCAD = require('./agenda-ucad');
 const UsuariosUcad = require('../ucad-usuarios/usuarios-ucad');
 const CitasUcad = require('../ucad-citas/citas-ucad');
 
+/**
+ * Función auxiliar para generar todos los slots de horarios posibles
+ * basado en horaInicio, horaFin y bloqueMinutos
+ */
+const generarSlotsHorarios = (horaInicio, horaFin, bloqueMinutos) => {
+  const [horaIni, minIni] = horaInicio.split(':').map(Number);
+  const [horaFn, minFn] = horaFin.split(':').map(Number);
+  const slots = [];
+  let horaActual = horaIni;
+  let minutoActual = minIni;
+  const finTotal = horaFn * 60 + minFn;
+
+  while (horaActual * 60 + minutoActual < finTotal) {
+    const horaFormato = `${String(horaActual).padStart(2, '0')}:${String(minutoActual).padStart(2, '0')}`;
+    slots.push(horaFormato);
+    minutoActual += bloqueMinutos;
+    if (minutoActual >= 60) {
+      horaActual += 1;
+      minutoActual = minutoActual % 60;
+    }
+  }
+  return slots;
+};
+
 const agendaUcadController = {
   /**
    * Crear agenda para un profesional
@@ -404,13 +428,53 @@ const agendaUcadController = {
         const inicioTotal = horaInicioNum * 60 + minutoInicioNum;
         const finTotal = horaFinNum * 60 + minutoFinNum;
 
-        for (const diaObj of dias) {
-          // Validar que sea un objeto
-          if (typeof diaObj !== 'object' || Array.isArray(diaObj) || diaObj === null) {
-            return res.status(400).json({
-              message: "Cada elemento de 'dias' debe ser un objeto con propiedades: dia, horarios, status"
-            });
+        // Detectar si el array contiene strings (formato nuevo simplificado) u objetos (formato completo)
+        const esFormatoSimplificado = typeof dias[0] === 'string';
+
+        if (esFormatoSimplificado) {
+          // Formato simplificado: array de strings ["lunes", "martes"]
+          // Usado cuando el admin edita la configuración base
+          for (const diaStr of dias) {
+            if (typeof diaStr !== 'string') {
+              return res.status(400).json({
+                message: "En formato simplificado, cada elemento de 'dias' debe ser un string (nombre del día)"
+              });
+            }
+
+            const diaNormalizado = diaStr.toLowerCase().trim()
+              .replace(/á/g, 'a')
+              .replace(/é/g, 'e')
+              .replace(/í/g, 'i')
+              .replace(/ó/g, 'o')
+              .replace(/ú/g, 'u');
+
+            if (!diasValidos.includes(diaNormalizado) && !diasValidos.includes(diaStr.toLowerCase().trim())) {
+              return res.status(400).json({
+                message: `Día inválido: ${diaStr}. Días válidos: lunes, martes, miércoles, jueves, viernes, sábado, domingo`
+              });
+            }
+
+            if (diasUnicos.has(diaNormalizado)) {
+              return res.status(400).json({
+                message: `El día '${diaStr}' está duplicado`
+              });
+            }
+            diasUnicos.add(diaNormalizado);
+            diasNormalizados.push(diaNormalizado);
           }
+
+          // En formato simplificado, solo actualizamos el array de días
+          // Los horariosDisponibles se mantienen y serán gestionados por el profesional
+          agenda.dias = diasNormalizados;
+        } else {
+          // Formato completo: array de objetos con estructura {dia, horarios, status}
+          for (const diaObj of dias) {
+            // Validar que sea un objeto
+            if (typeof diaObj !== 'object' || Array.isArray(diaObj) || diaObj === null) {
+              return res.status(400).json({
+                message: "Cada elemento de 'dias' debe ser un objeto con propiedades: dia, horarios, status"
+              });
+            }
 
           // Validar propiedades requeridas
           if (!diaObj.dia || diaObj.status === undefined) {
@@ -547,9 +611,10 @@ const agendaUcadController = {
           if (diaObj.horaFin) diaFinal.horaFin = diaObj.horaFin;
 
           diasNormalizados.push(diaFinal);
-        }
+          }
 
-        agenda.dias = diasNormalizados;
+          agenda.dias = diasNormalizados;
+        }
       }
 
       if (horaInicio) agenda.horaInicio = horaInicio;
@@ -558,6 +623,9 @@ const agendaUcadController = {
       if (status !== undefined) agenda.status = status;
 
       await agenda.save();
+
+      // Asegurar que el profesional tenga la referencia a la agenda
+      await UsuariosUcad.findByIdAndUpdate(agenda.profesional, { agenda: agenda._id });
 
       // Mensaje personalizado si se regeneraron horarios
       let mensaje = "Agenda actualizada exitosamente";
@@ -636,8 +704,10 @@ const agendaUcadController = {
         });
       }
 
-      // Validar fecha
-      const fechaDate = new Date(fecha);
+      // Validar fecha y crear objeto Date en zona horaria local
+      const [year, month, day] = fecha.split('-').map(Number);
+      const fechaDate = new Date(year, month - 1, day);
+
       if (isNaN(fechaDate.getTime())) {
         return res.status(400).json({
           message: "Formato de fecha inválido. Use YYYY-MM-DD"
@@ -648,102 +718,32 @@ const agendaUcadController = {
       const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
       const diaSemana = diasSemana[fechaDate.getDay()];
 
-      // Buscar el día en la agenda (ahora es un array de objetos)
-      const diaAgenda = Array.isArray(agenda.dias) && agenda.dias.length > 0 && typeof agenda.dias[0] === 'object'
-        ? agenda.dias.find(d => d.dia === diaSemana)
-        : null;
-
-      // Si la estructura es antigua (array de strings), mantener compatibilidad
-      if (!diaAgenda) {
-        const diasArray = Array.isArray(agenda.dias) ? agenda.dias : [];
-        const esEstructuraAntigua = diasArray.length > 0 && typeof diasArray[0] === 'string';
-        
-        if (esEstructuraAntigua && !diasArray.includes(diaSemana)) {
-          return res.status(400).json({
-            message: `El profesional no atiende los ${diaSemana}s`
-          });
-        }
-
-        // Si es estructura antigua, generar bloques automáticamente
-        if (esEstructuraAntigua) {
-          const [horaInicioNum, minutoInicioNum] = agenda.horaInicio.split(':').map(Number);
-          const [horaFinNum, minutoFinNum] = agenda.horaFin.split(':').map(Number);
-          const bloqueMinutos = agenda.bloque || 30;
-
-          const bloquesDisponibles = [];
-          let horaActual = horaInicioNum;
-          let minutoActual = minutoInicioNum;
-
-          while (horaActual < horaFinNum || (horaActual === horaFinNum && minutoActual < minutoFinNum)) {
-            const horaFormato = `${String(horaActual).padStart(2, '0')}:${String(minutoActual).padStart(2, '0')}`;
-            bloquesDisponibles.push(horaFormato);
-
-            // Avanzar según el bloque
-            minutoActual += bloqueMinutos;
-            if (minutoActual >= 60) {
-              horaActual += 1;
-              minutoActual = minutoActual % 60;
-            }
-          }
-
-          // Obtener citas existentes para esta fecha
-          const inicioDia = new Date(fechaDate);
-          inicioDia.setHours(0, 0, 0, 0);
-          const finDia = new Date(fechaDate);
-          finDia.setHours(23, 59, 59, 999);
-
-          const citasExistentes = await CitasUcad.find({
-            profesional: profesionalId,
-            fecha: {
-              $gte: inicioDia,
-              $lte: finDia
-            },
-            estado: { $nin: ['cancelada'] }
-          }).select('fecha duracion');
-
-          // Marcar bloques ocupados
-          const bloquesOcupados = new Set();
-          citasExistentes.forEach(cita => {
-            const fechaCita = new Date(cita.fecha);
-            const horaCita = `${String(fechaCita.getHours()).padStart(2, '0')}:${String(fechaCita.getMinutes()).padStart(2, '0')}`;
-            bloquesOcupados.add(horaCita);
-          });
-
-          // Filtrar bloques disponibles
-          const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.has(bloque));
-
-          return res.status(200).json({
-            profesional: {
-              id: profesional._id,
-              nombre: `${profesional.nombre} ${profesional.apellido}`,
-              especialidad: profesional.especialidad
-            },
-            fecha: fecha,
-            diaSemana: diaSemana,
-            horariosDisponibles: horariosDisponibles,
-            horariosOcupados: Array.from(bloquesOcupados),
-            totalDisponibles: horariosDisponibles.length,
-            totalOcupados: bloquesOcupados.size
-          });
-        } else {
-          return res.status(400).json({
-            message: `El profesional no atiende los ${diaSemana}s`
-          });
-        }
-      }
-
-      // Verificar que el día esté activo (status = true)
-      if (!diaAgenda.status) {
+      // Verificar que el día esté en los días habilitados
+      const diasArray = Array.isArray(agenda.dias) ? agenda.dias : [];
+      if (!diasArray.includes(diaSemana)) {
         return res.status(400).json({
-          message: `El profesional no está disponible los ${diaSemana}s (día inactivo)`
+          message: `El profesional no atiende los ${diaSemana}s`
         });
       }
 
-      // Usar los horarios específicos del día (normalizar formato HH:mm)
-      const bloquesDisponibles = (diaAgenda.horarios || []).map(horario => {
-        const [hora, minuto] = horario.split(':').map(Number);
-        return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
-      });
+      // Obtener horarios disponibles para este día desde horariosDisponibles
+      let bloquesDisponibles = [];
+      if (agenda.horariosDisponibles && Array.isArray(agenda.horariosDisponibles)) {
+        const diaConfig = agenda.horariosDisponibles.find(d => d.dia === diaSemana);
+        if (diaConfig && Array.isArray(diaConfig.horarios)) {
+          bloquesDisponibles = diaConfig.horarios.map(horario => {
+            const [hora, minuto] = horario.split(':').map(Number);
+            return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+          });
+        }
+      }
+
+      // Si no hay horarios disponibles configurados, retornar mensaje
+      if (bloquesDisponibles.length === 0) {
+        return res.status(400).json({
+          message: `El profesional no tiene horarios disponibles configurados para los ${diaSemana}s`
+        });
+      }
 
       // Obtener citas existentes para esta fecha
       const inicioDia = new Date(fechaDate);
@@ -760,7 +760,7 @@ const agendaUcadController = {
         estado: { $nin: ['cancelada'] }
       }).select('fecha duracion');
 
-      // Marcar bloques ocupados
+      // Marcar bloques ocupados por citas
       const bloquesOcupados = new Set();
       citasExistentes.forEach(cita => {
         const fechaCita = new Date(cita.fecha);
@@ -768,7 +768,19 @@ const agendaUcadController = {
         bloquesOcupados.add(horaCita);
       });
 
-      // Filtrar bloques disponibles
+      // Agregar horarios bloqueados por el profesional (horariosOcupados)
+      if (agenda.horariosOcupados && Array.isArray(agenda.horariosOcupados)) {
+        const diaOcupado = agenda.horariosOcupados.find(d => d.dia === diaSemana);
+        if (diaOcupado && Array.isArray(diaOcupado.horarios)) {
+          diaOcupado.horarios.forEach(item => {
+            if (item.hora) {
+              bloquesOcupados.add(item.hora);
+            }
+          });
+        }
+      }
+
+      // Filtrar bloques disponibles (excluir ocupados y bloqueados)
       const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.has(bloque));
 
       res.status(200).json({
@@ -788,6 +800,453 @@ const agendaUcadController = {
       console.error('Error al obtener disponibilidad:', error);
       res.status(500).json({
         message: "Error al obtener disponibilidad",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Admin habilita agenda para un profesional (primera vez)
+   * POST /habilitar-agenda
+   * Body: { profesional, dias, horaInicio, horaFin, bloque, habilitadaPor }
+   */
+  habilitarAgenda: async (req, res) => {
+    try {
+      const { profesional, dias, horaInicio, horaFin, bloque = 15, habilitadaPor } = req.body;
+
+      // Validar campos requeridos
+      if (!profesional || !dias || !horaInicio || !horaFin) {
+        return res.status(400).json({
+          message: "Los campos profesional, dias, horaInicio y horaFin son requeridos"
+        });
+      }
+
+      // Validar que el profesional existe y tiene rol 'profesional'
+      const profesionalExiste = await UsuariosUcad.findById(profesional);
+      if (!profesionalExiste) {
+        return res.status(404).json({
+          message: "Profesional no encontrado"
+        });
+      }
+
+      if (profesionalExiste.rol !== 'profesional') {
+        return res.status(400).json({
+          message: "El usuario debe tener rol 'profesional'"
+        });
+      }
+
+      // Verificar si ya tiene agenda
+      const agendaExistente = await AgendaUCAD.findOne({ profesional });
+      if (agendaExistente) {
+        return res.status(400).json({
+          message: "El profesional ya tiene una agenda habilitada. Use el endpoint de actualización."
+        });
+      }
+
+      // Validar que dias sea un array de strings
+      if (!Array.isArray(dias) || dias.length === 0) {
+        return res.status(400).json({
+          message: "El campo 'dias' debe ser un array no vacío de días de la semana"
+        });
+      }
+
+      // Validar formato de horas
+      const horaRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!horaRegex.test(horaInicio) || !horaRegex.test(horaFin)) {
+        return res.status(400).json({
+          message: "Formato de hora inválido. Use HH:mm (ej: 09:00, 17:00)"
+        });
+      }
+
+      // Validar que horaInicio < horaFin
+      const [horaIniNum, minIniNum] = horaInicio.split(':').map(Number);
+      const [horaFnNum, minFnNum] = horaFin.split(':').map(Number);
+      const inicioTotal = horaIniNum * 60 + minIniNum;
+      const finTotal = horaFnNum * 60 + minFnNum;
+
+      if (inicioTotal >= finTotal) {
+        return res.status(400).json({
+          message: "La hora de inicio debe ser menor que la hora de fin"
+        });
+      }
+
+      // Validar días
+      const diasValidos = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado', 'domingo'];
+      const diasNormalizados = dias.map(d => {
+        const diaLower = d.toLowerCase();
+        return diaLower === 'miercoles' ? 'miércoles' : (diaLower === 'sabado' ? 'sábado' : diaLower);
+      });
+
+      for (const dia of diasNormalizados) {
+        if (!diasValidos.includes(dia)) {
+          return res.status(400).json({
+            message: `Día inválido: ${dia}`
+          });
+        }
+      }
+
+      // Crear la agenda con horariosDisponibles vacío (el profesional los llenará)
+      const nuevaAgenda = new AgendaUCAD({
+        profesional,
+        dias: diasNormalizados,
+        horaInicio,
+        horaFin,
+        bloque,
+        status: true,
+        horariosDisponibles: [], // vacío inicialmente
+        habilitadaPor: habilitadaPor || null,
+        fechaHabilitacion: new Date()
+      });
+
+      await nuevaAgenda.save();
+
+      // Actualizar el campo agenda en el usuario profesional
+      const usuarioActualizado = await UsuariosUcad.findByIdAndUpdate(
+        profesional,
+        { agenda: nuevaAgenda._id },
+        { new: true }
+      );
+
+      console.log(`✓ Agenda vinculada al profesional ${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`);
+
+      res.status(201).json({
+        message: "Agenda habilitada correctamente. El profesional puede ahora configurar sus horarios disponibles.",
+        agenda: nuevaAgenda
+      });
+
+    } catch (error) {
+      console.error('Error al habilitar agenda:', error);
+      res.status(500).json({
+        message: "Error al habilitar agenda",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Obtener agenda habilitada con todos los slots disponibles
+   * GET /agenda-habilitada/:profesionalId
+   */
+  obtenerAgendaHabilitada: async (req, res) => {
+    try {
+      const { profesionalId } = req.params;
+
+      const agenda = await AgendaUCAD.findOne({ profesional: profesionalId })
+        .populate('profesional', 'nombre apellido especialidad')
+        .populate('habilitadaPor', 'nombre apellido');
+
+      if (!agenda) {
+        return res.status(404).json({
+          message: "El profesional no tiene agenda habilitada",
+          agendaHabilitada: false
+        });
+      }
+
+      // Normalizar días: asegurar que son strings, no objetos
+      const diasNormalizados = Array.isArray(agenda.dias)
+        ? agenda.dias.map(d => typeof d === 'string' ? d : (d.dia || String(d)))
+        : [];
+
+      // Generar todos los slots posibles por día
+      const slotsDisponibles = {};
+      diasNormalizados.forEach(dia => {
+        slotsDisponibles[dia] = generarSlotsHorarios(agenda.horaInicio, agenda.horaFin, agenda.bloque);
+      });
+
+      // Organizar horarios ocupados desde la agenda (ya no buscamos citas internas)
+      const horariosOcupados = {};
+      if (agenda.horariosOcupados && Array.isArray(agenda.horariosOcupados)) {
+        agenda.horariosOcupados.forEach(diaConfig => {
+          if (diaConfig.dia && Array.isArray(diaConfig.horarios)) {
+            horariosOcupados[diaConfig.dia] = diaConfig.horarios;
+          }
+        });
+      }
+
+      res.status(200).json({
+        message: "Agenda obtenida correctamente",
+        agendaHabilitada: true,
+        agenda: {
+          _id: agenda._id,
+          profesional: agenda.profesional,
+          dias: diasNormalizados,
+          horaInicio: agenda.horaInicio,
+          horaFin: agenda.horaFin,
+          bloque: agenda.bloque,
+          status: agenda.status,
+          horariosDisponibles: agenda.horariosDisponibles,
+          horariosOcupados: agenda.horariosOcupados,
+          habilitadaPor: agenda.habilitadaPor,
+          fechaHabilitacion: agenda.fechaHabilitacion
+        },
+        slotsDisponibles, // todos los slots posibles por día
+        horariosOcupados // horarios bloqueados organizados por día
+      });
+
+    } catch (error) {
+      console.error('Error al obtener agenda habilitada:', error);
+      res.status(500).json({
+        message: "Error al obtener agenda habilitada",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Profesional actualiza sus horarios disponibles
+   * PUT /actualizar-horarios/:agendaId
+   * Body: { horariosDisponibles: [{ dia: "lunes", horarios: ["09:00", "09:15"] }] }
+   */
+  actualizarHorariosDisponibles: async (req, res) => {
+    try {
+      const { agendaId } = req.params;
+      const { horariosDisponibles } = req.body;
+
+      if (!horariosDisponibles || !Array.isArray(horariosDisponibles)) {
+        return res.status(400).json({
+          message: "El campo 'horariosDisponibles' debe ser un array"
+        });
+      }
+
+      const agenda = await AgendaUCAD.findById(agendaId);
+      if (!agenda) {
+        return res.status(404).json({
+          message: "Agenda no encontrada"
+        });
+      }
+
+      // Validar que los días y horarios están dentro del rango habilitado
+      for (const diaConfig of horariosDisponibles) {
+        if (!agenda.dias.includes(diaConfig.dia)) {
+          return res.status(400).json({
+            message: `El día '${diaConfig.dia}' no está habilitado en la agenda`
+          });
+        }
+
+        // Generar slots válidos para este día
+        const slotsValidos = generarSlotsHorarios(agenda.horaInicio, agenda.horaFin, agenda.bloque);
+
+        // Validar que cada horario seleccionado está en el rango válido
+        for (const horario of diaConfig.horarios) {
+          if (!slotsValidos.includes(horario)) {
+            return res.status(400).json({
+              message: `El horario '${horario}' no está dentro del rango habilitado (${agenda.horaInicio} - ${agenda.horaFin})`
+            });
+          }
+        }
+      }
+
+      // Actualizar horarios disponibles
+      agenda.horariosDisponibles = horariosDisponibles;
+      await agenda.save();
+
+      res.status(200).json({
+        message: "Horarios disponibles actualizados correctamente",
+        agenda
+      });
+
+    } catch (error) {
+      console.error('Error al actualizar horarios disponibles:', error);
+      res.status(500).json({
+        message: "Error al actualizar horarios disponibles",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Marcar hora como ocupada (crea cita interna)
+   * POST /marcar-hora-ocupada/:agendaId
+   * Body: { dia, fecha, hora, duracion, motivoBloqueo }
+   */
+  marcarHoraOcupada: async (req, res) => {
+    try {
+      const { agendaId } = req.params;
+      const { dia, fecha, hora, duracion = 60, motivoBloqueo = 'Otro' } = req.body;
+
+      if (!dia || !fecha || !hora) {
+        return res.status(400).json({
+          message: "Los campos dia, fecha y hora son requeridos"
+        });
+      }
+
+      const agenda = await AgendaUCAD.findById(agendaId);
+      if (!agenda) {
+        return res.status(404).json({
+          message: "Agenda no encontrada"
+        });
+      }
+
+      // Validar que el día está habilitado
+      if (!agenda.dias.includes(dia)) {
+        return res.status(400).json({
+          message: `El día '${dia}' no está habilitado en la agenda`
+        });
+      }
+
+      // Generar slots que serán bloqueados
+      const slotsABloquear = [];
+      const [horaNum, minNum] = hora.split(':').map(Number);
+      let horaActual = horaNum;
+      let minutoActual = minNum;
+      const duracionMinutos = parseInt(duracion);
+      const minutosFinales = horaNum * 60 + minNum + duracionMinutos;
+
+      while (horaActual * 60 + minutoActual < minutosFinales) {
+        const horaFormato = `${String(horaActual).padStart(2, '0')}:${String(minutoActual).padStart(2, '0')}`;
+        slotsABloquear.push(horaFormato);
+        minutoActual += agenda.bloque;
+        if (minutoActual >= 60) {
+          horaActual += 1;
+          minutoActual = minutoActual % 60;
+        }
+      }
+
+      // Paso 1: Habilitar los horarios en la agenda si no están ya
+      let diaConfig = agenda.horariosDisponibles.find(d => d.dia === dia);
+      if (!diaConfig) {
+        diaConfig = { dia, horarios: [] };
+        agenda.horariosDisponibles.push(diaConfig);
+      }
+
+      // Agregar los slots si no existen
+      slotsABloquear.forEach(slot => {
+        if (!diaConfig.horarios.includes(slot)) {
+          diaConfig.horarios.push(slot);
+        }
+      });
+
+      await agenda.save();
+
+      // Paso 2: Crear cita interna para bloquear
+      const [horaInicio, minInicio] = hora.split(':').map(Number);
+      const fechaCita = new Date(fecha);
+      fechaCita.setHours(horaInicio, minInicio, 0, 0);
+
+      const citaInterna = new CitasUcad({
+        profesional: agenda.profesional,
+        deportista: null, // cita interna
+        especialidad: 'Bloqueado',
+        tipoCita: 'consulta',
+        fecha: fechaCita,
+        duracion: duracionMinutos,
+        estado: 'completada', // estado para que no se pueda modificar
+        esCitaInterna: true,
+        motivoBloqueo,
+        notas: `Horario bloqueado por el profesional: ${motivoBloqueo}`
+      });
+
+      await citaInterna.save();
+
+      res.status(201).json({
+        message: "Hora marcada como ocupada correctamente",
+        slotsHabilitados: slotsABloquear,
+        citaInterna
+      });
+
+    } catch (error) {
+      console.error('Error al marcar hora ocupada:', error);
+      res.status(500).json({
+        message: "Error al marcar hora ocupada",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Actualizar horarios ocupados del profesional
+   * PUT /actualizar-horarios-ocupados/:agendaId
+   * Body: { horariosOcupados: [{ dia: "lunes", horarios: [{ hora: "09:00", motivo: "Reunión" }] }] }
+   */
+  actualizarHorariosOcupados: async (req, res) => {
+    try {
+      const { agendaId } = req.params;
+      const { horariosOcupados } = req.body;
+
+      if (!horariosOcupados || !Array.isArray(horariosOcupados)) {
+        return res.status(400).json({
+          message: "El campo horariosOcupados es requerido y debe ser un array"
+        });
+      }
+
+      const agenda = await AgendaUCAD.findById(agendaId);
+      if (!agenda) {
+        return res.status(404).json({
+          message: "Agenda no encontrada"
+        });
+      }
+
+      // Validar estructura de horarios ocupados
+      for (const diaConfig of horariosOcupados) {
+        if (!diaConfig.dia || !Array.isArray(diaConfig.horarios)) {
+          return res.status(400).json({
+            message: "Cada elemento debe tener un campo 'dia' y un array 'horarios'"
+          });
+        }
+
+        // Validar que el día está habilitado
+        if (!agenda.dias.includes(diaConfig.dia)) {
+          return res.status(400).json({
+            message: `El día '${diaConfig.dia}' no está habilitado en la agenda`
+          });
+        }
+
+        // Validar estructura de cada horario ocupado
+        for (const horario of diaConfig.horarios) {
+          if (!horario.hora || !horario.motivo) {
+            return res.status(400).json({
+              message: "Cada horario ocupado debe tener 'hora' y 'motivo'"
+            });
+          }
+        }
+      }
+
+      // Actualizar horarios ocupados
+      agenda.horariosOcupados = horariosOcupados;
+      await agenda.save();
+
+      res.status(200).json({
+        message: "Horarios ocupados actualizados correctamente",
+        agenda
+      });
+
+    } catch (error) {
+      console.error('Error al actualizar horarios ocupados:', error);
+      res.status(500).json({
+        message: "Error al actualizar horarios ocupados",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Sincronizar agendas con usuarios (temporal - para arreglar agendas existentes)
+   * GET /sincronizar-agendas
+   */
+  sincronizarAgendas: async (req, res) => {
+    try {
+      const agendas = await AgendaUCAD.find().select('_id profesional');
+
+      let actualizados = 0;
+      for (const agenda of agendas) {
+        const resultado = await UsuariosUcad.findByIdAndUpdate(
+          agenda.profesional,
+          { agenda: agenda._id },
+          { new: true }
+        );
+        if (resultado) actualizados++;
+      }
+
+      res.status(200).json({
+        message: "Sincronización completada",
+        totalAgendas: agendas.length,
+        usuariosActualizados: actualizados
+      });
+
+    } catch (error) {
+      console.error('Error al sincronizar agendas:', error);
+      res.status(500).json({
+        message: "Error al sincronizar agendas",
         error: error.message
       });
     }
