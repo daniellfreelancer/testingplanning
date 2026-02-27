@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
 const sendWelcomeColaboradorPuenteAlto = require("../mail/welcomeColaborador");
+const ReservasPteAlto = require("../reservas-pte-alto/reservasPteAlto");
 
 // 👇 nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require("../../../utils/s3Client");
@@ -369,11 +370,21 @@ const usuariosPteAltoController = {
         .sort({ createAt: -1 })
         .select(
           "nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio fotoCedulaFrontal motivoValidacion motivoRechazo comuna ciudad region fechaNacimiento sexo direccion telefono"
-        );
+        ).populate("talleresInscritos", "nombre");
+        const reservasPteAlto = await ReservasPteAlto.find({ usuario: { $in: usuariosPteAlto.map(usuario => usuario._id) } }).populate("espacioDeportivo", {nombre: 1} , {fechaInicio: 1});
 
-      if (usuariosPteAlto?.length > 0) {
+        // retornar las reservas de cada usuario en la lista de los usuarios encontrados
+
+        let usuariosPteAltoConReservas = usuariosPteAlto.map(usuario => {
+          return {
+            ...usuario._doc,
+            reservas: reservasPteAlto.filter(reserva => reserva.usuario._id.equals(usuario._id)),
+          };
+        });
+
+      if (usuariosPteAltoConReservas?.length > 0) {
         res.status(200).json({
-          response: usuariosPteAlto,
+          response: usuariosPteAltoConReservas,
           message: "Usuarios PTE Alto encontrados",
           success: true,
         });
