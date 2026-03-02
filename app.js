@@ -104,8 +104,11 @@ const citasUCAD = require('./api/car/ucad-citas/citas-ucad.routes')
 const notificacionesUCAD = require('./api/car/ucad-notificaciones/notificaciones-ucad.routes')
 const accesosUCAD = require('./api/car/ucad-accesos/accesos-ucad.routes');
 
+
+// Rutas para gestion de escuelas de futbol
 //Rutas para gestion de emails
 const emailStudentFutbol = require('./email/emailStudentFutbol.routes')
+const paymentFutbolVM = require('./routes/paymentFutbolVM.routes')
 
 var app = express();
 
@@ -261,6 +264,9 @@ app.use('/suscripciones-piscinas', suscripcionesPiscinas)
 
 //Rutas para gestion de emails
 app.use('/email-student-futbol', emailStudentFutbol)
+
+//Rutas para gestion de escuelas de futbol
+app.use('/payment-futbol-vm', paymentFutbolVM)
 // Transbank Routes
 app.use('/transbank', transbankRoutes); // Rutas webpay plus
 app.use('/webpaymall', webpayMallRoutes); // Rutas webpay mall
