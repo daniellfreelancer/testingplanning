@@ -764,7 +764,36 @@ if (req.file) {
       });
     }
   },
+  obtenerTalleresDeportivosPteAltoParaInscripciones : async (req, res) =>{
 
+    try {
+// los talleres que debe retornar los talleres que tienen fecha publicacion mayor o igual a hoy y status en true
+
+      const talleresDeportivosPteAlto = await TalleresDeportivos.find()
+        .where('fechaPublicacion').lte(new Date())
+        .where('status').equals(true)
+        .populate('espacioDeportivo', 'nombre deporte')
+        .populate('complejo', 'nombre direccion')
+        .populate('sede', 'nombre direccion')
+        .populate('profesores', 'nombre apellido email')
+        .populate('coordinadores', 'nombre apellido email');
+
+      res.status(200).json({
+        message: 'Talleres deportivos PTE Alto obtenidos correctamente',
+        response: talleresDeportivosPteAlto,
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al obtener los talleres deportivos PTE Alto',
+        error: error.message,
+        success: false,
+      });
+    }
+
+
+  },
   obtenerTallerDeportivoPteAltoPorId: async (req, res) => {
     try {
       const { id } = req.params;
