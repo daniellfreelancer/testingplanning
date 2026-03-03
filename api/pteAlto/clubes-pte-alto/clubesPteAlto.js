@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 
 const clubesPteAltoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
-    rut: { type: String, required: true },
+    rut: { type: String, },
     imgUrl: { type: String, },
     direccion: { type: String, required: true },
     telefono: { type: String, required: true },
@@ -22,7 +22,7 @@ const clubesPteAltoSchema = new mongoose.Schema({
     responsable:[{type: Object}], //array de objetos con los datos del responsable del club
     contacto:[{type: Object}], //array de objetos con los datos del contacto del club
     documentos: [{ type: String }], // array de URLs de documentos del club (pdf, imágenes, etc.). Máximo 10.
-    notas:{type: String}, //notas del club
+    notas:{type: String}, 
     personaJuridica: { type: Boolean, default: false },
 
 });
