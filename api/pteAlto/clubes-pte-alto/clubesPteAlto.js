@@ -22,7 +22,7 @@ const clubesPteAltoSchema = new mongoose.Schema({
     responsable:[{type: Object}], //array de objetos con los datos del responsable del club
     contacto:[{type: Object}], //array de objetos con los datos del contacto del club
     documentos: [{ type: String }], // array de URLs de documentos del club (pdf, imágenes, etc.). Máximo 10.
-    notas:{type: String}, //notas del club
+    notas:{type: String}, 
     personaJuridica: { type: Boolean, default: false },
 
 });
