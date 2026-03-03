@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 
 const clubesPteAltoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
-    rut: { type: String, required: true },
+    rut: { type: String, },
     imgUrl: { type: String, },
     direccion: { type: String, required: true },
     telefono: { type: String, required: true },
