@@ -27,9 +27,6 @@ const citasUcadSchema = new mongoose.Schema({
   },
   duracion: { 
     type: Number, 
-    default: 30, // minutos
-    min: 30,
-    max: 120
   },
   estado: { 
     type: String, 

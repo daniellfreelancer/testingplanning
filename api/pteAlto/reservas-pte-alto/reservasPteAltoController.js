@@ -393,13 +393,44 @@ const reservasPteAltoController = {
                 });
             }
 
-            // Verificar que el usuario está validado (opcional, descomentar si es requerido)
-            // if (usuarioEncontrado.estadoValidacion !== 'validado') {
-            //     return res.status(403).json({ 
-            //         success: false,
-            //         message: "Usuario no validado. Debe esperar la validación de un administrador" 
-            //     });
-            // }
+            // validar que el usuario encontrado sea mayor de 18 años
+            if (usuarioEncontrado.fechaNacimiento > new Date(Date.now() - 18 * 365 * 24 * 60 * 60 * 1000)) {
+                return res.status(403).json({ 
+                    success: false,
+                    message: "Usuario no mayor de 18 años. Debe ser mayor de 18 años para crear reservas" 
+                });
+            }
+
+            //Verificar que el usuario está validado (opcional, descomentar si es requerido)
+            if (usuarioEncontrado.estadoValidacion !== 'validado') {
+                return res.status(403).json({ 
+                    success: false,
+                    message: "Usuario no validado. Debe esperar la validación de un administrador" 
+                });
+            }
+
+
+            //Verificar que el usuario está activo 
+            if (usuarioEncontrado.status !== true) {
+                return res.status(403).json({ 
+                    success: false,
+                    message: "Usuario no activo. Debe ser activo para crear reservas" 
+                });
+            }
+
+            // Validar que el usuario no tenga una reserva vigente
+            const reservaVigente = await ReservasPteAlto.findOne({
+                usuario: usuarioEncontrado._id,
+                estado: 'activa',
+                fechaFin: { $gt: new Date() }
+            });
+
+            if (reservaVigente) {
+                return res.status(409).json({
+                    success: false,
+                    message: "El usuario ya tiene una reserva vigente. Solo puede tener una reserva activa."
+                });
+            }
 
             // Verificar que el espacio existe y está activo
             const espacio = await EspaciosDeportivosPteAlto.findById(espacioDeportivo);
@@ -410,12 +441,6 @@ const reservasPteAltoController = {
                 });
             }
 
-            // if (!espacio.status) {
-            //     return res.status(400).json({ 
-            //         success: false,
-            //         message: "El espacio deportivo está deshabilitado" 
-            //     });
-            // }
 
             let inicio, fin;
             try {

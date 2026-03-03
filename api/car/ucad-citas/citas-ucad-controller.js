@@ -10,7 +10,7 @@ const citasUcadController = {
    */
   crearCita: async (req, res) => {
     try {
-      const { deportista, profesional, especialidad, tipoCita, fecha, duracion = 30, notas } = req.body;
+      const { deportista, profesional, especialidad, tipoCita, fecha, duracion = 15, notas } = req.body;
 
       // Validar campos requeridos
       if (!deportista || !profesional || !especialidad || !tipoCita || !fecha) {
@@ -228,7 +228,7 @@ const citasUcadController = {
         profesional,
         especialidad,
         fecha,
-        duracion = 30,
+        duracion = 15,
         derivadaPor,
         motivoDerivacion,
         notas,
@@ -418,7 +418,7 @@ const citasUcadController = {
         }
       } else {
         // Estructura antigua: validar que el horario esté en bloques según el campo 'bloque'
-        const bloqueMinutos = agenda.bloque || 30;
+        const bloqueMinutos = agenda.bloque || 15;
         
         // Calcular minutos desde el inicio del día
         const minutosDesdeInicio = horaCitaTotal - inicioTotal;
@@ -967,7 +967,7 @@ const citasUcadController = {
         especialidad,
         tipoCita,
         fecha,
-        duracion = 30,
+        duracion = 15,
         notas,
         motivoSobreCupo,
       } = req.body;
