@@ -860,7 +860,22 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
 
       // Parsear espaciosComunes si vienen como string (NUEVO SISTEMA)
       if (typeof updateData.espaciosComunes === 'string') {
-        updateData.espaciosComunes = JSON.parse(updateData.espaciosComunes);
+        try {
+          const parsed = JSON.parse(updateData.espaciosComunes);
+          updateData.espaciosComunes = Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          updateData.espaciosComunes = updateData.espaciosComunes ? [updateData.espaciosComunes] : [];
+        }
+      }
+
+      // Parsear espacioDeportivo si viene como string JSON (array de ObjectIds)
+      if (typeof updateData.espacioDeportivo === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.espacioDeportivo);
+          updateData.espacioDeportivo = Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+          updateData.espacioDeportivo = updateData.espacioDeportivo ? [updateData.espacioDeportivo] : [];
+        }
       }
 
       // Parsear fechas si vienen como strings ISO
