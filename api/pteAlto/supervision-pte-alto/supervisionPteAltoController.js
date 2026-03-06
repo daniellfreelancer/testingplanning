@@ -9,13 +9,14 @@ const supervisionPteAltoController = {
     crearSupervisionComplejoPteAlto: async (req, res) => {
         // Crea la supervision para un complejo deportivo PTe Alto, lo asocia  al complejo deportivo
         try {
-            const {idUsuario } = req.params;
-            const { observaciones, fecha, complejoDeportivo } = req.body;
+            const { idUsuario } = req.params;
+            const { observaciones, fecha, complejoDeportivo, tipo } = req.body;
 
             const supervision = new SupervisionPteAlto({
                 usuario: idUsuario,
                 fecha: fecha,
                 observaciones: observaciones,
+                tipo: tipo,
                 supervisionComplejos: complejoDeportivo,
             });
 
@@ -40,11 +41,12 @@ const supervisionPteAltoController = {
     crearSupervisionEspacioPteAlto: async (req, res) => {
         try {
             const { idUsuario } = req.params;
-            const { observaciones, fecha, espacioDeportivo } = req.body;
+            const { observaciones, fecha, espacioDeportivo, tipo } = req.body;
             const supervision = new SupervisionPteAlto({
                 usuario: idUsuario,
                 fecha: fecha,
                 observaciones: observaciones,
+                tipo: tipo,
                 supervisionEspacio: espacioDeportivo,
             });
             await supervision.save();
@@ -68,11 +70,12 @@ const supervisionPteAltoController = {
     crearSupervisionSedePteAlto: async (req, res) => {
         try {
             const { idUsuario } = req.params;
-            const { observaciones, fecha, sede } = req.body;
+            const { observaciones, fecha, sede, tipo } = req.body;
             const supervision = new SupervisionPteAlto({
                 usuario: idUsuario,
                 fecha: fecha,
                 observaciones: observaciones,
+                tipo: tipo,
                 supervisionSede: sede,
             });
             await supervision.save();
@@ -98,11 +101,12 @@ const supervisionPteAltoController = {
     crearSupervisionTallerPteAlto: async (req, res) => {
         try {
             const { idUsuario } = req.params;
-            const { observaciones, fecha, taller } = req.body;
+            const { observaciones, fecha, taller, tipo } = req.body;
             const supervision = new SupervisionPteAlto({
                 usuario: idUsuario,
                 fecha: fecha,
                 observaciones: observaciones,
+                tipo: tipo,
                 supervisionTaller: taller,
             });
             await supervision.save();
