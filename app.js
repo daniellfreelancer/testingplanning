@@ -77,6 +77,7 @@ const suscripcionesPiscinas = require('./api/suscripcion-planes/suscripcionesRou
 const emailService = require('./api/email/emailServiceRoutes')
 const notasUsuarios = require('./api/notas-usuarios/notasUsuariosRoutes')
 const patentesPiscina = require('./api/patentes-piscina/patentesPiscinaRoutes')
+const organigrama = require('./routes/organigrama.routes')
 
 //Rutas para gestion de usuarios PTE Alto
 const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
@@ -292,6 +293,9 @@ app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
 app.use('/ucad-citas', citasUCAD)
 app.use('/ucad-notificaciones', notificacionesUCAD)
+
+//Ruta para organigrama
+app.use('/organigrama', organigrama)
 app.use('/ucad-accesos', accesosUCAD);
 
 

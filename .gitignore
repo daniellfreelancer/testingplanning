@@ -6,3 +6,5 @@
 .env.local
 dev-pte-alto-back.md
 package-lock.json
+Backend/testingplanning/package.json
+package.json
