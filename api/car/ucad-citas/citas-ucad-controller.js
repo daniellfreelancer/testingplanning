@@ -2,6 +2,12 @@ const CitasUcad = require('./citas-ucad');
 const UsuariosUcad = require('../ucad-usuarios/usuarios-ucad');
 const AgendaUCAD = require('../ucad-agenda/agenda-ucad');
 
+// Función para normalizar días sin tildes
+const normalizarDia = (dia) => {
+  if (!dia || typeof dia !== 'string') return dia;
+  return dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
 const citasUcadController = {
   /**
    * Crear nueva cita
@@ -85,16 +91,17 @@ const citasUcadController = {
       // Solo validar agenda si existe y está activa
       if (agenda && agenda.status) {
         // Validar día de la semana (usar UTC para mantener consistencia con la hora extraída)
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         const diaSemana = diasSemana[fechaCita.getUTCDay()];
+        const diaSemanaNormalizado = normalizarDia(diaSemana);
 
         // Verificar estructura de agenda (nueva: array de objetos, antigua: array de strings)
         const esEstructuraNueva = Array.isArray(agenda.dias) && agenda.dias.length > 0 && typeof agenda.dias[0] === 'object';
 
         let diaAgenda = null;
         if (esEstructuraNueva) {
-          // Nueva estructura: buscar el día en el array de objetos
-          diaAgenda = agenda.dias.find(d => d.dia === diaSemana);
+          // Nueva estructura: buscar el día en el array de objetos (normalizado)
+          diaAgenda = agenda.dias.find(d => normalizarDia(d.dia) === diaSemanaNormalizado);
           if (!diaAgenda) {
             return res.status(400).json({
               message: `El profesional no atiende los ${diaSemana}s según su agenda configurada`
@@ -107,8 +114,9 @@ const citasUcadController = {
             });
           }
         } else {
-          // Estructura antigua: array de strings
-          if (!agenda.dias.includes(diaSemana)) {
+          // Estructura antigua: array de strings (normalizar antes de comparar)
+          const diasNormalizados = agenda.dias.map(d => normalizarDia(d));
+          if (!diasNormalizados.includes(diaSemanaNormalizado)) {
             return res.status(400).json({
               message: `El profesional no atiende los ${diaSemana}s según su agenda configurada`
             });
@@ -352,10 +360,10 @@ const citasUcadController = {
         'domingo',
         'lunes',
         'martes',
-        'miércoles',
+        'miercoles',
         'jueves',
         'viernes',
-        'sábado',
+        'sabado',
       ];
       const diaSemana = diasSemana[fechaCita.getUTCDay()];
       
@@ -859,8 +867,8 @@ const citasUcadController = {
         });
       }
 
-      // Obtener día de la semana
-      const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      // Obtener día de la semana (sin tildes para consistencia)
+      const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
       const diaSemana = diasSemana[fechaDate.getDay()];
 
       // Verificar que el día esté en los días habilitados
@@ -1034,12 +1042,13 @@ const citasUcadController = {
         return res.status(400).json({ message: "El profesional no tiene agenda configurada o está inactiva" });
       }
 
-      const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
       const diaSemana = diasSemana[fechaCita.getUTCDay()];
+      const diaSemanaNormalizado = normalizarDia(diaSemana);
       const esEstructuraNueva = Array.isArray(agenda.dias) && agenda.dias.length > 0 && typeof agenda.dias[0] === 'object';
 
       if (esEstructuraNueva) {
-        const diaAgenda = agenda.dias.find(d => d.dia === diaSemana);
+        const diaAgenda = agenda.dias.find(d => normalizarDia(d.dia) === diaSemanaNormalizado);
         if (!diaAgenda || !diaAgenda.status) {
           return res.status(400).json({ message: `El profesional no atiende los ${diaSemana}s` });
         }
@@ -1054,7 +1063,8 @@ const citasUcadController = {
           });
         }
       } else {
-        if (!agenda.dias.includes(diaSemana)) {
+        const diasNormalizados = agenda.dias.map(d => normalizarDia(d));
+        if (!diasNormalizados.includes(diaSemanaNormalizado)) {
           return res.status(400).json({ message: `El profesional no atiende los ${diaSemana}s` });
         }
       }

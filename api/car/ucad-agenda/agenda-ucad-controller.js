@@ -3,6 +3,17 @@ const UsuariosUcad = require('../ucad-usuarios/usuarios-ucad');
 const CitasUcad = require('../ucad-citas/citas-ucad');
 
 /**
+ * Función para normalizar nombres de días (sin tildes)
+ */
+const normalizarDia = (dia) => {
+  if (!dia || typeof dia !== 'string') return dia;
+  return dia
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // Elimina tildes
+};
+
+/**
  * Función auxiliar para generar todos los slots de horarios posibles
  * basado en horaInicio, horaFin y bloqueMinutos
  */
@@ -91,8 +102,8 @@ const agendaUcadController = {
         });
       }
 
-      // Validar días de la semana y estructura
-      const diasValidos = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado', 'domingo'];
+      // Validar días de la semana y estructura (sin tildes para consistencia)
+      const diasValidos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
       const diasNormalizados = [];
       const diasUnicos = new Set();
 
@@ -118,21 +129,13 @@ const agendaUcadController = {
           });
         }
 
-        // Normalizar día
-        const diaLower = diaObj.dia.toLowerCase();
-        let diaNormalizado;
-        if (diaLower === 'miercoles') {
-          diaNormalizado = 'miércoles';
-        } else if (diaLower === 'sabado') {
-          diaNormalizado = 'sábado';
-        } else {
-          diaNormalizado = diaLower;
-        }
+        // Normalizar día (sin tildes)
+        const diaNormalizado = normalizarDia(diaObj.dia);
 
         // Validar que el día sea válido
         if (!diasValidos.includes(diaNormalizado)) {
           return res.status(400).json({
-            message: `Día inválido: ${diaObj.dia}. Días válidos: lunes, martes, miércoles, jueves, viernes, sábado, domingo`
+            message: `Día inválido: ${diaObj.dia}. Días válidos: lunes, martes, miercoles, jueves, viernes, sabado, domingo`
           });
         }
 
@@ -714,8 +717,8 @@ const agendaUcadController = {
         });
       }
 
-      // Obtener día de la semana (0 = domingo, 1 = lunes, ..., 6 = sábado)
-      const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      // Obtener día de la semana (0 = domingo, 1 = lunes, ..., 6 = sabado) - sin tildes
+      const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
       const diaSemana = diasSemana[fechaDate.getDay()];
 
       // Verificar que el día esté en los días habilitados
@@ -870,17 +873,14 @@ const agendaUcadController = {
         });
       }
 
-      // Validar días
-      const diasValidos = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes', 'sábado', 'sabado', 'domingo'];
-      const diasNormalizados = dias.map(d => {
-        const diaLower = d.toLowerCase();
-        return diaLower === 'miercoles' ? 'miércoles' : (diaLower === 'sabado' ? 'sábado' : diaLower);
-      });
+      // Validar días (normalizar sin tildes)
+      const diasValidos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+      const diasNormalizados = dias.map(d => normalizarDia(d));
 
       for (const dia of diasNormalizados) {
         if (!diasValidos.includes(dia)) {
           return res.status(400).json({
-            message: `Día inválido: ${dia}`
+            message: `Día inválido: ${dia}. Días válidos: lunes, martes, miercoles, jueves, viernes, sabado, domingo`
           });
         }
       }
@@ -942,9 +942,9 @@ const agendaUcadController = {
         });
       }
 
-      // Normalizar días: asegurar que son strings, no objetos
+      // Normalizar días: asegurar que son strings sin tildes
       const diasNormalizados = Array.isArray(agenda.dias)
-        ? agenda.dias.map(d => typeof d === 'string' ? d : (d.dia || String(d)))
+        ? agenda.dias.map(d => normalizarDia(typeof d === 'string' ? d : (d.dia || String(d))))
         : [];
 
       // Generar todos los slots posibles por día
@@ -1016,8 +1016,13 @@ const agendaUcadController = {
       }
 
       // Validar que los días y horarios están dentro del rango habilitado
+      // Normalizar días de la agenda para comparación
+      const diasAgendaNormalizados = agenda.dias.map(d => normalizarDia(d));
+
       for (const diaConfig of horariosDisponibles) {
-        if (!agenda.dias.includes(diaConfig.dia)) {
+        const diaNormalizado = normalizarDia(diaConfig.dia);
+
+        if (!diasAgendaNormalizados.includes(diaNormalizado)) {
           return res.status(400).json({
             message: `El día '${diaConfig.dia}' no está habilitado en la agenda`
           });
@@ -1036,8 +1041,14 @@ const agendaUcadController = {
         }
       }
 
+      // Normalizar días antes de guardar (quitar tildes)
+      const horariosNormalizados = horariosDisponibles.map(diaConfig => ({
+        ...diaConfig,
+        dia: normalizarDia(diaConfig.dia)
+      }));
+
       // Actualizar horarios disponibles
-      agenda.horariosDisponibles = horariosDisponibles;
+      agenda.horariosDisponibles = horariosNormalizados;
       await agenda.save();
 
       res.status(200).json({
@@ -1176,6 +1187,9 @@ const agendaUcadController = {
         });
       }
 
+      // Normalizar días de la agenda para comparación
+      const diasAgendaNormalizados = agenda.dias.map(d => normalizarDia(d));
+
       // Validar estructura de horarios ocupados
       for (const diaConfig of horariosOcupados) {
         if (!diaConfig.dia || !Array.isArray(diaConfig.horarios)) {
@@ -1184,8 +1198,9 @@ const agendaUcadController = {
           });
         }
 
-        // Validar que el día está habilitado
-        if (!agenda.dias.includes(diaConfig.dia)) {
+        // Validar que el día está habilitado (normalizar para comparar)
+        const diaNormalizado = normalizarDia(diaConfig.dia);
+        if (!diasAgendaNormalizados.includes(diaNormalizado)) {
           return res.status(400).json({
             message: `El día '${diaConfig.dia}' no está habilitado en la agenda`
           });
@@ -1201,8 +1216,14 @@ const agendaUcadController = {
         }
       }
 
+      // Normalizar días antes de guardar (quitar tildes)
+      const horariosNormalizados = horariosOcupados.map(diaConfig => ({
+        ...diaConfig,
+        dia: normalizarDia(diaConfig.dia)
+      }));
+
       // Actualizar horarios ocupados
-      agenda.horariosOcupados = horariosOcupados;
+      agenda.horariosOcupados = horariosNormalizados;
       await agenda.save();
 
       res.status(200).json({
