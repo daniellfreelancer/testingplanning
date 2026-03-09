@@ -210,7 +210,7 @@ const AccesosUcadController = {
         return res.status(404).json({ message: "Usuario ucad no encontrado" });
       }
 
-      const sistemaUsuarioId =  usuarioAutorizador ? usuarioAutorizador : "6945e1914f071a7cad249dff";
+      const sistemaUsuarioId =  usuarioAutorizador ? usuarioAutorizador : "69aec7e5ace6ed72422f369f";
       const nombreCompleto = `${usuarioUcad.nombre} ${usuarioUcad.apellido}`;
 
       // Caso 1: Usuario no es deportista - acceso directo sin revisión de citas
