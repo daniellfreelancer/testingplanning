@@ -12,7 +12,7 @@ const populateOptions = [
     { path: 'planCurso', select: 'tipoPlan plan valor dias ' },
     { path: 'planNL', select: 'tipoPlan plan valor dias' },
     { path: 'planGym', select: 'tipoPlan plan valor dias' },
-    { path: 'planId', select: 'tipo nombrePlan valor' }
+    { path: 'planId', select: 'tipo nombrePlan valor valorResidente valorNoResidente duracion' }
 ]
 
 
@@ -51,6 +51,11 @@ const gestionPagosController = {
         try {
             const fechaPagoNorm = fechaPago ? normalizeToUTC(fechaPago) : null;
             const fechaFinNorm = fechaFin ? normalizeToUTC(fechaFin) : null;
+
+            // Los planes de nadoLibre tienen horas ilimitadas
+            const plan = await GestionPlanesN.findById(planId);
+            const horasFinales = plan?.tipo === 'nadoLibre' ? null : horasDisponibles;
+
             const pago = new GestionPagos({
                 usuario: usuarioId,
                 institucion: institucionId,
@@ -72,9 +77,8 @@ const gestionPagosController = {
                 fechaFin: fechaFinNorm || fechaFin,
                 pago: pagoGuardado._id,
                 tipoConsumo: tipoConsumo,
-                horasDisponibles: horasDisponibles,
+                horasDisponibles: horasFinales,
                 institucion: institucionId,
-
             });
             const suscripcionGuardada = await suscripcion.save();
             //agregar el usuario a la variante
@@ -158,9 +162,9 @@ const gestionPagosController = {
             }
         } catch (error) {
             console.error("Error en getPagosToday:", error);
-            res.status(500).json({ 
-                message: "Error al obtener los pagos del día", 
-                error: error.message 
+            res.status(500).json({
+                message: "Error al obtener los pagos del día",
+                error: error.message
             });
         }
     },
@@ -190,7 +194,7 @@ const gestionPagosController = {
         try {
             // Construir el filtro dinámicamente
             const filtro = { institucion: institucionId };
-            
+
             // Solo agregar el filtro de recepcion si se proporciona
             if (recepcion) {
                 filtro.recepcion = recepcion;
@@ -210,9 +214,9 @@ const gestionPagosController = {
         }
         catch (error) {
             console.error("Error en getPagosByInstitucion:", error);
-            res.status(500).json({ 
-                message: "Error al obtener los pagos de la institución", 
-                error: error.message 
+            res.status(500).json({
+                message: "Error al obtener los pagos de la institución",
+                error: error.message
             });
         }
     },
@@ -236,11 +240,13 @@ const gestionPagosController = {
         const { suscripcionId } = req.params;
 
         try {
-            ///buscamos primero la suscripcion
-            const suscripcion = await SuscripcionPlanes.findById(suscripcionId);
+            const suscripcion = await SuscripcionPlanes.findById(suscripcionId).populate('planId', 'tipo');
             if (!suscripcion) {
                 return res.status(404).json({ message: "Suscripcion no encontrada" });
             }
+
+            // Los planes de nadoLibre tienen horas ilimitadas
+            const horasFinales = suscripcion.planId?.tipo === 'nadoLibre' ? null : horasDisponibles;
 
             const pago = new GestionPagos({
                 usuario: suscripcion.usuario,
@@ -257,7 +263,7 @@ const gestionPagosController = {
             const pagoGuardado = await pago.save();
 
             ///actualizamos la suscripcion
-            await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin, horasDisponibles: horasDisponibles } });
+            await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { pago: pagoGuardado._id, fechaFin: fechaFin, horasDisponibles: horasFinales } });
             ///agregar el pago al usuario
             await Usuarios.findByIdAndUpdate(suscripcion.usuario, { $push: { pagos: pagoGuardado._id }, $set: { status: true } });
 
@@ -283,7 +289,84 @@ const gestionPagosController = {
             console.log(error)
             res.status(500).json({ message: "Error al crear el pago", error: error.message });
         }
+    },
+    obtenerUltimoPagoEvaluacionUsuarioParaDescontar: async (req, res) => {
+        const { usuarioId } = req.params;
+
+        try {
+            const hace90Dias = new Date();
+            hace90Dias.setDate(hace90Dias.getDate() - 90);
+
+            // Buscar el pago de evaluación más reciente de los últimos 90 días y que no haya sido utilizado
+            const pago = await GestionPagos.findOne({
+                usuario: usuarioId,
+                descripcion: { $regex: /evaluaci[oó]n/i },
+                fechaPago: { $gte: hace90Dias },
+                utilizado: false,
+            })
+                .sort({ fechaPago: -1 })
+                .populate({ path: 'recepcion', select: 'nombre apellido' });
+
+            if (!pago) {
+                return res.status(200).json({
+                    message: "No se encontró pago de evaluación en los últimos 90 días",
+                    pago: null,
+                    tieneEvaluacion: false,
+                    success: true,
+                });
+            }
+
+            return res.status(200).json({
+                message: "Pago de evaluación encontrado",
+                pago,
+                tieneEvaluacion: true,
+                montoADescontar: pago.monto,
+                success: true,
+            });
+
+        } catch (error) {
+            console.error("Error en obtenerUltimoPagoEvaluacionUsuarioParaDescontar:", error);
+            res.status(500).json({
+                message: "Error al obtener el pago de evaluación",
+                error: error.message,
+            });
+        }
+    },
+    actualizarPagoEvaluacionUtilizado: async (req, res) => {
+        const { pagoId } = req.params;
+
+        try {
+            const pago = await GestionPagos.findByIdAndUpdate(pagoId, { $set: { utilizado: true } });
+            res.status(200).json({ message: "Pago actualizado correctamente", pago: pago, success: true });
+        } catch (error) {
+            console.error("Error en actualizarPagoEvaluacionUtilizado:", error);
+            res.status(500).json({ message: "Error al actualizar el pago de evaluación", error: error.message });
+        }
+    },
+    registrarPagoAccesiorios: async (req, res) => {
+        const { transaccion, voucher, monto, fechaPago, colaboradorId, descripcion, } = req.body;
+        const { institucionId } = req.params;
+
+        try {
+            const pago = new GestionPagos({
+                institucion: institucionId,
+                transaccion: transaccion,
+                voucher: voucher,
+                monto: monto,
+                fechaPago: fechaPago,
+                recepcion: colaboradorId,
+                descripcion: descripcion,
+            });
+            const pagoGuardado = await pago.save();
+
+            res.status(201).json({ message: "Pago de accesiorios creado exitosamente", pago: pagoGuardado, success: true, message: "Pago registrado exitosamente" });
+        } catch (error) {
+            console.error("Error en registrarPagoAccesiorios:", error);
+            res.status(500).json({ message: "Error al registrar el pago de accesiorios", error: error.message });
+        }
     }
+
+
 
 }
 

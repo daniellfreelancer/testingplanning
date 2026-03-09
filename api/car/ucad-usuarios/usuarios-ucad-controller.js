@@ -238,8 +238,10 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         });
       }
 
+      const emailNormalizado = String(email).trim().toLowerCase();
+
       // Buscar usuario por email
-      const usuario = await UsuariosUcad.findOne({ email });
+      const usuario = await UsuariosUcad.findOne({ email: emailNormalizado });
 
       if (!usuario) {
         return res.status(404).json({
@@ -673,8 +675,56 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
     } catch (error) {
       console.log(error);
     }
-  }
+  },
+  crearTotemUCAD: async (req, res) => {
+    try {
+      const { nombre, apellido, email, rol } = req.body;
 
+      if (!nombre || !apellido || !email || !rol) {
+        return res.status(400).json({
+          message: "Los campos nombre, apellido, email y rol son requeridos"
+        });
+      }
+
+      const emailNormalizado = String(email).trim().toLowerCase();
+
+      const totemExistente = await UsuariosUcad.findOne({ email: emailNormalizado });
+      if (totemExistente) {
+        return res.status(400).json({
+          message: "Ya existe un usuario registrado con ese correo"
+        });
+      }
+
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      const totem = new UsuariosUcad({
+        nombre,
+        apellido,
+        email: emailNormalizado,
+        rol,
+        password: [passwordHashed],
+        estadoValidacion: 'validado',
+      });
+
+      await totem.save();
+      console.log("Password generado para totem:", password);
+
+      await bienvenidaProfesionalMail(totem.email, password, totem.nombre, rol);
+
+      return res.status(200).json({
+        message: "Totem creado correctamente",
+        response: totem,
+        password
+      });
+    } catch (error) {
+      console.log(error); 
+      return res.status(500).json({
+        message: "Error al crear totem",
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = usuariosUcadController;

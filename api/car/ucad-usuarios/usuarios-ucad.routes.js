@@ -42,5 +42,7 @@ router.get("/obtener-usuario/:_id", usuariosUcadController.obtenerUsuarioUCAD);
 // Enviar email de bienvenida admin
 router.post("/enviar-email-bienvenida-admin", usuariosUcadController.enviarEmailBienvenidaAdmin);
 
+// Crear totem UCAD
+router.post("/crear-totem-ucad", usuariosUcadController.crearTotemUCAD);
 
 module.exports = router;
