@@ -195,14 +195,13 @@ const AccesosUcadController = {
   accesoCompletoUcad: async (req, res) => {
     try {
       const { rut } = req.params;
+      const { usuarioAutorizador } = req.body;
 
-      // Limpiar y validar RUT
       const rutLimpio = rut.replace(/-/g, '').trim();
       if (!rutLimpio || rutLimpio.length < 7) {
         return res.status(400).json({ message: "RUT inválido" });
       }
 
-      // Buscar usuario UCAD por RUT (formato: 27210192-2)
       const usuarioUcad = await UsuariosUcad.findOne({ 
         rut: { $regex: `^${rutLimpio}-` } 
       });
@@ -211,11 +210,10 @@ const AccesosUcadController = {
         return res.status(404).json({ message: "Usuario ucad no encontrado" });
       }
 
-      // ID del sistema para registrar accesos automáticos
-      const sistemaUsuarioId = "6945e1914f071a7cad249dff";
+      const sistemaUsuarioId =  usuarioAutorizador ? usuarioAutorizador : "6945e1914f071a7cad249dff";
       const nombreCompleto = `${usuarioUcad.nombre} ${usuarioUcad.apellido}`;
 
-      // Caso 1: Usuario no es deportista - acceso directo
+      // Caso 1: Usuario no es deportista - acceso directo sin revisión de citas
       if (usuarioUcad.rol !== "deportista") {
         const acceso = await AccesosUcad.create({
           usuario: sistemaUsuarioId,
@@ -230,45 +228,48 @@ const AccesosUcadController = {
           message: "Registro de acceso creado correctamente",
           response: acceso,
           success: true,
+          usuario: {
+            _id: usuarioUcad._id,
+            nombre: usuarioUcad.nombre,
+            apellido: usuarioUcad.apellido,
+            rut: usuarioUcad.rut,
+            rol: usuarioUcad.rol,
+          },
+          citas: { pendientes: [], validadas: [], sobreCupo: [] },
         });
       }
 
-      // Caso 2: Usuario es deportista - verificar citas
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      const hoyString = hoy.toDateString();
+      // Caso 2: Usuario es deportista - buscar todas sus citas de hoy
+      const inicioDia = new Date();
+      inicioDia.setHours(0, 0, 0, 0);
+      const finDia = new Date();
+      finDia.setHours(23, 59, 59, 999);
 
-      // Buscar citas del deportista con populate optimizado
-      const citasUcad = await CitasUcad.find({ 
-        deportista: usuarioUcad._id 
-      }).populate('profesional', 'nombre apellido email');
+      const citasHoy = await CitasUcad.find({
+        deportista: usuarioUcad._id,
+        fecha: { $gte: inicioDia, $lte: finDia },
+      }).populate('profesional', 'nombre apellido email especialidad');
 
-      // Filtrar citas pendientes o derivadas de hoy
-      const citasPendientesODerivadas = citasUcad.filter(cita => {
-        const fechaCita = new Date(cita.fecha);
-        fechaCita.setHours(0, 0, 0, 0);
-        return (
-          (cita.estado === "pendiente" || cita.estado === "derivada") &&
-          fechaCita.toDateString() === hoyString
-        );
-      });
+      const citasPendientes = citasHoy.filter(c => c.estado === "pendiente" || c.estado === "derivada");
+      const citasValidadas = citasHoy.filter(c => c.estado === "validada");
+      const citasSobreCupo = citasHoy.filter(c => c.sobreCupo === true);
 
-      // Si hay citas pendientes/derivadas hoy, enviar notificaciones
-      if (citasPendientesODerivadas.length > 0) {
-        // Procesar emails y notificaciones en paralelo para cada cita
-        const notificacionesPromises = citasPendientesODerivadas.map(async (cita) => {
+      // Enviar notificaciones para citas pendientes y validadas
+      const citasParaNotificar = [...citasPendientes, ...citasValidadas];
+      if (citasParaNotificar.length > 0) {
+        const notificacionesPromises = citasParaNotificar.map(async (cita) => {
           const emailPromise = sendEmailAsistenciaCita(
-            cita.profesional.email, 
-            nombreCompleto, 
+            cita.profesional.email,
+            nombreCompleto,
             cita
           );
-          
+
           const notificacion = new NotificacionesUcad({
             createdBy: usuarioUcad._id,
             target: cita.profesional._id,
             motivo: `El deportista ${nombreCompleto} ha ingresado a las instalaciones, para la atención de la cita`,
             prioridad: "alta",
-            tipo: "cita"
+            tipo: "cita",
           });
           const notificacionPromise = notificacion.save();
 
@@ -278,28 +279,45 @@ const AccesosUcadController = {
         await Promise.all(notificacionesPromises);
       }
 
-      // Crear registro de acceso (siempre se crea para deportistas)
+      const totalCitasHoy = citasHoy.length;
+
       const acceso = await AccesosUcad.create({
         usuario: sistemaUsuarioId,
         usuarioAutorizado: usuarioUcad._id,
         accesoLugar: "CAR",
         accesoTipo: "ingreso",
         resultado: "permitido",
-        motivo: citasPendientesODerivadas.length > 0 
-          ? "Ingreso a las instalaciones con citas programadas" 
+        motivo: totalCitasHoy > 0
+          ? "Ingreso a las instalaciones con citas programadas"
           : "Ingreso a las instalaciones",
         metadata: {
-          tieneCitasHoy: citasPendientesODerivadas.length > 0,
-          cantidadCitas: citasPendientesODerivadas.length
-        }
+          tieneCitasHoy: totalCitasHoy > 0,
+          cantidadCitas: totalCitasHoy,
+          cantidadPendientes: citasPendientes.length,
+          cantidadValidadas: citasValidadas.length,
+          cantidadSobreCupo: citasSobreCupo.length,
+        },
       });
 
       return res.status(200).json({
-        message: citasPendientesODerivadas.length > 0
+        message: citasParaNotificar.length > 0
           ? "Registro de acceso creado correctamente y notificaciones enviadas"
           : "Registro de acceso creado correctamente",
         response: acceso,
         success: true,
+        usuario: {
+          _id: usuarioUcad._id,
+          nombre: usuarioUcad.nombre,
+          apellido: usuarioUcad.apellido,
+          rut: usuarioUcad.rut,
+          rol: usuarioUcad.rol,
+          imgUrl: usuarioUcad.imgUrl,
+        },
+        citas: {
+          pendientes: citasPendientes,
+          validadas: citasValidadas,
+          sobreCupo: citasSobreCupo,
+        },
       });
 
     } catch (error) {
