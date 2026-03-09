@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const gestionPagosSchema = new mongoose.Schema({
-    usuario: { type: mongoose.Types.ObjectId, ref: 'usuariosComplejos', required: true },
+    usuario: { type: mongoose.Types.ObjectId, ref: 'usuariosComplejos',},
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion', required: true },
     transaccion: { type: String, required: true },
     voucher: { type: String },
@@ -14,6 +14,7 @@ const gestionPagosSchema = new mongoose.Schema({
     planNL: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
     planGym: { type: mongoose.Types.ObjectId, ref: 'gestionPlanes' },
     descripcion: { type: String },
+    utilizado: { type: Boolean, default: false },
 },
 {
     timestamps: true

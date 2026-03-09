@@ -12,6 +12,9 @@ const gestionPlanesNSchema = new mongoose.Schema({
     status: { type: Boolean, default: true },
     fechaInicio: { type: Date, required: false },
     fechaFin: { type: Date, required: false },
+    duracion: { type: String, required: false, enum:['dia', 'mes', 'trimestre', 'semestre', 'full'] },
+    valorNoResidente: { type: Number, required: false },
+    valorResidente: { type: Number, required: false },
 },
 {
     timestamps: true

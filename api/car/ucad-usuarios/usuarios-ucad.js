@@ -5,7 +5,7 @@ const usuariosUcadSchema = new mongoose.Schema({
   apellido: { type: String },
   email: { type: String },
   password: [{ type: String }],
-  rol: { type: String, enum: ['admin', 'profesional', 'deportista', 'colaborador'] },
+  rol: { type: String, enum: ['admin', 'profesional', 'deportista', 'colaborador', 'totem'] },
   rut: { type: String },
   telefono: { type: String },
   direccion: { type: String },

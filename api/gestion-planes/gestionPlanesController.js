@@ -224,25 +224,22 @@ const gestionPlanesController = {
   },
   crearPlanN: async (req, res) => {
     try {
-      const { variantes } = req.body; // array de variantes
+      const { variantes } = req.body;
       const nuevoPlanN = new PlanesN(req.body);
 
       let variantesGuardadas = [];
 
       if (variantes && variantes.length > 0) {
-
         for (const variante of variantes) {
           const nuevaVariante = new VariantesPlanes({ planId: nuevoPlanN._id, ...variante });
           await nuevaVariante.save();
           variantesGuardadas.push(nuevaVariante._id);
         }
-
-        //asignar las variantes al plan
         nuevoPlanN.variantesPlan = variantesGuardadas;
-        await nuevoPlanN.save();
-
-        res.status(201).json({ message: "Plan N creado exitosamente", planN: nuevoPlanN, success: true, variantes: variantesGuardadas });
       }
+
+      await nuevoPlanN.save();
+      res.status(201).json({ message: "Plan N creado exitosamente", planN: nuevoPlanN, success: true, variantes: variantesGuardadas });
 
     } catch (error) {
       res.status(500).json({ message: "Error al crear el plan N", error: error.message });
@@ -440,11 +437,11 @@ const gestionPlanesController = {
         return false;
       });
 
-      // para nado libre el planId?.tipo sea igual a nadoLibre y fechaFin sea igual o menor a tomorrow y horasDisponibles sea mayor a 0
+      // para nado libre: horas ilimitadas (null/undefined) o horas disponibles > 0, y fechaFin vigente
       let nadoLibre = stats.filter((suscripcion) => {
-
         let fechaFin = new Date(suscripcion.fechaFin);
-        if (suscripcion.planId?.tipo === 'nadoLibre' && fechaFin >= tomorrow && suscripcion.horasDisponibles > 0) {
+        const horasOk = suscripcion.horasDisponibles == null || suscripcion.horasDisponibles > 0;
+        if (suscripcion.planId?.tipo === 'nadoLibre' && fechaFin >= tomorrow && horasOk) {
           return true;
         }
         return false;
@@ -518,11 +515,10 @@ const gestionPlanesController = {
         return false;
       });
 
-      // para nado libre el planId?.tipo sea igual a nadoLibre y fechaFin sea igual o menor a tomorrow y horasDisponibles sea mayor a 0
+      // para nado libre: horas ilimitadas (null/undefined) o horas disponibles > 0
       let nadoLibre = stats.filter((suscripcion) => {
-
-        let fechaFin = new Date(suscripcion.fechaFin);
-        if (suscripcion.planId?.tipo === 'nadoLibre' && suscripcion.horasDisponibles > 0) {
+        const horasOk = suscripcion.horasDisponibles == null || suscripcion.horasDisponibles > 0;
+        if (suscripcion.planId?.tipo === 'nadoLibre' && horasOk) {
           return true;
         }
         return false;

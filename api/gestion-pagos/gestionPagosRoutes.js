@@ -12,4 +12,7 @@ router.get('/pagos-institucion/:institucionId', gestionPagosController.getPagosB
 router.get('/ultimo-pago-usuario/:usuarioId', gestionPagosController.getUltimoPagoByUsuario);
 router.post('/crear-renovacion/:suscripcionId', gestionPagosController.crearRenovacion);
 router.post('/crear-pago/:usuarioId/institucion/:institucionId', gestionPagosController.crearPago);
+router.get('/evaluacion-para-descontar/:usuarioId', gestionPagosController.obtenerUltimoPagoEvaluacionUsuarioParaDescontar);
+router.put('/actualizar-pago-evaluacion-utilizado/:pagoId', gestionPagosController.actualizarPagoEvaluacionUtilizado);
+router.post('/registrar-pago-accesiorios/:institucionId', gestionPagosController.registrarPagoAccesiorios);
 module.exports = router;
