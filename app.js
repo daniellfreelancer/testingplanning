@@ -78,6 +78,7 @@ const emailService = require('./api/email/emailServiceRoutes')
 const notasUsuarios = require('./api/notas-usuarios/notasUsuariosRoutes')
 const patentesPiscina = require('./api/patentes-piscina/patentesPiscinaRoutes')
 const organigrama = require('./routes/organigrama.routes')
+const adminExternosRoutes = require('./routes/adminExternos.routes')
 
 //Rutas para gestion de usuarios PTE Alto
 const usuariosPteAlto = require('./api/pteAlto/usuarios-pte-alto/usuariosPteAltoRoutes')
@@ -307,6 +308,7 @@ app.use("/liveness", livenessRoutes);
 app.use('/access', accessControl)
 app.use('/users-car', usersUCAD)
 app.use('/vm-users-cd', usuariosComplejosDeportivos) // usuarios complejos deportivos
+app.use('/admin-externos', adminExternosRoutes) // admins externos (por institucion)
 app.use('/vm-instituciones-deportivas', institucionesDeportivas) // instituciones deportivas
 app.use('/vm-centros-deportivos', centrosDeportivos) // centros deportivos
 app.use('/vm-espacios-deportivos', espaciosDeportivos) // espacios deportivos
