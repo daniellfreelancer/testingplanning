@@ -1483,7 +1483,7 @@ const usuariosComplejosController = {
           planGym: null,
           pagos: [],
           suscripciones: [],
-          statusArrendatario: true,
+          statusArrendatario: false,
           fechaInicioArrendatario: new Date(),
         });
         await newUser.save();
@@ -1493,9 +1493,9 @@ const usuariosComplejosController = {
 
         return res
           .status(200)
-          .json({ message: "Usuario creado correctamente" });
+          .json({ message: "Usuario creado correctamente", userId: newUser._id });
       } else {
-        user.statusArrendatario = true;
+        user.statusArrendatario = false;
         user.fechaInicioArrendatario = new Date();
         user.fechaRegistro = new Date();
         user.nombreArrendatario = userData.nombreArrendatario;
@@ -1504,7 +1504,7 @@ const usuariosComplejosController = {
 
         return res
           .status(200)
-          .json({ message: "Usuario actualizado correctamente" });
+          .json({ message: "Usuario actualizado correctamente", userId: user._id });
       }
     } catch (error) {
       console.log(error);
