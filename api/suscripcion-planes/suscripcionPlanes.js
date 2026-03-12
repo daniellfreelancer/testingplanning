@@ -12,6 +12,7 @@ const suscripcionPlanesSchema = new mongoose.Schema({
     horasDisponibles : {type: Number},
     bloquesDisponibles : {type: Number},
     institucion: { type: mongoose.Types.ObjectId, ref: 'institucion', required: true },
+    nivel: { type: String, required: true },
 },
 {
     timestamps: true
