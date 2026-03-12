@@ -6,6 +6,63 @@ const AdminExterno = require("../models/adminExterno");
 const Institucion = require("../api/institucion/institucionModel");
 const UsuariosComplejos = require("../api/usuarios-complejos/usuariosComplejos");
 const sendCredencialesAdminExterno = require("../api/email/mailAdminExterno");
+const AccesoUsuariosComplejos = require("../api/acceso-usuarios-complejos/accesoUsuariosComplejosModel");
+
+const queryPopulateAccesos = [
+  {
+    path: "usuario usuarioAutorizado",
+    select:
+      "nombre apellido rut email telefono rol tipoPlan tipoPlanGym tipoCurso nivelCurso tipoContratacion arrendatario nombreArrendatario",
+  },
+  {
+    path: "institucion",
+    select: "nombre",
+  },
+];
+
+const calcularFechasPorPeriodo = (periodo, fechaInicio = null, fechaFin = null) => {
+  const ahora = new Date();
+  const inicio = new Date();
+  const fin = new Date();
+
+  switch (periodo) {
+    case "hoy":
+      inicio.setHours(0, 0, 0, 0);
+      fin.setHours(23, 59, 59, 999);
+      break;
+    case "semana": {
+      const diaSemana = ahora.getDay();
+      const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+      inicio.setDate(ahora.getDate() - diasHastaLunes);
+      inicio.setHours(0, 0, 0, 0);
+      fin.setHours(23, 59, 59, 999);
+      break;
+    }
+    case "mes":
+      inicio.setDate(1);
+      inicio.setHours(0, 0, 0, 0);
+      fin.setMonth(ahora.getMonth() + 1, 0);
+      fin.setHours(23, 59, 59, 999);
+      break;
+    case "todos":
+      return null;
+    case "rango":
+      if (fechaInicio && fechaFin) {
+        inicio.setTime(new Date(fechaInicio).getTime());
+        inicio.setHours(0, 0, 0, 0);
+
+        fin.setTime(new Date(fechaFin).getTime());
+        fin.setHours(23, 59, 59, 999);
+
+        return { inicio, fin };
+      }
+      return null;
+    default:
+      return null;
+  }
+
+  return { inicio, fin };
+};
 
 function generateRandomPassword(length = 8) {
   const characters =
@@ -241,6 +298,82 @@ const adminExternosController = {
       console.error("Error obtenerMisUsuarios:", err);
       return res.status(500).json({
         message: "Error al obtener usuarios",
+        error: err.message,
+      });
+    }
+  },
+
+  obtenerHistorialAccesosMisUsuarios: async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const token =
+      authHeader && authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+
+    if (!token) {
+      return res
+        .status(401)
+        .json({ message: "Token de autenticación requerido" });
+    }
+
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.KEY_JWT || "defaultSecretChangeInProduction"
+      );
+      const adminId = decoded.id;
+
+      const admin = await AdminExterno.findById(adminId).select(
+        "institucion usuarios"
+      );
+      if (!admin) {
+        return res
+          .status(404)
+          .json({ message: "Admin externo no encontrado" });
+      }
+
+      const usuariosIds = Array.isArray(admin.usuarios)
+        ? admin.usuarios.filter(Boolean)
+        : [];
+
+      if (usuariosIds.length === 0) {
+        return res.status(200).json([]);
+      }
+
+      const { periodo = "todos" } = req.params;
+      const { fechaInicio, fechaFin } = req.query;
+
+      const query = {
+        institucion: admin.institucion,
+        usuarioAutorizado: { $in: usuariosIds },
+      };
+
+      if (periodo !== "todos") {
+        const fechas =
+          periodo === "rango"
+            ? calcularFechasPorPeriodo(periodo, fechaInicio, fechaFin)
+            : calcularFechasPorPeriodo(periodo);
+
+        if (fechas) {
+          query.createdAt = {
+            $gte: fechas.inicio,
+            $lte: fechas.fin,
+          };
+        }
+      }
+
+      const accesos = await AccesoUsuariosComplejos.find(query)
+        .sort({ createdAt: -1 })
+        .populate(queryPopulateAccesos);
+
+      return res.status(200).json(accesos);
+    } catch (err) {
+      if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+        return res.status(401).json({ message: "Token inválido o expirado" });
+      }
+      console.error("Error obtenerHistorialAccesosMisUsuarios:", err);
+      return res.status(500).json({
+        message: "Error al obtener historial de accesos",
         error: err.message,
       });
     }
