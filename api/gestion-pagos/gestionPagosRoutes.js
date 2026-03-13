@@ -14,5 +14,5 @@ router.post('/crear-renovacion/:suscripcionId', gestionPagosController.crearReno
 router.post('/crear-pago/:usuarioId/institucion/:institucionId', gestionPagosController.crearPago);
 router.get('/evaluacion-para-descontar/:usuarioId', gestionPagosController.obtenerUltimoPagoEvaluacionUsuarioParaDescontar);
 router.put('/actualizar-pago-evaluacion-utilizado/:pagoId', gestionPagosController.actualizarPagoEvaluacionUtilizado);
-router.post('/registrar-pago-accesiorios/:institucionId', gestionPagosController.registrarPagoAccesiorios);
+router.post('/registrar-pago-accesiorios/:institucionId/usuario/:usuarioId', gestionPagosController.registrarPagoAccesiorios);
 module.exports = router;
