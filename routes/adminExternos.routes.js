@@ -35,4 +35,9 @@ router.post(
   adminExternosController.resetearPasswordAdminExterno
 );
 
+router.get(
+  "/historial-accesos/mis-usuarios/:periodo?",
+  adminExternosController.obtenerHistorialAccesosMisUsuarios
+);
+
 module.exports = router;

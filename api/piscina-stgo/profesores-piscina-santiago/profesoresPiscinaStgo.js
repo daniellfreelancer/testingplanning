@@ -7,6 +7,16 @@ const profesoresPiscinaStgoSchema = new mongoose.Schema({
     telefono: { type: String,  },
     rut: { type: String, required: true },
     status: { type: Boolean, default: true },
+    //campos no requeridos
+    imgUrl: { type: String },
+    documentos: { type: Array },
+    idFront: { type: String },
+    idBack: { type: String },
+    backgroundDoc: { type: String },
+    otherDocs: { type: String },
+    controlParental: { type: Boolean },
+    role: { type: String, default: 'TRAINER' }
+
 },{
     timestamps: true
 });
