@@ -345,11 +345,12 @@ const gestionPagosController = {
     },
     registrarPagoAccesiorios: async (req, res) => {
         const { transaccion, voucher, monto, fechaPago, colaboradorId, descripcion, } = req.body;
-        const { institucionId } = req.params;
+        const { institucionId, usuarioId } = req.params;
 
         try {
             const pago = new GestionPagos({
                 institucion: institucionId,
+                usuario: usuarioId,
                 transaccion: transaccion,
                 voucher: voucher,
                 monto: monto,
