@@ -19,6 +19,7 @@ router.put('/actualizar-plan/:id', gruposPiscinaStgoController.actualizarPlanGru
 router.put('/remover-plan/:id', gruposPiscinaStgoController.eliminarPlanGrupoPiscinaStgo);
 
 router.put('/actualizar-grupo/:id', gruposPiscinaStgoController.actualizarGrupoPiscinaStgo);
+router.delete('/eliminar-grupo/:id', gruposPiscinaStgoController.eliminarGrupoPiscinaStgo);
 
 router.put('/marcar-asistencia/:id', gruposPiscinaStgoController.marcarAsistenciaGrupoPiscinaStgo);
 router.get('/obtener-asistencia/:id', gruposPiscinaStgoController.obtenerAsistenciaGrupoPiscinaStgo);

@@ -68,7 +68,13 @@ async function obtenerDiasDesdeVariantes(variantesIds) {
   const variantes = await VariantesPlanes.find({ _id: { $in: variantesIds } })
     .select('dia')
     .lean();
-  return variantes.map((v) => v.dia).filter(Boolean);
+  const dias = [];
+  for (const v of variantes) {
+    if (!v.dia) continue;
+    const partes = v.dia.split(',').map((d) => d.trim()).filter(Boolean);
+    dias.push(...partes);
+  }
+  return dias;
 }
 
 const populateGrupo = [
@@ -569,29 +575,59 @@ const gruposPiscinaStgoController = {
         return res.status(400).json({ success: false, message: 'ID de grupo no válido' });
       }
 
-      const camposPermitidos = {};
       const { mes, año, nivel, capacidad, status } = req.body;
 
-      if (mes !== undefined) camposPermitidos.mes = mes;
-      if (año !== undefined) camposPermitidos.año = año;
-      if (nivel !== undefined) camposPermitidos.nivel = nivel;
-      if (capacidad !== undefined) camposPermitidos.capacidad = Number(capacidad);
-      if (status !== undefined) camposPermitidos.status = status;
-
-      const grupo = await GruposPiscinaStgo.findByIdAndUpdate(
-        id,
-        camposPermitidos,
-        { new: true, runValidators: true }
-      ).populate(populateGrupo).lean();
-
+      const grupo = await GruposPiscinaStgo.findById(id);
       if (!grupo) {
         return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
       }
 
+      const mesChanged = mes !== undefined && mes !== grupo.mes;
+      const añoChanged = año !== undefined && año !== grupo.año;
+
+      if (mes !== undefined) grupo.mes = mes;
+      if (año !== undefined) grupo.año = año;
+      if (nivel !== undefined) grupo.nivel = nivel;
+      if (capacidad !== undefined) grupo.capacidad = Number(capacidad);
+      if (status !== undefined) grupo.status = status;
+
+      if ((mesChanged || añoChanged) && grupo.variantesId?.length > 0) {
+        const diasSemana = await obtenerDiasDesdeVariantes(grupo.variantesId);
+        const nuevasFechas = obtenerFechasDelMes(grupo.mes, grupo.año, diasSemana);
+
+        const asistenciaExistente = {};
+        for (const dia of grupo.asistencia) {
+          asistenciaExistente[dia.fecha] = dia;
+        }
+
+        grupo.asistencia = nuevasFechas.map((f) => {
+          if (asistenciaExistente[f.fecha]) {
+            return asistenciaExistente[f.fecha];
+          }
+          return {
+            fecha: f.fecha,
+            dia: f.dia,
+            registros: grupo.usuarios.map((u) => ({
+              usuarioId: u._id,
+              nombre: u.nombre,
+              apellido: u.apellido,
+              presente: null,
+            })),
+          };
+        });
+
+        grupo.markModified('asistencia');
+      }
+
+      await grupo.save();
+
+      const grupoPopulado = await GruposPiscinaStgo.findById(id)
+        .populate(populateGrupo).lean();
+
       res.status(200).json({
         success: true,
         message: 'Grupo actualizado correctamente',
-        grupo,
+        grupo: grupoPopulado,
       });
     } catch (error) {
       console.error('Error al actualizar grupo:', error);
@@ -706,6 +742,49 @@ const gruposPiscinaStgoController = {
       });
     }
   },
+  eliminarGrupoPiscinaStgo: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ success: false, message: 'ID de grupo no válido' });
+      }
+
+      const grupo = await GruposPiscinaStgo.findById(id);
+      if (!grupo) {
+        return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
+      }
+
+      if (grupo.usuarios && grupo.usuarios.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede eliminar un grupo que tiene alumnos asignados',
+        });
+      }
+
+      if (grupo.profesor) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se puede eliminar un grupo que tiene un profesor asignado',
+        });
+      }
+
+      await GruposPiscinaStgo.findByIdAndDelete(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Grupo eliminado permanentemente',
+      });
+    } catch (error) {
+      console.error('Error al eliminar grupo:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al eliminar grupo',
+        error: error.message,
+      });
+    }
+  },
+
   buscarUsuarioPiscinaPorRut: async (req, res) => {
     try {
       const { rut } = req.params;

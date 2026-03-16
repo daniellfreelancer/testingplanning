@@ -79,6 +79,7 @@ const gestionPagosController = {
                 tipoConsumo: tipoConsumo,
                 horasDisponibles: horasFinales,
                 institucion: institucionId,
+                nivel: nivelCurso || 'sin-nivel',
             });
             const suscripcionGuardada = await suscripcion.save();
             //agregar el usuario a la variante
