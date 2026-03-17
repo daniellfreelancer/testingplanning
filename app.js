@@ -105,6 +105,7 @@ const agendaUCAD = require('./api/car/ucad-agenda/agenda-ucad.routes')
 const citasUCAD = require('./api/car/ucad-citas/citas-ucad.routes')
 const notificacionesUCAD = require('./api/car/ucad-notificaciones/notificaciones-ucad.routes')
 const accesosUCAD = require('./api/car/ucad-accesos/accesos-ucad.routes');
+const coordinadorUCAD = require('./api/car/ucad-coordinador/coordinador-ucad.routes');
 
 
 // Rutas para gestion de escuelas de futbol
@@ -294,6 +295,7 @@ app.use('/usuarios-ucad', usuariosUCAD)
 app.use('/ucad-agenda', agendaUCAD)
 app.use('/ucad-citas', citasUCAD)
 app.use('/ucad-notificaciones', notificacionesUCAD)
+app.use('/ucad-coordinador', coordinadorUCAD)
 
 //Ruta para organigrama
 app.use('/organigrama', organigrama)
