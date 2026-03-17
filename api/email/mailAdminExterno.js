@@ -77,6 +77,8 @@ const sendCredencialesAdminExterno = async (
     .password-box { background:#fef3c7; border:1px solid #f59e0b; border-radius:6px; padding:14px; margin:12px 0; }
     .password-box .value { background:#fff; }
     .footer { text-align:center; border-top:1px solid #e5e7eb; color:#9ca3af; font-size:11px; padding:12px; background:#f9fafb; }
+    .button-wrapper { text-align:center; padding:20px; }
+    .button { display:inline-block; background:#93c5fd; color:#1e40af; font-weight:600; font-size:14px; text-decoration:none; padding:12px 24px; border-radius:8px; }
   </style>
 </head>
 <body>
@@ -102,13 +104,18 @@ const sendCredencialesAdminExterno = async (
           <p class="value">${nombreArrendatario}</p>
         </div>` : ""}
         <div class="password-box">
-          <p class="label">Contraseña temporal</p>
+          <p class="label">Contraseña</p>
           <p class="value">${password || "—"}</p>
         </div>
         <p style="font-size:12px; color:#6b7280; margin:12px 0 0 0;">
           Guarde esta contraseña en un lugar seguro. Si la pierde, puede solicitar un reenvío desde el panel de administración.
         </p>
       </div>
+
+            <div class="button-wrapper">
+        <a href="https://externos.vitalmoveglobal.com/" class="button" target="_blank">INICIAR SESIÓN</a>
+      </div>
+
       <div class="footer">
         <p style="margin:0;">Documento generado automáticamente - ${currentDate}</p>
       </div>

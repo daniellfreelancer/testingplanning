@@ -79,6 +79,7 @@ const gestionPagosController = {
                 tipoConsumo: tipoConsumo,
                 horasDisponibles: horasFinales,
                 institucion: institucionId,
+                nivel: nivelCurso || 'sin-nivel',
             });
             const suscripcionGuardada = await suscripcion.save();
             //agregar el usuario a la variante
@@ -345,11 +346,12 @@ const gestionPagosController = {
     },
     registrarPagoAccesiorios: async (req, res) => {
         const { transaccion, voucher, monto, fechaPago, colaboradorId, descripcion, } = req.body;
-        const { institucionId } = req.params;
+        const { institucionId, usuarioId } = req.params;
 
         try {
             const pago = new GestionPagos({
                 institucion: institucionId,
+                usuario: usuarioId,
                 transaccion: transaccion,
                 voucher: voucher,
                 monto: monto,

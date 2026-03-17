@@ -63,6 +63,8 @@ const accessControl = require('./api/access/accessRoutes')
 const usersUCAD = require('./api/car/users/userCarRoutes')
 const encuestaGymRoutes = require('./routes/encuestaGymRoutes');
 const metricasPiscinaRoutes = require('./routes/metricasPiscinaRoutes');
+const gruposPiscinaStgoRoutes = require('./api/piscina-stgo/grupos-piscina-santiago/gruposPiscinaStgo.routes');
+const profesoresPiscinaStgoRoutes = require('./api/piscina-stgo/profesores-piscina-santiago/profesoresPiscinaStgo.routes');
 
 //SISTEMA DE USUARIOS PARA COMPLEJOS/INSTITUCIONES DEPORTIVAS
 const usuariosComplejosDeportivos = require('./api/usuarios-complejos/usuariosComplejosRoutes')
@@ -264,7 +266,8 @@ app.use('/metricas-piscina', metricasPiscinaRoutes);
 app.use('/planes-piscinas', planesPiscinas)
 app.use('/pagos-piscinas', pagosPiscinas)
 app.use('/suscripciones-piscinas', suscripcionesPiscinas)
-
+app.use('/grupos-piscina-stgo', gruposPiscinaStgoRoutes)
+app.use('/profesores-piscina-stgo', profesoresPiscinaStgoRoutes)
 //Rutas para gestion de emails
 app.use('/email-student-futbol', emailStudentFutbol)
 
