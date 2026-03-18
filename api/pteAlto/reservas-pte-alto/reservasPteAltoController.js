@@ -889,7 +889,11 @@ const reservasPteAltoController = {
                 })
                 .populate({
                     path: 'espacioDeportivo',
-                    select: 'nombre deporte',
+                    select: 'nombre deporte complejoDeportivo',
+                    populate: {
+                        path: 'complejoDeportivo',
+                        select: '_id nombre'
+                    },
                     model: EspaciosDeportivosPteAlto
                 })
                 .populate({
@@ -916,6 +920,114 @@ const reservasPteAltoController = {
                 success: false,
                 message: "Error al obtener las reservas",
                 error: error.message
+            });
+        }
+    },
+
+    /**
+     * Listar reservas pobladas para el calendario (Puente Alto)
+     * GET /reservas-pte-alto/reservas-calendario?fechaDesde=YYYY-MM-DD&fechaHasta=YYYY-MM-DD&complejoDeportivo=ObjectId&espacioDeportivo=ObjectId
+     */
+    listarReservasCalendario: async (req, res) => {
+        try {
+            const {
+                fechaDesde,
+                fechaHasta,
+                complejoDeportivo,
+                espacioDeportivo,
+            } = req.query;
+
+            // Default: desde inicio del mes actual hasta fin del mes siguiente
+            const now = new Date();
+            const defaultDesde = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+            const defaultHasta = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0, 23, 59, 59, 999)); // último día del mes+1
+
+            const desde = fechaDesde ? getStartOfDayUTC(fechaDesde) : defaultDesde;
+            const hasta = fechaHasta ? getEndOfDayUTC(fechaHasta) : defaultHasta;
+
+            // Evitar rangos inválidos silenciosos
+            if (desde && hasta && desde.getTime() > hasta.getTime()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El parámetro 'fechaDesde' debe ser menor o igual a 'fechaHasta'",
+                });
+            }
+
+            // Overlap: (fechaInicio <= hasta) AND (fechaFin >= desde)
+            const query = {
+                estado: "activa",
+                fechaInicio: { $lte: hasta },
+                fechaFin: { $gte: desde },
+            };
+
+            if (espacioDeportivo) {
+                query.espacioDeportivo = espacioDeportivo;
+            }
+
+            if (complejoDeportivo) {
+                const espaciosDeEseComplejo = await EspaciosDeportivosPteAlto.find(
+                    {
+                        complejoDeportivo: complejoDeportivo,
+                        status: { $ne: "desactivado" },
+                    },
+                    { _id: 1 }
+                ).lean();
+
+                const ids = espaciosDeEseComplejo.map((e) => e._id);
+
+                // Si no hay espacios para el complejo, no hay reservas de calendario
+                if (ids.length === 0) {
+                    return res.status(200).json({ success: true, reservas: [], total: 0 });
+                }
+
+                // Si viene espacio específico, validar que pertenezca al complejo
+                if (espacioDeportivo) {
+                    const pertenece = ids.some((id) => String(id) === String(espacioDeportivo));
+                    if (!pertenece) {
+                        return res.status(200).json({ success: true, reservas: [], total: 0 });
+                    }
+                } else {
+                    query.espacioDeportivo = { $in: ids };
+                }
+            }
+
+            const reservas = await ReservasPteAlto.find(query)
+                .populate({
+                    path: "usuario",
+                    select: "nombre apellido email",
+                    model: UsuariosPteAlto,
+                })
+                .populate({
+                    path: "espacioDeportivo",
+                    select: "nombre deporte complejoDeportivo",
+                    populate: {
+                        path: "complejoDeportivo",
+                        select: "_id nombre",
+                    },
+                })
+                .populate({
+                    path: "taller",
+                    select: "nombre fechaInicio fechaFin",
+                    model: TalleresDeportivosPteAlto,
+                })
+                .populate({
+                    path: "reservadoPor",
+                    select: "nombre apellido email",
+                    model: UsuariosPteAlto,
+                })
+                .sort({ fechaInicio: -1 });
+
+            res.status(200).json({
+                success: true,
+                reservas: reservas,
+                total: reservas.length,
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: "Error al obtener reservas para calendario",
+                error: error.message,
             });
         }
     },

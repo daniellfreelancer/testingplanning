@@ -38,6 +38,9 @@ router.put('/:id/cancelar', reservasPteAltoController.cancelarReserva);
 // Listar todas las reservas
 router.get('/obtener-todas-las-reservas', reservasPteAltoController.listarTodasReservas);
 
+// Listar reservas pobladas para el calendario
+router.get('/reservas-calendario', reservasPteAltoController.listarReservasCalendario);
+
 // Obtener reserva por ID
 router.get('/obtener-reserva-por-id/:id', reservasPteAltoController.obtenerReservaPorId);
 
