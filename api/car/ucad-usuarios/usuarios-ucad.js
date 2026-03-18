@@ -5,7 +5,9 @@ const usuariosUcadSchema = new mongoose.Schema({
   apellido: { type: String },
   email: { type: String },
   password: [{ type: String }],
-  rol: { type: String, enum: ['admin', 'profesional', 'deportista', 'colaborador', 'totem'] },
+  rol: { type: String, enum: ['admin', 'profesional', 'deportista', 'colaborador', 'totem', 'coordinador'] },
+  esCoordinador: { type: Boolean, default: false },
+  esProfesional: { type: Boolean, default: false }, // Para coordinadores que también son profesionales
   rut: { type: String },
   telefono: { type: String },
   direccion: { type: String },

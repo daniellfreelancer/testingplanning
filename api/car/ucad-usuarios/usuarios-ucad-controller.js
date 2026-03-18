@@ -133,9 +133,9 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
     }
   },
 
-  registrarColaborador: async (req, res) => { // si entra como profecional o colaborador, bienvenida + clave, profecional a la app y el colaboraador a la web // 
+  registrarColaborador: async (req, res) => { // si entra como profecional o colaborador, bienvenida + clave, profecional a la app y el colaboraador a la web //
     try {
-      const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo, rol, especialidad, direccion, comuna, region } = req.body;
+      const { nombre, apellido, rut, email, telefono, fechaNacimiento, sexo, rol, especialidad, direccion, comuna, region, esCoordinador, esProfesional } = req.body;
 
       // Validar campos requeridos
       if (!nombre || !apellido || !rut || !email || !rol) {
@@ -144,10 +144,10 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         });
       }
 
-      // Validar que el rol sea válido (colaborador, profesional o deportista)
-      if (!['colaborador', 'profesional', 'deportista', 'admin'].includes(rol)) {
+      // Validar que el rol sea válido (colaborador, profesional, deportista, coordinador o admin)
+      if (!['colaborador', 'profesional', 'deportista', 'coordinador', 'admin'].includes(rol)) {
         return res.status(400).json({
-          message: "El rol debe ser: colaborador, profesional o deportista"
+          message: "El rol debe ser: colaborador, profesional, deportista o coordinador"
         });
       }
 
@@ -180,7 +180,9 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         comuna,
         region,
         password: [passwordHashed],
-        estadoValidacion: 'validado' // Los usuarios creados por admin se validan automáticamente
+        estadoValidacion: 'validado', // Los usuarios creados por admin se validan automáticamente
+        esCoordinador: esCoordinador || false,
+        esProfesional: esProfesional || false
       });
 
       // Subir imagen si existe
@@ -282,7 +284,9 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
             rut: usuario.rut,
             telefono: usuario.telefono,
             imgUrl: usuario.imgUrl,
-            estadoValidacion: usuario.estadoValidacion
+            estadoValidacion: usuario.estadoValidacion,
+            esCoordinador: usuario.esCoordinador || false,
+            esProfesional: usuario.esProfesional || false
           },
           token
         });

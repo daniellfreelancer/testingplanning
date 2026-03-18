@@ -9,12 +9,12 @@ const {
     hardDelete
 } = require('../controllers/organigramaController');
 
-// Rutas públicas (podrías agregar middleware de autenticación según necesites)
-router.post('/', create);
-router.get('/', getAll);
-router.get('/:id', getById);
-router.put('/:id', update);
-router.delete('/:id', deleteOrganigrama);
-router.delete('/:id/hard', hardDelete);
+// Rutas de organigrama
+router.post('/crear', create);
+router.get('/obtener-todos', getAll);
+router.get('/obtener/:id', getById);
+router.put('/actualizar/:id', update);
+router.delete('/eliminar/:id', deleteOrganigrama);
+router.delete('/eliminar-permanente/:id', hardDelete);
 
 module.exports = router;
