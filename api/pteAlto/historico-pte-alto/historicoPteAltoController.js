@@ -16,7 +16,7 @@ const historicoPteAltoController = {
         try {
             const historicos = await HistoricoPteAlto.find()
                 .sort({ createdAt: -1 })
-                .populate('realizadoPor', 'nombre apellido email rol');
+                .populate('realizadoPor', 'nombre apellido email rol rut telefono');
             res.status(200).json({ message: 'Históricos PTE Alto obtenidos correctamente', historicos });
         } catch (error) {
             res.status(500).json({ message: 'Error al obtener históricos PTE Alto', error });
