@@ -9,9 +9,9 @@ const populateOptions = [
     { path: 'usuario', select: 'nombre apellido email rut' },
     { path: 'institucion', select: 'nombre' },
     { path: 'recepcion', select: 'nombre apellido email rut' },
-    { path: 'planCurso', select: 'tipoPlan plan valor dias ' },
-    { path: 'planNL', select: 'tipoPlan plan valor dias' },
-    { path: 'planGym', select: 'tipoPlan plan valor dias' },
+    { path: 'planCurso', select: 'tipoPlan plan valor dias duracion' },
+    { path: 'planNL', select: 'tipoPlan plan valor dias duracion' },
+    { path: 'planGym', select: 'tipoPlan plan valor dias duracion' },
     { path: 'planId', select: 'tipo nombrePlan valor valorResidente valorNoResidente duracion' }
 ]
 
