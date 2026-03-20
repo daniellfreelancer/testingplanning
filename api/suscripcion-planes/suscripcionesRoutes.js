@@ -10,5 +10,6 @@ router.get('/pago/:pagoId', suscripcionController.getSuscripcionByPago);
 router.get('/institucion/:institucionId', suscripcionController.getSuscripcionByInstitucion);
 router.put('/update-suscripcion/:id', suscripcionController.actualizarSuscripcion);
 router.get('/ultima-suscripcion-usuario/:usuarioId', suscripcionController.obtenerUltimaSuscripcionPorUsuario);
+router.put('/sumar-horas-disponibles/:suscripcionId/horas/:horas', suscripcionController.sumarHorasDisponibles);
 
 module.exports = router;
