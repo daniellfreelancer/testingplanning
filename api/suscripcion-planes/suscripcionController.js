@@ -128,6 +128,35 @@ const suscripcionController = {
         }
 
 
+    },
+    sumarHorasDisponibles: async (req, res) => {
+        // este controlador debe recibir el _id de la suscripcion y el numero de horas a sumar al campo horasDisponibles de la suscripcion, que comienzan como null y luego debe cambiarse a el numero de horas a sumar.
+        const { suscripcionId, horas } = req.params;
+        try {
+            // primero busco la suscripcion y la cambio a cero y despues la actualizo con el numero de horas a sumar.
+
+            const suscripcion = await SuscripcionPlanes.findById(suscripcionId);
+
+            // si la suscripcion tiene el campo horasDisponibles como null, la cambio a cero y despues la actualizo con el numero de horas a sumar.
+            if (suscripcion.horasDisponibles === null) {
+                await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $set: { horasDisponibles: 0 } }, { new: true });
+            }
+            // si la suscripcion tiene el campo horasDisponibles como un numero, la actualizo con el numero de horas a sumar.
+            if (suscripcion.horasDisponibles !== null) {
+                await SuscripcionPlanes.findByIdAndUpdate(suscripcionId, { $inc: { horasDisponibles: horas } }, { new: true });
+            }
+
+
+            res.status(200).json({
+                message: "Horas sumadas correctamente",
+                suscripcion,
+                success: true,
+            });
+        } catch (error) {
+            res.status(500).json({ message: "Error al sumar las horas", error: error.message });
+        }
+
+
     }
 
 }
