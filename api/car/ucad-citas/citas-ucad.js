@@ -21,9 +21,9 @@ const citasUcadSchema = new mongoose.Schema({
     required: true,
     enum: ['consulta', 'emergencia', 'derivacion']
   },
-  fecha: { 
-    type: Date, 
-    required: true
+  fecha: {
+    type: Date,
+    required: false // Opcional para derivaciones pendientes
   },
   duracion: { 
     type: Number, 
