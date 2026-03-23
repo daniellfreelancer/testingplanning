@@ -176,9 +176,11 @@ app.use((req, res, next) => {
     '/eventos-pte-alto/crear-evento',
     '/eventos-pte-alto/editar-evento',
     '/pte-alto/crear-usuario-externo',
+    '/pte-alto/validar-email',
     '/clubes-pte-alto/crear-club-pte-alto',
     '/clubes-pte-alto/actualizar-club-pte-alto',
     '/student', // create/update usan multer (upload.single)
+    '/pte-alto/actualizar-datos-rechazado',
   ];
   
   const shouldSkip = multerRoutes.some(route => req.path.startsWith(route));

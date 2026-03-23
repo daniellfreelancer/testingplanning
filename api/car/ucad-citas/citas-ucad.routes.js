@@ -38,5 +38,11 @@ router.put("/completar-cita/:citaId", citasUcadController.completarCita);
 // Obtener horarios disponibles para agendar
 router.get("/horarios-disponibles/:profesionalId/:fecha", citasUcadController.obtenerHorariosDisponibles);
 
+// Obtener derivaciones recibidas (pendientes sin fecha)
+router.get("/derivaciones-recibidas/:profesionalId", citasUcadController.obtenerDerivacionesRecibidas);
+
+// Asignar fecha/hora a una derivación pendiente
+router.put("/asignar-horario-derivacion/:citaId", citasUcadController.asignarHorarioDerivacion);
+
 module.exports = router;
 

@@ -5,6 +5,11 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Institucion = require("../../institucion/institucionModel");
 const sendWelcomeColaboradorPuenteAlto = require("../mail/welcomeColaborador");
+const sendWelcomeUsuarioExternoPteAlto = require("../mail/welcomeUsuarioExternoPteAlto");
+const sendUsuarioValidadoPteAlto = require("../mail/usuarioValidadoPteAlto");
+const sendUsuarioDeshabilitadoPteAlto = require("../mail/usuarioDeshabilitadoPteAlto");
+const sendUsuarioHabilitadoPteAlto = require("../mail/usuarioHabilitadoPteAlto");
+const sendUsuarioRechazadoPteAlto = require("../mail/usuarioRechazadoPteAlto");
 const ReservasPteAlto = require("../reservas-pte-alto/reservasPteAlto");
 const ComplejosDeportivosPteAlto = require("../complejos-deportivos/complejosDeportivosPteAlto");
 
@@ -86,15 +91,31 @@ const usuariosPteAltoController = {
 
   crearUsuarioExternoPteAlto: async (req, res) => {
     try {
-      const { nombre, apellido, email, rut, rol, institucion } = req.body;
+      const { nombre, apellido, email, rut, rol, institucion, tipoDocumento } = req.body;
 
-      // validar si el correo y rut ya existen
       const usuarioPteAltoEmail = await UsuariosPteAlto.findOne({ email });
-      const usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut });
-      if (usuarioPteAltoEmail || usuarioPteAltoRut) {
-        return res
-          .status(400)
-          .json({ message: "El correo o rut ya existe" });
+      if (usuarioPteAltoEmail) {
+        return res.status(400).json({
+          message: "El correo ya está registrado",
+          code: "email_duplicado",
+        });
+      }
+
+      const tipoDoc = tipoDocumento || "rut";
+      let usuarioPteAltoRut;
+      if (tipoDoc === "rut") {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({
+          rut,
+          $or: [{ tipoDocumento: "rut" }, { tipoDocumento: null }, { tipoDocumento: { $exists: false } }],
+        });
+      } else {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut, tipoDocumento: "pasaporte" });
+      }
+      if (usuarioPteAltoRut) {
+        return res.status(400).json({
+          message: "El documento ya está registrado",
+          code: "documento_duplicado",
+        });
       }
 
       const password = generateRandomPassword(8);
@@ -105,7 +126,7 @@ const usuariosPteAltoController = {
         email,
         rut,
         rol,
-        password: [passwordHashed],
+      //  password: [passwordHashed],
         institucion,
         ...req.body,
       });
@@ -176,12 +197,11 @@ const usuariosPteAltoController = {
 
       await nuevoUsuarioPteAlto.save();
 
-      // ENVIAR EMAIL DE BIENVENIDA
-      // await sendWelcomeMailPteAlto(
-      //   nuevoUsuarioPteAlto.email,
-      //   password,
-      //   nuevoUsuarioPteAlto.nombre
-      // );
+      try {
+        await sendWelcomeUsuarioExternoPteAlto(nuevoUsuarioPteAlto);
+      } catch (err) {
+        console.error("Error enviando email de bienvenida (usuario ya creado):", err);
+      }
 
       res.status(201).json({
         message: "Cuenta creada correctamente",
@@ -212,7 +232,8 @@ const usuariosPteAltoController = {
         telefono,
         direccion,
         region,
-        comuna
+        comuna,
+        estadoValidacion
       } = req.body;
       
       const updateData = {};
@@ -228,6 +249,7 @@ const usuariosPteAltoController = {
       if (direccion !== undefined) updateData.direccion = direccion;
       if (region !== undefined) updateData.region = region;
       if (comuna !== undefined) updateData.comuna = comuna;
+      if (estadoValidacion !== undefined) updateData.estadoValidacion = estadoValidacion;
       
       const usuarioPteAlto = await UsuariosPteAlto.findByIdAndUpdate(
         id,
@@ -291,6 +313,121 @@ const usuariosPteAltoController = {
       console.log(error);
       res.status(500).json({
         message: "Error al obtener usuario PTE Alto",
+        error: error.message,
+      });
+    }
+  },
+
+  obtenerFichaUsuarioRechazadoPteAlto: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const usuarioPteAlto = await UsuariosPteAlto.findById(id);
+      if (!usuarioPteAlto) {
+        return res
+          .status(404)
+          .json({ message: "Usuario no encontrado" });
+      }
+      if (usuarioPteAlto.estadoValidacion !== "rechazado") {
+        return res
+          .status(403)
+          .json({ message: "Este enlace solo está disponible para usuarios con solicitud rechazada" });
+      }
+      res.status(200).json({
+        message: "Ficha de usuario rechazado",
+        usuarioPteAlto,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al obtener ficha",
+        error: error.message,
+      });
+    }
+  },
+
+  actualizarDatosUsuarioRechazadoPteAlto: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const {
+        nombre,
+        apellido,
+        email,
+        telefono,
+        fechaNacimiento,
+        sexo,
+        direccion,
+        region,
+        comuna,
+        rut,
+        pasaporte,
+        tipoDocumento,
+      } = req.body;
+
+      const usuarioPteAlto = await UsuariosPteAlto.findById(id);
+      if (!usuarioPteAlto) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      if (usuarioPteAlto.estadoValidacion !== "rechazado") {
+        return res
+          .status(403)
+          .json({ message: "Solo puedes actualizar datos si tu solicitud fue rechazada" });
+      }
+
+      const updateData = { estadoValidacion: "pendiente", motivoRechazo: "", motivoValidacion: "" };
+      if (nombre !== undefined) updateData.nombre = nombre;
+      if (apellido !== undefined) updateData.apellido = apellido;
+      if (email !== undefined) updateData.email = email;
+      if (telefono !== undefined) updateData.telefono = telefono;
+      if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento;
+      if (sexo !== undefined) updateData.sexo = sexo;
+      if (direccion !== undefined) updateData.direccion = direccion;
+      if (region !== undefined) updateData.region = region;
+      if (comuna !== undefined) updateData.comuna = comuna;
+      if (tipoDocumento !== undefined) updateData.tipoDocumento = tipoDocumento;
+      if (rut !== undefined || pasaporte !== undefined) {
+        updateData.rut = rut !== undefined ? rut : pasaporte;
+      }
+
+      if (req.files && req.files["certificadoDomicilio"]) {
+        try {
+          const key = await uploadMulterFile(req.files["certificadoDomicilio"][0]);
+          updateData.certificadoDomicilio = key;
+        } catch (err) {
+          console.error("Error subiendo certificado:", err);
+          return res.status(500).json({
+            message: "Error al subir el certificado de domicilio",
+            error: err.message,
+          });
+        }
+      }
+      
+      if (req.files && req.files["fotoCedulaFrontal"]) {
+        try {
+          const key = await uploadMulterFile(req.files["fotoCedulaFrontal"][0]);
+          updateData.fotoCedulaFrontal = key;
+        } catch (err) {
+          console.log("Error subiendo foto de cédula frontal a S3:", err);
+          return res.status(500).json({
+            message: "Error al subir la foto de la cédula frontal",
+            error: err.message,
+          });
+        }
+      }
+
+      const usuarioActualizado = await UsuariosPteAlto.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      );
+
+      res.status(200).json({
+        message: "Datos actualizados correctamente. Tu cuenta será revisada nuevamente.",
+        usuarioPteAlto: usuarioActualizado,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: "Error al actualizar datos",
         error: error.message,
       });
     }
@@ -370,7 +507,7 @@ const usuariosPteAltoController = {
       const usuariosPteAlto = await UsuariosPteAlto.find({ rol: "USER" })
         .sort({ createAt: -1 })
         .select(
-          "nombre apellido email rut rol status institucion estadoValidacion certificadoDomicilio fotoCedulaFrontal motivoValidacion motivoRechazo comuna ciudad region fechaNacimiento sexo direccion telefono"
+          "nombre apellido email rut tipoDocumento rol status institucion estadoValidacion certificadoDomicilio fotoCedulaFrontal motivoValidacion motivoRechazo comuna ciudad region fechaNacimiento sexo direccion telefono"
         ).populate("talleresInscritos", "nombre");
         const reservasPteAlto = await ReservasPteAlto.find({ usuario: { $in: usuariosPteAlto.map(usuario => usuario._id) } }).populate("espacioDeportivo", {nombre: 1} , {fechaInicio: 1});
 
@@ -383,17 +520,11 @@ const usuariosPteAltoController = {
           };
         });
 
-      if (usuariosPteAltoConReservas?.length > 0) {
-        res.status(200).json({
-          response: usuariosPteAltoConReservas,
-          message: "Usuarios PTE Alto encontrados",
-          success: true,
-        });
-      } else {
-        res
-          .status(404)
-          .json({ message: "No se encontraron usuarios PTE Alto" });
-      }
+      res.status(200).json({
+        response: usuariosPteAltoConReservas ?? [],
+        message: usuariosPteAltoConReservas?.length > 0 ? "Usuarios PTE Alto encontrados" : "No se encontraron usuarios PTE Alto",
+        success: true,
+      });
     } catch (error) {
       console.log(error);
       res.status(500).json({
@@ -500,6 +631,10 @@ const usuariosPteAltoController = {
           .json({ message: "Usuario PTE Alto no encontrado" });
       }
 
+      // Capturar estado previo antes de modificar (para detectar qué email enviar)
+      const statusPrev = usuarioPteAlto.status;
+      const estadoValidacionPrev = usuarioPteAlto.estadoValidacion;
+
       // Actualizar campos según lo que se envíe
       if (estadoValidacion !== undefined) {
         usuarioPteAlto.estadoValidacion = estadoValidacion;
@@ -519,6 +654,37 @@ const usuariosPteAltoController = {
       }
 
       await usuarioPteAlto.save();
+
+      // Enviar email según la acción detectada (no bloquear respuesta si falla)
+      try {
+        const statusNew = usuarioPteAlto.status;
+        const estadoValidacionNew = usuarioPteAlto.estadoValidacion;
+
+        // Deshabilitar: status pasó de true a false
+        if (statusNew === false && statusPrev === true) {
+          const motivo = usuarioPteAlto.motivoValidacion || usuarioPteAlto.motivoRechazo;
+          await sendUsuarioDeshabilitadoPteAlto(usuarioPteAlto, motivo);
+        }
+        // Validar: primera validación (pendiente/rechazado -> validado + habilitado)
+        else if (
+          statusNew === true &&
+          estadoValidacionNew === "validado" &&
+          (estadoValidacionPrev === "pendiente" || estadoValidacionPrev === "rechazado")
+        ) {
+          await sendUsuarioValidadoPteAlto(usuarioPteAlto);
+        }
+        // Habilitar: re-activación de usuario previamente deshabilitado
+        else if (statusNew === true && statusPrev === false) {
+          await sendUsuarioHabilitadoPteAlto(usuarioPteAlto);
+        }
+        // Rechazar: usuario pendiente o validado que es rechazado
+        else if (estadoValidacionNew === "rechazado") {
+          const motivo = usuarioPteAlto.motivoRechazo || usuarioPteAlto.motivoValidacion;
+          await sendUsuarioRechazadoPteAlto(usuarioPteAlto, motivo);
+        }
+      } catch (emailError) {
+        console.error("Error enviando email de notificación (usuario actualizado correctamente):", emailError);
+      }
       
       res.status(200).json({
         message: "Usuario PTE Alto actualizado correctamente",

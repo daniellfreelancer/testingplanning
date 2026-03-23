@@ -16,12 +16,20 @@ const citasUcadController = {
    */
   crearCita: async (req, res) => {
     try {
-      const { deportista, profesional, especialidad, tipoCita, fecha, duracion = 15, notas } = req.body;
+      const { deportista, profesional, especialidad, tipoCita, fecha, duracion = 15, notas, derivadaPor, motivoDerivacion, estado } = req.body;
 
-      // Validar campos requeridos
-      if (!deportista || !profesional || !especialidad || !tipoCita || !fecha) {
+      // Validar campos requeridos básicos
+      if (!deportista || !profesional || !especialidad || !tipoCita) {
         return res.status(400).json({
-          message: "Los campos deportista, profesional, especialidad, tipoCita y fecha son requeridos"
+          message: "Los campos deportista, profesional, especialidad y tipoCita son requeridos"
+        });
+      }
+
+      // Para derivaciones, la fecha es opcional (se asignará después)
+      const esDerivacion = tipoCita === 'derivacion' || derivadaPor;
+      if (!esDerivacion && !fecha) {
+        return res.status(400).json({
+          message: "El campo fecha es requerido para citas no derivadas"
         });
       }
 
@@ -55,41 +63,46 @@ const citasUcadController = {
         });
       }
 
-      // Validar fecha
-      const fechaCita = new Date(fecha);
-      if (isNaN(fechaCita.getTime())) {
-        return res.status(400).json({
-          message: "Formato de fecha inválido"
-        });
-      }
+      // Variables para fecha/hora (solo si no es derivación pendiente)
+      let fechaCita, horaCita, minutoCita, horaCitaFormato;
 
-      // Extraer hora y minutos directamente de la cadena ISO para preservar la hora original
-      // Formato esperado: "2026-01-14T10:00:00.000Z" o "2026-01-14T10:00:00"
-      let horaCita, minutoCita;
-      if (typeof fecha === 'string' && fecha.includes('T')) {
-        const parteHora = fecha.split('T')[1];
-        if (parteHora) {
-          const horaMinuto = parteHora.split(':');
-          horaCita = parseInt(horaMinuto[0], 10);
-          minutoCita = parseInt(horaMinuto[1] || '0', 10);
+      // Solo validar y procesar fecha si existe (no es derivación pendiente)
+      if (fecha) {
+        // Validar fecha
+        fechaCita = new Date(fecha);
+        if (isNaN(fechaCita.getTime())) {
+          return res.status(400).json({
+            message: "Formato de fecha inválido"
+          });
+        }
+
+        // Extraer hora y minutos directamente de la cadena ISO para preservar la hora original
+        // Formato esperado: "2026-01-14T10:00:00.000Z" o "2026-01-14T10:00:00"
+        if (typeof fecha === 'string' && fecha.includes('T')) {
+          const parteHora = fecha.split('T')[1];
+          if (parteHora) {
+            const horaMinuto = parteHora.split(':');
+            horaCita = parseInt(horaMinuto[0], 10);
+            minutoCita = parseInt(horaMinuto[1] || '0', 10);
+          } else {
+            // Fallback a métodos UTC si no se puede extraer de la cadena
+            horaCita = fechaCita.getUTCHours();
+            minutoCita = fechaCita.getUTCMinutes();
+          }
         } else {
-          // Fallback a métodos UTC si no se puede extraer de la cadena
+          // Si no es string ISO, usar métodos UTC para preservar hora original
           horaCita = fechaCita.getUTCHours();
           minutoCita = fechaCita.getUTCMinutes();
         }
-      } else {
-        // Si no es string ISO, usar métodos UTC para preservar hora original
-        horaCita = fechaCita.getUTCHours();
-        minutoCita = fechaCita.getUTCMinutes();
-      }
 
-      const horaCitaFormato = `${String(horaCita).padStart(2, '0')}:${String(minutoCita).padStart(2, '0')}`;
+        horaCitaFormato = `${String(horaCita).padStart(2, '0')}:${String(minutoCita).padStart(2, '0')}`;
+      }
 
       // Obtener agenda del profesional (OPCIONAL - puede no tener agenda)
       const agenda = await AgendaUCAD.findOne({ profesional });
 
-      // Solo validar agenda si existe y está activa
-      if (agenda && agenda.status) {
+      // Solo validar agenda si existe, está activa Y hay fecha
+      if (agenda && agenda.status && fecha) {
         // Extraer solo la fecha sin hora para buscar en horariosPorFecha
         if (!fecha || typeof fecha !== 'string') {
           return res.status(400).json({
@@ -121,37 +134,52 @@ const citasUcadController = {
       }
       // Si no hay agenda o está inactiva, se permite crear la cita sin validaciones de agenda
 
-      // Verificar que no haya conflicto con otra cita
-      // Usar UTC para mantener la hora original
-      const fechaFinCita = new Date(fechaCita);
-      fechaFinCita.setUTCMinutes(fechaFinCita.getUTCMinutes() + duracion);
+      // Verificar que no haya conflicto con otra cita (solo si hay fecha)
+      if (fecha && fechaCita) {
+        // Usar UTC para mantener la hora original
+        const fechaFinCita = new Date(fechaCita);
+        fechaFinCita.setUTCMinutes(fechaFinCita.getUTCMinutes() + duracion);
 
-      const citaConflictiva = await CitasUcad.findOne({
-        profesional,
-        fecha: {
-          $gte: fechaCita,
-          $lt: fechaFinCita
-        },
-        estado: { $nin: ['cancelada'] }
-      });
-
-      if (citaConflictiva) {
-        return res.status(400).json({
-          message: "Ya existe una cita agendada en este horario"
+        const citaConflictiva = await CitasUcad.findOne({
+          profesional,
+          fecha: {
+            $gte: fechaCita,
+            $lt: fechaFinCita
+          },
+          estado: { $nin: ['cancelada'] }
         });
+
+        if (citaConflictiva) {
+          return res.status(400).json({
+            message: "Ya existe una cita agendada en este horario"
+          });
+        }
       }
 
       // Crear la cita (la fecha se guarda tal como viene, sin modificar la hora)
-      const nuevaCita = new CitasUcad({
+      const citaData = {
         deportista,
         profesional,
         especialidad,
         tipoCita,
-        fecha: fechaCita,
         duracion,
-        notas,
-        estado: 'pendiente'
-      });
+        estado: estado || 'pendiente',
+      };
+
+      // Solo agregar fecha si existe
+      if (fechaCita) {
+        citaData.fecha = fechaCita;
+      }
+
+      // Agregar campos según el tipo
+      if (esDerivacion) {
+        if (motivoDerivacion) citaData.motivoDerivacion = motivoDerivacion;
+        if (derivadaPor) citaData.derivadaPor = derivadaPor;
+      } else {
+        if (notas) citaData.notas = notas;
+      }
+
+      const nuevaCita = new CitasUcad(citaData);
 
       await nuevaCita.save();
 
@@ -963,38 +991,24 @@ const citasUcadController = {
 
       const horaCitaFormato = `${String(horaCita).padStart(2, '0')}:${String(minutoCita).padStart(2, '0')}`;
 
-      // Validar que el profesional tiene agenda activa y el horario pertenece a ella
+      // Validar que el profesional tiene agenda activa
       const agenda = await AgendaUCAD.findOne({ profesional });
       if (!agenda || !agenda.status) {
         return res.status(400).json({ message: "El profesional no tiene agenda configurada o está inactiva" });
       }
 
-      const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-      const diaSemana = diasSemana[fechaCita.getUTCDay()];
-      const diaSemanaNormalizado = normalizarDia(diaSemana);
-      const esEstructuraNueva = Array.isArray(agenda.dias) && agenda.dias.length > 0 && typeof agenda.dias[0] === 'object';
+      // Nuevo sistema: validar contra horariosPorFecha
+      const fechaStr = fechaCita.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const diaAgenda = agenda.horariosPorFecha?.find(d => d.fecha === fechaStr);
 
-      if (esEstructuraNueva) {
-        const diaAgenda = agenda.dias.find(d => normalizarDia(d.dia) === diaSemanaNormalizado);
-        if (!diaAgenda || !diaAgenda.status) {
-          return res.status(400).json({ message: `El profesional no atiende los ${diaSemana}s` });
-        }
-        // El horario debe estar en la agenda del día (aunque esté ocupado)
-        const horariosNormalizados = (diaAgenda.horarios || []).map(h => {
-          const [hh, mm] = h.split(':').map(Number);
-          return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      if (!diaAgenda || !diaAgenda.horarios || diaAgenda.horarios.length === 0) {
+        return res.status(400).json({
+          message: "El profesional no tiene horarios configurados para esta fecha"
         });
-        if (!horariosNormalizados.includes(horaCitaFormato)) {
-          return res.status(400).json({
-            message: `El horario ${horaCitaFormato} no pertenece a la agenda del profesional para este día`,
-          });
-        }
-      } else {
-        const diasNormalizados = agenda.dias.map(d => normalizarDia(d));
-        if (!diasNormalizados.includes(diaSemanaNormalizado)) {
-          return res.status(400).json({ message: `El profesional no atiende los ${diaSemana}s` });
-        }
       }
+
+      // Para sobrecupo, no validamos si el horario está en la lista
+      // Solo verificamos que haya horarios configurados ese día
 
       // Evitar duplicado exacto: mismo deportista + mismo profesional + mismo horario
       const citaMismoPaciente = await CitasUcad.findOne({
@@ -1108,6 +1122,110 @@ const citasUcadController = {
       console.error('Error al obtener todas las citas:', error);
       res.status(500).json({
         message: "Error al obtener todas las citas",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Obtener derivaciones recibidas (pendientes sin fecha asignada)
+   * GET /derivaciones-recibidas/:profesionalId
+   */
+  obtenerDerivacionesRecibidas: async (req, res) => {
+    try {
+      const { profesionalId } = req.params;
+
+      // Buscar citas de tipo derivación, estado pendiente, y sin fecha
+      const derivaciones = await CitasUcad.find({
+        profesional: profesionalId,
+        tipoCita: 'derivacion',
+        estado: 'pendiente',
+        fecha: { $exists: false }
+      })
+        .populate('deportista', 'nombre apellido email rut imgUrl')
+        .populate('derivadaPor', 'nombre apellido email especialidad')
+        .sort({ createdAt: -1 }); // Más recientes primero
+
+      res.status(200).json({
+        success: true,
+        derivaciones,
+        total: derivaciones.length
+      });
+    } catch (error) {
+      console.error('Error al obtener derivaciones recibidas:', error);
+      res.status(500).json({
+        message: "Error al obtener derivaciones recibidas",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Asignar fecha/hora a una derivación pendiente
+   * PUT /asignar-horario-derivacion/:citaId
+   * Body: { fecha }
+   */
+  asignarHorarioDerivacion: async (req, res) => {
+    try {
+      const { citaId } = req.params;
+      const { fecha } = req.body;
+
+      if (!fecha) {
+        return res.status(400).json({
+          message: "La fecha es requerida"
+        });
+      }
+
+      // Buscar la cita
+      const cita = await CitasUcad.findById(citaId);
+      if (!cita) {
+        return res.status(404).json({
+          message: "Cita no encontrada"
+        });
+      }
+
+      // Validar que sea una derivación pendiente
+      if (cita.tipoCita !== 'derivacion') {
+        return res.status(400).json({
+          message: "Esta cita no es una derivación"
+        });
+      }
+
+      if (cita.estado !== 'pendiente') {
+        return res.status(400).json({
+          message: "Esta derivación ya fue procesada"
+        });
+      }
+
+      // Validar formato de fecha
+      const fechaCita = new Date(fecha);
+      if (isNaN(fechaCita.getTime())) {
+        return res.status(400).json({
+          message: "Formato de fecha inválido"
+        });
+      }
+
+      // TODO: Aquí podrías agregar validación de conflictos de horario si lo deseas
+
+      // Actualizar la cita con la fecha y cambiar estado a confirmada
+      cita.fecha = fechaCita;
+      cita.estado = 'confirmada';
+      await cita.save();
+
+      // Populate para respuesta
+      await cita.populate('deportista', 'nombre apellido email rut imgUrl');
+      await cita.populate('profesional', 'nombre apellido email especialidad');
+      await cita.populate('derivadaPor', 'nombre apellido email especialidad');
+
+      res.status(200).json({
+        success: true,
+        message: "Horario asignado exitosamente",
+        cita
+      });
+    } catch (error) {
+      console.error('Error al asignar horario a derivación:', error);
+      res.status(500).json({
+        message: "Error al asignar horario a derivación",
         error: error.message
       });
     }

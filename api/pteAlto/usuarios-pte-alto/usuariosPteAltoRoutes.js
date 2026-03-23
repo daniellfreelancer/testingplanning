@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 const usuariosPteAltoController = require("./usuariosPteAltoController");
 const upload = require('../../../libs/pteAltoDocStorage');
+const validacionEmailRoutes = require("../validacion-email/validacionEmailRoutes");
 
+router.use("/validar-email", validacionEmailRoutes);
 router.post("/crear-usuario", usuariosPteAltoController.crearUsuarioPteAlto);
 router.post("/crear-usuario-externo", upload.fields([
   { name: 'certificadoDomicilio', maxCount: 1 },
@@ -12,6 +14,11 @@ router.post("/asignar-admin-pte-alto", usuariosPteAltoController.asignarAdminPte
 router.put("/actualizar-usuario/:id", usuariosPteAltoController.actualizarUsuarioPteAlto);
 router.delete("/eliminar-usuario/:id", usuariosPteAltoController.eliminarUsuarioPteAlto);
 router.get("/obtener-usuario/:id", usuariosPteAltoController.obtenerUsuarioPteAlto);
+router.get("/obtener-ficha-usuario-rechazado/:id", usuariosPteAltoController.obtenerFichaUsuarioRechazadoPteAlto);
+router.post("/actualizar-datos-rechazado/:id", upload.fields([
+  { name: 'certificadoDomicilio', maxCount: 1 },
+  { name: 'fotoCedulaFrontal', maxCount: 1 }
+]), usuariosPteAltoController.actualizarDatosUsuarioRechazadoPteAlto);
 router.post("/login-usuario", usuariosPteAltoController.loginUsuarioPteAlto);
 router.post("/logout-usuario/:id", usuariosPteAltoController.logoutUsuarioPteAlto);
 router.get("/obtener-todos-los-usuarios", usuariosPteAltoController.obtenerTodosLosUsuariosPteAlto);
