@@ -41,6 +41,9 @@ router.get('/obtener-todas-las-reservas', reservasPteAltoController.listarTodasR
 // Listar reservas pobladas para el calendario
 router.get('/reservas-calendario', reservasPteAltoController.listarReservasCalendario);
 
+// Listar reservas por nombre de organización (reservadoPara)
+router.post('/reservas-por-organizacion', reservasPteAltoController.listarReservasPorOrganizacion);
+
 // Obtener reserva por ID
 router.get('/obtener-reserva-por-id/:id', reservasPteAltoController.obtenerReservaPorId);
 

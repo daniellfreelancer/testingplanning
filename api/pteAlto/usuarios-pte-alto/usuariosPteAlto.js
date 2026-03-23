@@ -5,6 +5,7 @@ const usuariosPteAltoSchema = new mongoose.Schema({
     apellido: { type: String },
     email: { type: String },
     rut: { type: String },
+    tipoDocumento: { type: String, enum: ['rut', 'pasaporte'] },
     telefono: { type: String },
     direccion: { type: String }, // url de la direccion de google maps
     fechaNacimiento: { type: Date },

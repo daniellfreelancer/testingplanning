@@ -935,6 +935,8 @@ const reservasPteAltoController = {
                 fechaHasta,
                 complejoDeportivo,
                 espacioDeportivo,
+                club,
+                reservadoPor,
             } = req.query;
 
             // Default: desde inicio del mes actual hasta fin del mes siguiente
@@ -962,6 +964,14 @@ const reservasPteAltoController = {
 
             if (espacioDeportivo) {
                 query.espacioDeportivo = espacioDeportivo;
+            }
+
+            if (club) {
+                query.club = club;
+            }
+
+            if (reservadoPor) {
+                query.reservadoPor = reservadoPor;
             }
 
             if (complejoDeportivo) {
@@ -1027,6 +1037,90 @@ const reservasPteAltoController = {
             res.status(500).json({
                 success: false,
                 message: "Error al obtener reservas para calendario",
+                error: error.message,
+            });
+        }
+    },
+
+    /**
+     * Listar reservas por nombre de organización (reservadoPara)
+     * POST /reservas-pte-alto/reservas-por-organizacion
+     * Body: { nombreOrganizacion, fechaDesde?, fechaHasta?, reservadoPor? }
+     */
+    listarReservasPorOrganizacion: async (req, res) => {
+        try {
+            const { nombreOrganizacion, fechaDesde, fechaHasta, reservadoPor } = req.body;
+
+            if (!nombreOrganizacion || typeof nombreOrganizacion !== 'string' || !nombreOrganizacion.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El campo 'nombreOrganizacion' es requerido y debe ser un string no vacío",
+                });
+            }
+
+            const nombreNorm = nombreOrganizacion.trim();
+            const now = new Date();
+            const defaultDesde = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+            const defaultHasta = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 0, 23, 59, 59, 999));
+
+            const desde = fechaDesde ? getStartOfDayUTC(fechaDesde) : defaultDesde;
+            const hasta = fechaHasta ? getEndOfDayUTC(fechaHasta) : defaultHasta;
+
+            if (desde && hasta && desde.getTime() > hasta.getTime()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "El parámetro 'fechaDesde' debe ser menor o igual a 'fechaHasta'",
+                });
+            }
+
+            const escaped = nombreNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const query = {
+                estado: "activa",
+                reservadoPara: { $regex: new RegExp(`^\\s*${escaped}\\s*$`, 'i') },
+                fechaInicio: { $lte: hasta },
+                fechaFin: { $gte: desde },
+            };
+
+            if (reservadoPor) {
+                query.reservadoPor = reservadoPor;
+            }
+
+            const reservas = await ReservasPteAlto.find(query)
+                .populate({
+                    path: "usuario",
+                    select: "nombre apellido email",
+                    model: UsuariosPteAlto,
+                })
+                .populate({
+                    path: "espacioDeportivo",
+                    select: "nombre deporte complejoDeportivo",
+                    populate: {
+                        path: "complejoDeportivo",
+                        select: "_id nombre",
+                    },
+                })
+                .populate({
+                    path: "taller",
+                    select: "nombre fechaInicio fechaFin",
+                    model: TalleresDeportivosPteAlto,
+                })
+                .populate({
+                    path: "reservadoPor",
+                    select: "nombre apellido email",
+                    model: UsuariosPteAlto,
+                })
+                .sort({ fechaInicio: -1 });
+
+            res.status(200).json({
+                success: true,
+                reservas: reservas,
+                total: reservas.length,
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: "Error al obtener reservas por organización",
                 error: error.message,
             });
         }
