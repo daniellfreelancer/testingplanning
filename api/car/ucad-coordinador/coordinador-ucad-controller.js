@@ -213,21 +213,26 @@ exports.desasignarProfesional = async (req, res) => {
  */
 exports.obtenerAgendaProfesional = async (req, res) => {
   try {
-    const coordinadorId = req.usuarioId;
+    const usuarioId = req.usuarioId;
     const { profesionalId } = req.params;
 
-    // Verificar que el profesional está asignado al coordinador
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Permitir acceso si es el propio profesional viendo su agenda
+    const esPropiosProfesional = usuarioId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para ver esta agenda'
+    // Si no es su propia agenda, verificar que sea coordinador con asignación
+    if (!esPropiosProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: usuarioId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para ver esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId })
@@ -262,21 +267,26 @@ exports.obtenerAgendaProfesional = async (req, res) => {
  */
 exports.obtenerHorariosMes = async (req, res) => {
   try {
-    const coordinadorId = req.usuarioId;
+    const usuarioId = req.usuarioId;
     const { profesionalId, ano, mes } = req.params;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Permitir acceso si es el propio profesional viendo su agenda
+    const esPropiosProfesional = usuarioId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para ver esta agenda'
+    // Si no es su propia agenda, verificar que sea coordinador con asignación
+    if (!esPropiosProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: usuarioId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para ver esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
