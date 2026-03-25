@@ -1075,8 +1075,7 @@ const reservasPteAltoController = {
 
             const escaped = nombreNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const query = {
-                estado: "activa",
-                reservadoPara: { $regex: new RegExp(`^\\s*${escaped}\\s*$`, 'i') },
+                reservadoPara: { $regex: new RegExp(escaped, 'i') },
                 fechaInicio: { $lte: hasta },
                 fechaFin: { $gte: desde },
             };
