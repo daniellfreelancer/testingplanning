@@ -248,17 +248,12 @@ exports.updateAlbum = async (req, res) => {
   }
 };
 
-// Eliminar álbum (soft delete)
+// Eliminar álbum permanentemente (con todas sus imágenes de S3)
 exports.deleteAlbum = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const album = await Album.findByIdAndUpdate(
-      id,
-      { activo: false },
-      { new: true }
-    );
-
+    const album = await Album.findById(id);
     if (!album) {
       return res.status(404).json({
         success: false,
@@ -266,9 +261,20 @@ exports.deleteAlbum = async (req, res) => {
       });
     }
 
+    // Eliminar todas las imágenes de S3
+    if (album.imagenes && album.imagenes.length > 0) {
+      const deletePromises = album.imagenes.map(imagen =>
+        deleteFile(imagen.key)
+      );
+      await Promise.all(deletePromises);
+    }
+
+    // Eliminar el álbum de la base de datos
+    await Album.findByIdAndDelete(id);
+
     res.status(200).json({
       success: true,
-      message: 'Álbum eliminado exitosamente'
+      message: 'Álbum y todas sus imágenes eliminados exitosamente'
     });
   } catch (error) {
     console.error('Error al eliminar álbum:', error);
