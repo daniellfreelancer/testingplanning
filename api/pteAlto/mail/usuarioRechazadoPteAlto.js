@@ -40,7 +40,7 @@ const sendUsuarioRechazadoPteAlto = async (usuario, motivo) => {
     const apellido = usuario.apellido || "";
     const email = usuario.email || "";
     const motivoTexto = (motivo && String(motivo).trim()) || "Sin motivo especificado";
-    const baseUrl = process.env.APP_BASE_URL || "https://deportespte.vitalmoveglobal.com";
+    const baseUrl = process.env.APP_BASE_URL || "https://deportespuentealto.cl";
     const linkActualizarDatos = `${baseUrl}/actualizar-datos/${usuario._id}`;
 
     const mailOptions = {
