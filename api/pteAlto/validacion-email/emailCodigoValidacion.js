@@ -1,42 +1,18 @@
 /**
  * Envía email con código de 6 dígitos para validación (registro usuarios Puente Alto).
  */
-const nodemailer = require("nodemailer");
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-const {
-  GOOGLE_USER,
-  GOOGLE_ID,
-  GOOGLE_SECRET,
-  GOOGLE_REFRESH,
-  GOOGLE_URL,
-  GOOGLE_ACCESS,
-} = process.env;
+const { Resend } = require("resend");
+
+const { EMAIL_SERVICE_API_RESEND } = process.env;
 
 const sendCodigoValidacionEmail = async (email, codigo) => {
   try {
-    const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
-    oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH });
-    await oauth2Client.getAccessToken();
+    if (!EMAIL_SERVICE_API_RESEND) {
+      throw new Error("EMAIL_SERVICE_API_RESEND no está configurada");
+    }
+    const resend = new Resend(EMAIL_SERVICE_API_RESEND);
 
-    const smtpTransport = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: GOOGLE_USER,
-        type: "OAuth2",
-        clientId: GOOGLE_ID,
-        clientSecret: GOOGLE_SECRET,
-        refreshToken: GOOGLE_REFRESH,
-        accessToken: GOOGLE_ACCESS,
-      },
-      tls: { rejectUnauthorized: false },
-    });
-
-    const mailOptions = {
-      from: GOOGLE_USER,
-      to: email,
-      subject: "Código de verificación - Deportes Puente Alto",
-      html: `
+    const html = `
         <!DOCTYPE html>
         <html lang="es">
         <head>
@@ -67,10 +43,21 @@ const sendCodigoValidacionEmail = async (email, codigo) => {
           </div>
         </body>
         </html>
-      `,
-    };
+      `;
 
-    await smtpTransport.sendMail(mailOptions);
+    const { error } = await resend.emails.send({
+      from: "Contacto <deportespuentealto@vitalmoveglobal.com>",
+      to: email,
+      subject: "Código de verificación - Deportes Puente Alto",
+      html,
+    });
+
+    if (error) {
+      throw new Error(
+        `Resend no pudo enviar el correo de validación: ${error.message || "Error desconocido"}`
+      );
+    }
+
     console.log("Email de código de validación enviado correctamente a:", email);
   } catch (error) {
     console.error("Error enviando email de código:", error);

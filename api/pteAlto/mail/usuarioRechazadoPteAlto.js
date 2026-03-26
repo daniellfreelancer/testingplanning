@@ -3,38 +3,17 @@
  * Incluye motivo del rechazo y botón "Actualizar datos" que redirige a /actualizar-datos/:id
  * Requiere APP_BASE_URL en .env del backend (ej: http://localhost:3000 en dev, dominio en prod)
  */
-const nodemailer = require("nodemailer");
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-const {
-  GOOGLE_USER,
-  GOOGLE_ID,
-  GOOGLE_SECRET,
-  GOOGLE_REFRESH,
-  GOOGLE_URL,
-  GOOGLE_ACCESS,
-} = process.env;
+const { Resend } = require("resend");
+const { EMAIL_SERVICE_API_RESEND } = process.env;
 
 const LOGO_PUENTE_ALTO = "https://deportespte.vitalmoveglobal.com/logos/ptealto.webp";
 
 const sendUsuarioRechazadoPteAlto = async (usuario, motivo) => {
   try {
-    const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
-    oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH });
-    await oauth2Client.getAccessToken();
-
-    const smtpTransport = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: GOOGLE_USER,
-        type: "OAuth2",
-        clientId: GOOGLE_ID,
-        clientSecret: GOOGLE_SECRET,
-        refreshToken: GOOGLE_REFRESH,
-        accessToken: GOOGLE_ACCESS,
-      },
-      tls: { rejectUnauthorized: false },
-    });
+    if (!EMAIL_SERVICE_API_RESEND) {
+      throw new Error("EMAIL_SERVICE_API_RESEND no está configurada");
+    }
+    const resend = new Resend(EMAIL_SERVICE_API_RESEND);
 
     const nombre = usuario.nombre || "";
     const apellido = usuario.apellido || "";
@@ -43,11 +22,7 @@ const sendUsuarioRechazadoPteAlto = async (usuario, motivo) => {
     const baseUrl = process.env.APP_BASE_URL || "https://deportespuentealto.cl";
     const linkActualizarDatos = `${baseUrl}/actualizar-datos/${usuario._id}`;
 
-    const mailOptions = {
-      from: GOOGLE_USER,
-      to: email,
-      subject: "Tu solicitud de registro ha sido rechazada - Deportes Puente Alto",
-      html: `
+    const html = `
         <!DOCTYPE html>
         <html lang="es">
         <head>
@@ -96,10 +71,21 @@ const sendUsuarioRechazadoPteAlto = async (usuario, motivo) => {
           </div>
         </body>
         </html>
-      `,
-    };
+      `;
 
-    await smtpTransport.sendMail(mailOptions);
+    const { error } = await resend.emails.send({
+      from: "Contacto <deportespuentealto@vitalmoveglobal.com>",
+      to: email,
+      subject: "Tu solicitud de registro ha sido rechazada - Deportes Puente Alto",
+      html,
+    });
+
+    if (error) {
+      throw new Error(
+        `Resend no pudo enviar el correo de usuario rechazado: ${error.message || "Error desconocido"}`
+      );
+    }
+
     console.log("Email de usuario rechazado enviado correctamente a:", email);
   } catch (error) {
     console.error("Error enviando email de usuario rechazado:", error);

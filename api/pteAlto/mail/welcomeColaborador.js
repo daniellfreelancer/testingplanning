@@ -1,46 +1,15 @@
-const nodemailer = require("nodemailer");
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-const {
-    GOOGLE_USER,
-    GOOGLE_ID,
-    GOOGLE_SECRET,
-    GOOGLE_REFRESH,
-    GOOGLE_URL,
-    GOOGLE_ACCESS,
-} = process.env;
+const { Resend } = require("resend");
+const { EMAIL_SERVICE_API_RESEND } = process.env;
 
 
 const sendWelcomeColaboradorPuenteAlto = async (email, password, name) => {
     try {
-        const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
+        if (!EMAIL_SERVICE_API_RESEND) {
+            throw new Error("EMAIL_SERVICE_API_RESEND no está configurada");
+        }
+        const resend = new Resend(EMAIL_SERVICE_API_RESEND);
 
-        oauth2Client.setCredentials({
-            refresh_token: GOOGLE_REFRESH,
-        });
-
-        const accessToken = await oauth2Client.getAccessToken();
-
-        const smtpTransport = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: GOOGLE_USER,
-                type: "OAuth2",
-                clientId: GOOGLE_ID,
-                clientSecret: GOOGLE_SECRET,
-                refreshToken: GOOGLE_REFRESH,
-                accessToken: GOOGLE_ACCESS,
-            },
-            tls: {
-                rejectUnauthorized: false,
-            },
-        });
-
-        const mailOptions = {
-            from: GOOGLE_USER,
-            to: email,
-            subject: "Bienvenido/a a Deportes Puente Alto",
-            html: `
+        const html = `
             <!DOCTYPE html>
             <html lang="es">
             <head>
@@ -198,13 +167,25 @@ const sendWelcomeColaboradorPuenteAlto = async (email, password, name) => {
               </center>
             </body>
             </html>
-          `,
-        };
+          `;
 
-        await smtpTransport.sendMail(mailOptions);
+        const { error } = await resend.emails.send({
+            from: "Contacto <deportespuentealto@vitalmoveglobal.com>",
+            to: email,
+            subject: "Bienvenido/a a Deportes Puente Alto",
+            html,
+        });
+
+        if (error) {
+            throw new Error(
+                `Resend no pudo enviar el correo de bienvenida colaborador: ${error.message || "Error desconocido"}`
+            );
+        }
+
         console.log("Email de bienvenida a sido enviado con exito: Receive ok");
     } catch (error) {
-        console.log(error);
+        console.error("Error enviando email de bienvenida colaborador:", error);
+        throw error;
     }
 }
 
