@@ -11,7 +11,10 @@ switch (process.env.NODE_ENV) {
         dbUri = process.env.MONGO_CONNECT_TEST;
         break;
     case 'production':
-        dbUri = process.env.MONGO_CONNECT_PROD;
+        dbUri = process.env.MONGO_CONNECT;
+        break;
+    case 'dev':
+        dbUri = process.env.MONGO_CONNECT_DEV;
         break;
     default:
         dbUri = process.env.MONGO_CONNECT;

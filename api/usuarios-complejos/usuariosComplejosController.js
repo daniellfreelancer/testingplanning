@@ -558,6 +558,8 @@ const usuariosComplejosController = {
       fechaFin.setDate(fechaFin.getDate());
       fechaFin.setHours(0, 0, 0, 0);
 
+      console.log(fechaFin);
+
       const suscripcionesActivas = await SuscripcionPlanes.find({
         usuario: user?._id,
         fechaFin: { $gte: fechaFin },
@@ -577,8 +579,7 @@ const usuariosComplejosController = {
       const suscripcionesActivasFiltradas = suscripcionesActivas.filter(
         (suscripcion) => {
           if (
-            suscripcion.planId?.tipo === "nadoLibre" &&
-            suscripcion.horasDisponibles === 0
+            suscripcion.planId?.tipo === "nadoLibre"
           ) {
             return false;
           }
@@ -608,7 +609,7 @@ const usuariosComplejosController = {
           tipoPlanGym: user.tipoPlanGym,
           arrendatario: user.arrendatario,
           nombreArrendatario: user.nombreArrendatario,
-          suscripcionesActivas: suscripcionesActivasFiltradas,
+          suscripcionesActivas: suscripcionesActivas,
           aptoNadolibre: user.aptoNadolibre,
           statusArrendatario: user.statusArrendatario,
         },

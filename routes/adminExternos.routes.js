@@ -40,4 +40,9 @@ router.get(
   adminExternosController.obtenerHistorialAccesosMisUsuarios
 );
 
+router.get(
+  "/obtener-externos-para-patentes/:id",
+  adminExternosController.obtenerExternosParaPatentes
+);
+
 module.exports = router;
