@@ -558,6 +558,39 @@ const adminExternosController = {
       });
     }
   },
+  obtenerExternosParaPatentes: async (req, res) =>{
+
+    try {
+   const {id} = req.params;
+
+
+  const externos = await AdminExterno.find({ institucion: id, status: true }).select(
+    "nombreArrendatario usuarios status"
+  );
+
+
+    if(!externos){
+      return res.status(404).json({message: "No se encontraron externos para patentes"});
+    }
+
+    return res.status(200).json({
+      message: "Externos para patentes obtenidos correctamente",
+      response:externos,
+      success: true,
+    });
+
+      
+    } catch (error) {
+
+      console.error("Error obtenerExternosParaPatentes:", error);
+      return res.status(500).json({
+        message: "Error al obtener externos para patentes",
+        error: error.message,
+      });
+    }
+
+
+  }
 };
 
 module.exports = adminExternosController;
