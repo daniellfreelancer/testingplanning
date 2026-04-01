@@ -957,7 +957,7 @@ const reservasPteAltoController = {
 
             // Overlap: (fechaInicio <= hasta) AND (fechaFin >= desde)
             const query = {
-                estado: "activa",
+                estado: { $in: ["activa", "cancelada"] },
                 fechaInicio: { $lte: hasta },
                 fechaFin: { $gte: desde },
             };

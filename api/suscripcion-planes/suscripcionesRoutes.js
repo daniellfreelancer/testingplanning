@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const suscripcionController = require('./suscripcionController');
+const suscripcionAuxController = require('./suscripcionAuxController');
 
+router.get('/fecha-inicio-marzo-2026', suscripcionAuxController.getSuscripcionesFechaInicioMarzo2026);
+router.get('/migradas-fechas-abril-2026', suscripcionAuxController.getSuscripcionesMigradasAbril2026);
+router.get('/migracion-fechas-abril-2026/dry-run', suscripcionAuxController.dryRunMigracionFechasAbril2026);
+router.post('/migracion-fechas-abril-2026/ejecutar', suscripcionAuxController.ejecutarMigracionFechasAbril2026);
 router.get('/:id', suscripcionController.getSuscripcionById);
 router.get('/usuario/:usuarioId', suscripcionController.getSuscripcionByUsuario);
 router.get('/plan/:planId', suscripcionController.getSuscripcionByPlan);

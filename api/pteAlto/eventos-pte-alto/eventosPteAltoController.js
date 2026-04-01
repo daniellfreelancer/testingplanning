@@ -262,7 +262,7 @@ const eventosPteAltoController = {
         //obtener todos los eventos, con las variantes asociadas
         try {
 
-            const eventosPteAlto = await EventosPteAlto.find({ status: true })
+            const eventosPteAlto = await EventosPteAlto.find()
                 .populate({
                     path: 'variantes',
                     model: VariantesPteAlto,
