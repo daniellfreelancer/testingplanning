@@ -2,8 +2,107 @@ const ReservasPteAlto = require('./reservasPteAlto');
 const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
 const TalleresDeportivosPteAlto = require('../talleres-deportivos/talleresDeportivosPteAlto');
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
+const ClubesPteAlto = require('../clubes-pte-alto/clubesPteAlto');
 const sendEmailReservaPteAlto = require('../email-pte-alto/emailReservaPteAlto');
+const sendEmailReservaPteAltoOrganizacion = require('../email-pte-alto/emailReservaPteAltoOrganizacion');
+const sendEmailCancelacionPteAlto = require('../email-pte-alto/emailCancelacionPteAlto');
 const { normalizeToUTC, getStartOfDayUTC, getEndOfDayUTC } = require('../../../utils/dateUtils');
+
+/**
+ * Resuelve datos del club para aviso de cancelación (populate, ref suelta o reservas legacy sin ref).
+ */
+const resolverClubParaEmailCancelacion = async (reserva) => {
+    if (!reserva.esReservaInterna) return null;
+
+    const raw = reserva.club;
+    if (raw && typeof raw === 'object' && raw.email) {
+        return { nombre: raw.nombre, email: raw.email };
+    }
+    const clubId = raw && (raw._id || raw);
+    if (clubId) {
+        const doc = await ClubesPteAlto.findById(clubId).select('nombre email').lean();
+        if (doc && doc.email && String(doc.email).trim()) {
+            return { nombre: doc.nombre, email: String(doc.email).trim() };
+        }
+    }
+
+    // Legacy: confirmación se mandó con club en el body pero el documento no tenía ref guardada
+    if (reserva.reservadoPara && typeof reserva.reservadoPara === 'string') {
+        const candidato = reserva.reservadoPara.split('—')[0].trim();
+        if (candidato.length >= 2) {
+            const doc = await ClubesPteAlto.findOne({ nombre: candidato }).select('nombre email').lean();
+            if (doc && doc.email && String(doc.email).trim()) {
+                return { nombre: doc.nombre, email: String(doc.email).trim() };
+            }
+        }
+    }
+    return null;
+};
+
+/**
+ * Aviso por correo de cancelación a usuario y/o club (emails únicos). Fallos no críticos.
+ * @param {Object} reserva - documento Mongoose (usuario/club pueden ir como ref u objeto)
+ */
+const enviarEmailsCancelacionReserva = async (reserva) => {
+    const enviados = new Set();
+    const enviar = async (email, nombre) => {
+        const e = email && String(email).trim();
+        if (!e) return;
+        const key = e.toLowerCase();
+        if (enviados.has(key)) return;
+        enviados.add(key);
+        try {
+            await sendEmailCancelacionPteAlto(e, nombre);
+        } catch (err) {
+            console.error('Error al enviar email de cancelación (no crítico):', err);
+        }
+    };
+
+    const usuario = reserva.usuario;
+    let mailUsuario = null;
+    let nombreUsuario = 'Usuario';
+    if (usuario) {
+        if (typeof usuario === 'object' && usuario.email && String(usuario.email).trim()) {
+            mailUsuario = String(usuario.email).trim();
+            nombreUsuario = usuario.nombre
+                ? `${usuario.nombre} ${usuario.apellido || ''}`.trim()
+                : 'Usuario';
+        } else {
+            const uid = usuario._id || usuario;
+            const udoc = await UsuariosPteAlto.findById(uid).select('email nombre apellido').lean();
+            if (udoc && udoc.email && String(udoc.email).trim()) {
+                mailUsuario = String(udoc.email).trim();
+                nombreUsuario = udoc.nombre
+                    ? `${udoc.nombre} ${udoc.apellido || ''}`.trim()
+                    : 'Usuario';
+            }
+        }
+    }
+    if (mailUsuario) {
+        await enviar(mailUsuario, nombreUsuario);
+    }
+
+    if (reserva.esReservaInterna) {
+        const clubInfo = await resolverClubParaEmailCancelacion(reserva);
+        if (clubInfo && clubInfo.email) {
+            const nombreOrg = clubInfo.nombre ? String(clubInfo.nombre).trim() : 'Organización';
+            await enviar(clubInfo.email, nombreOrg);
+        }
+    }
+
+    if (enviados.size === 0) {
+        console.warn(
+            '[cancelación email] No se envió ningún correo. reserva:',
+            String(reserva._id),
+            'interna:',
+            !!reserva.esReservaInterna,
+            'refClub:',
+            !!reserva.club,
+            'tieneUsuario:',
+            !!reserva.usuario
+        );
+    }
+};
 
 // ============================================
 // FUNCIONES HELPER
@@ -826,9 +925,11 @@ const reservasPteAltoController = {
                 }
             }
 
+            await reserva.populate('usuario', 'nombre apellido email');
+            await reserva.populate('club', 'nombre email');
             await reserva.populate('espacioDeportivo', 'nombre deporte');
             await reserva.populate('taller', 'nombre');
-            await reserva.populate('usuario', 'nombre apellido');
+            await enviarEmailsCancelacionReserva(reserva);
 
             res.status(200).json({
                 success: true,
@@ -1195,7 +1296,7 @@ const reservasPteAltoController = {
             await reserva.save();
 
             // Si es reserva de taller, remover usuario del array
-            if (reserva.tipoReserva === 'taller' && reserva.taller) {
+            if (reserva.tipoReserva === 'taller' && reserva.taller && reserva.usuario) {
                 const taller = await TalleresDeportivosPteAlto.findById(reserva.taller);
                 if (taller && taller.usuarios) {
                     taller.usuarios = taller.usuarios.filter(
@@ -1206,8 +1307,10 @@ const reservasPteAltoController = {
             }
 
             await reserva.populate('usuario', 'nombre apellido email');
+            await reserva.populate('club', 'nombre email');
             await reserva.populate('espacioDeportivo', 'nombre deporte');
             await reserva.populate('taller', 'nombre');
+            await enviarEmailsCancelacionReserva(reserva);
 
             res.status(200).json({
                 success: true,
@@ -1359,6 +1462,7 @@ const reservasPteAltoController = {
      *   tipoReservaInterna: 'tercero' | 'convenio' | 'cliente' | 'arrendatario' | 'mantenimiento',
      *   reservadoPor: ObjectId (admin),
      *   reservadoPara: String,
+     *   club?: ObjectId — si se envía y el club tiene email, se envía confirmación con QR a la organización
      *   notas?: String
      * }
      */
@@ -1373,6 +1477,7 @@ const reservasPteAltoController = {
                 reservadoPor,
                 reservadoPara,
                 usuario, // Campo usuario cuando tipoReservaInterna es 'usuario'
+                club, // ObjectId club/organización (email de confirmación)
                 notas
             } = req.body;
 
@@ -1491,6 +1596,7 @@ const reservasPteAltoController = {
                     reservadoPor: reservadoPor,
                     reservadoPara: reservadoPara,
                     usuario: usuario || null, // Agregar usuario si está presente
+                    club: club || null,
                     notas: notas || null
                 });
 
@@ -1514,15 +1620,42 @@ const reservasPteAltoController = {
                 });
             }
 
-            // Enviar emails de confirmación para reservas tipo 'usuario' con usuario
+            // Email con QR a la organización (club) cuando viene club en el body
+            if (club) {
+                try {
+                    const clubDoc = await ClubesPteAlto.findById(club).select('nombre email');
+                    const emailOrg = clubDoc?.email && String(clubDoc.email).trim();
+                    if (clubDoc && emailOrg) {
+                        const nombreOrg = clubDoc.nombre ? String(clubDoc.nombre).trim() : 'Organización';
+                        for (const reserva of reservasCreadas) {
+                            try {
+                                await sendEmailReservaPteAltoOrganizacion(
+                                    emailOrg,
+                                    nombreOrg,
+                                    reserva,
+                                    { esParaOrganizacion: true }
+                                );
+                            } catch (emailError) {
+                                console.error('Error al enviar email de reserva a organización (no crítico):', emailError);
+                            }
+                        }
+                    } else {
+                        console.log('Reserva interna: club sin email o no encontrado, no se envía correo a organización');
+                    }
+                } catch (e) {
+                    console.error('Error al resolver club para email de reserva:', e);
+                }
+            }
+
+            // Email a usuario PTE cuando es reserva interna tipo 'usuario' (sin depender del club)
             if (tipoReservaInterna === 'usuario' && usuario) {
                 for (const reserva of reservasCreadas) {
                     try {
                         if (reserva.usuario && reserva.usuario.email) {
-                            const nombreUsuario = reserva.usuario.nombre 
+                            const nombreUsuario = reserva.usuario.nombre
                                 ? `${reserva.usuario.nombre} ${reserva.usuario.apellido || ''}`.trim()
                                 : 'Usuario';
-                            await sendEmailReservaPteAlto(
+                            await sendEmailReservaPteAltoOrganizacion(
                                 reserva.usuario.email,
                                 nombreUsuario,
                                 reserva
@@ -1530,7 +1663,6 @@ const reservasPteAltoController = {
                         }
                     } catch (emailError) {
                         console.error('Error al enviar email de reserva (no crítico):', emailError);
-                        // No falla la creación si el email falla
                     }
                 }
             }
