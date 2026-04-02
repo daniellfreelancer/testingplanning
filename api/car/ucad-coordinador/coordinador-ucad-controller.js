@@ -270,8 +270,14 @@ exports.obtenerHorariosMes = async (req, res) => {
     const usuarioId = req.usuarioId;
     const { profesionalId, ano, mes } = req.params;
 
+    console.log('\n========== OBTENER HORARIOS MES ==========');
+    console.log('Usuario ID:', usuarioId);
+    console.log('Profesional ID:', profesionalId);
+    console.log('Año:', ano, 'Mes:', mes);
+
     // Permitir acceso si es el propio profesional viendo su agenda
     const esPropiosProfesional = usuarioId === profesionalId;
+    console.log('Es propio profesional:', esPropiosProfesional);
 
     // Si no es su propia agenda, verificar que sea coordinador con asignación
     if (!esPropiosProfesional) {
@@ -280,6 +286,8 @@ exports.obtenerHorariosMes = async (req, res) => {
         profesionales: profesionalId,
         activo: true
       });
+
+      console.log('Asignación encontrada:', asignacion ? 'SÍ' : 'NO');
 
       if (!asignacion) {
         return res.status(403).json({
@@ -291,16 +299,36 @@ exports.obtenerHorariosMes = async (req, res) => {
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
     if (!agenda) {
+      console.log('❌ Agenda no encontrada para profesional:', profesionalId);
       return res.status(404).json({
         success: false,
         message: 'Agenda no encontrada'
       });
     }
 
+    console.log('✓ Agenda encontrada:', agenda._id);
+    console.log('  - Bloque:', agenda.bloque);
+    console.log('  - Status:', agenda.status);
+    console.log('  - PlantillaBase:', JSON.stringify(agenda.plantillaBase, null, 2));
+    console.log('  - HorariosPorFecha length:', (agenda.horariosPorFecha || []).length);
+
+    // Log de fechas guardadas
+    if (agenda.horariosPorFecha && agenda.horariosPorFecha.length > 0) {
+      console.log('  - Fechas guardadas en horariosPorFecha:');
+      agenda.horariosPorFecha.forEach((h, idx) => {
+        const fechaNormalizada = h.fecha.split('T')[0];
+        console.log(`    [${idx}] Fecha: ${fechaNormalizada}, Horarios: ${h.horarios ? h.horarios.length : 0}`);
+      });
+    }
+
+    console.log('  - Excepciones length:', (agenda.excepciones || []).length);
+
     // Construir fecha inicio y fin del mes
     const fechaInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
     const ultimoDia = new Date(parseInt(ano), parseInt(mes), 0).getDate();
     const fechaFin = `${ano}-${String(mes).padStart(2, '0')}-${ultimoDia}`;
+
+    console.log('Rango de fechas:', fechaInicio, '-', fechaFin);
 
     // Filtrar horarios del mes (normalizar fechas para comparación)
     const horariosMes = (agenda.horariosPorFecha || [])
@@ -313,19 +341,28 @@ exports.obtenerHorariosMes = async (req, res) => {
         fecha: h.fecha.split('T')[0] // Normalizar fecha sin timestamp
       }));
 
+    console.log('Horarios del mes filtrados:', horariosMes.length);
+
     // Filtrar excepciones del mes
     const excepcionesMes = (agenda.excepciones || []).filter(e => {
       const fechaExcepcion = new Date(e.fecha).toISOString().split('T')[0];
       return fechaExcepcion >= fechaInicio && fechaExcepcion <= fechaFin;
     });
 
-    res.status(200).json({
+    console.log('Excepciones del mes filtradas:', excepcionesMes.length);
+
+    const response = {
       success: true,
       bloque: agenda.bloque,
       plantillaBase: agenda.plantillaBase,
       horariosMes,
       excepciones: excepcionesMes
-    });
+    };
+
+    console.log('Respuesta enviada - plantillaBase:', response.plantillaBase);
+    console.log('==========================================\n');
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error al obtener horarios del mes:', error);
     res.status(500).json({
@@ -345,29 +382,53 @@ exports.guardarHorariosFecha = async (req, res) => {
   try {
     const coordinadorId = req.usuarioId;
     const { profesionalId } = req.params;
-    const { fecha, horarios, bloques, ocupados, notas } = req.body;
+    const { fecha, horarios, bloques, ocupados, notas, slotsBloqueados } = req.body;
+
+    console.log('\n========== GUARDAR HORARIOS FECHA ==========');
+    console.log('Coordinador ID:', coordinadorId);
+    console.log('Profesional ID:', profesionalId);
+    console.log('Fecha:', fecha);
+    console.log('Horarios:', horarios);
+    console.log('Bloques:', bloques);
+    console.log('Ocupados:', ocupados);
+    console.log('SlotsBloqueados:', slotsBloqueados);
+    console.log('Notas:', notas);
 
     // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Permitir si es el mismo profesional (auto-gestión) o tiene asignación
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    console.log('Es propio profesional:', esPropioProfesional);
+
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      console.log('Asignación encontrada:', asignacion ? 'SÍ' : 'NO');
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
+    } else {
+      console.log('✓ Coordinador gestionando su propia agenda (auto-gestión)');
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
     if (!agenda) {
+      console.log('❌ Agenda no encontrada');
       return res.status(404).json({
         success: false,
         message: 'Agenda no encontrada'
       });
     }
+
+    console.log('✓ Agenda encontrada:', agenda._id);
 
     if (!agenda.horariosPorFecha) {
       agenda.horariosPorFecha = [];
@@ -375,37 +436,50 @@ exports.guardarHorariosFecha = async (req, res) => {
 
     // Normalizar fecha (solo YYYY-MM-DD sin hora)
     const fechaNormalizada = fecha.split('T')[0];
+    console.log('Fecha normalizada:', fechaNormalizada);
 
     // Buscar si ya existe configuración para esta fecha
     const indiceExistente = agenda.horariosPorFecha.findIndex(
       h => h.fecha.split('T')[0] === fechaNormalizada
     );
 
+    console.log('Índice existente:', indiceExistente);
+
     const configuracionFecha = {
       fecha: fechaNormalizada,
       horarios: horarios || [],
       bloques: bloques || [],
       ocupados: ocupados || [],
+      slotsBloqueados: slotsBloqueados || [],
       notas: notas || ''
     };
+
+    console.log('Configuración a guardar:', configuracionFecha);
 
     // Solo guardar si tiene horarios (no guardar días vacíos)
     if (horarios && horarios.length > 0) {
       if (indiceExistente >= 0) {
         // Actualizar existente
+        console.log('Actualizando configuración existente');
         agenda.horariosPorFecha[indiceExistente] = configuracionFecha;
       } else {
         // Agregar nuevo
+        console.log('Agregando nueva configuración');
         agenda.horariosPorFecha.push(configuracionFecha);
       }
     } else if (indiceExistente >= 0) {
       // Si no tiene horarios y existía, eliminarlo
+      console.log('Eliminando configuración sin horarios');
       agenda.horariosPorFecha.splice(indiceExistente, 1);
     }
 
     agenda.ultimaModificacionPor = coordinadorId;
     agenda.ultimaModificacion = new Date();
     await agenda.save();
+
+    console.log('✓ Agenda guardada correctamente');
+    console.log('Total de fechas configuradas:', agenda.horariosPorFecha.length);
+    console.log('==========================================\n');
 
     res.status(200).json({
       success: true,
@@ -433,18 +507,22 @@ exports.copiarHorarios = async (req, res) => {
     const { profesionalId } = req.params;
     const { fechaOrigen, fechasDestino } = req.body;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
@@ -518,18 +596,22 @@ exports.aplicarPlantillaAFechas = async (req, res) => {
     const { profesionalId } = req.params;
     const { fechas, plantilla } = req.body;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
@@ -596,18 +678,22 @@ exports.editarAgendaPorPeriodo = async (req, res) => {
     const { profesionalId } = req.params;
     const { periodo, fechaInicio, dias, horaInicio, horaFin, bloque, horariosDisponibles, horariosOcupados, motivo } = req.body;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId })
@@ -779,18 +865,22 @@ exports.gestionarAjusteRango = async (req, res) => {
     const { profesionalId } = req.params;
     const { fechaInicio, fechaFin, dias, horaInicio, horaFin, horariosDisponibles, horariosOcupados } = req.body;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
@@ -845,17 +935,22 @@ exports.eliminarAjusteRango = async (req, res) => {
     const coordinadorId = req.usuarioId;
     const { profesionalId, ajusteId } = req.params;
 
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
@@ -904,18 +999,22 @@ exports.crearExcepcion = async (req, res) => {
     const { profesionalId } = req.params;
     const { fecha, tipo, motivo, descripcion, horaInicio, horaFin, horariosDisponibles, horariosOcupados } = req.body;
 
-    // Verificar permisos
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId })
@@ -1045,17 +1144,22 @@ exports.eliminarExcepcion = async (req, res) => {
     const coordinadorId = req.usuarioId;
     const { profesionalId, excepcionId } = req.params;
 
-    const asignacion = await CoordinadorAsignacion.findOne({
-      coordinador: coordinadorId,
-      profesionales: profesionalId,
-      activo: true
-    });
+    // Verificar permisos - Permitir auto-gestión
+    const esPropioProfesional = coordinadorId === profesionalId;
 
-    if (!asignacion) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para editar esta agenda'
+    if (!esPropioProfesional) {
+      const asignacion = await CoordinadorAsignacion.findOne({
+        coordinador: coordinadorId,
+        profesionales: profesionalId,
+        activo: true
       });
+
+      if (!asignacion) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar esta agenda'
+        });
+      }
     }
 
     const agenda = await AgendaUCAD.findOne({ profesional: profesionalId });
