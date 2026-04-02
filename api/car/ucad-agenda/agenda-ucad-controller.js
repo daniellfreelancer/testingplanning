@@ -290,16 +290,33 @@ const agendaUcadController = {
       const { id } = req.params;
       const { dias, horaInicio, horaFin, bloque, status } = req.body;
 
+      console.log('\n========== ACTUALIZAR AGENDA ==========');
+      console.log('Agenda ID:', id);
+      console.log('Body recibido:', { dias, horaInicio, horaFin, bloque, status });
+
       const agenda = await AgendaUCAD.findById(id);
       if (!agenda) {
+        console.log('❌ Agenda no encontrada');
         return res.status(404).json({
           message: "Agenda no encontrada"
         });
       }
 
+      console.log('✓ Agenda encontrada');
+      console.log('  - PlantillaBase actual:', JSON.stringify(agenda.plantillaBase, null, 2));
+      console.log('  - Dias legacy:', agenda.dias);
+      console.log('  - HoraInicio legacy:', agenda.horaInicio);
+      console.log('  - HoraFin legacy:', agenda.horaFin);
+
+      // Leer desde plantillaBase o campos legacy
+      const plantillaActual = agenda.plantillaBase || {};
+      const horaInicioActual = plantillaActual.horaInicio || agenda.horaInicio || "09:00";
+      const horaFinActual = plantillaActual.horaFin || agenda.horaFin || "18:00";
+      const diasActuales = plantillaActual.dias || agenda.dias || [];
+
       // Validar formato de horas si se proporcionan
-      const horaInicioFinal = horaInicio || agenda.horaInicio;
-      const horaFinFinal = horaFin || agenda.horaFin;
+      const horaInicioFinal = horaInicio || horaInicioActual;
+      const horaFinFinal = horaFin || horaFinActual;
       const bloqueFinal = bloque !== undefined ? bloque : agenda.bloque;
 
       // Detectar si cambió el bloque, horaInicio o horaFin
@@ -620,12 +637,32 @@ const agendaUcadController = {
         }
       }
 
-      if (horaInicio) agenda.horaInicio = horaInicio;
-      if (horaFin) agenda.horaFin = horaFin;
+      // Actualizar plantillaBase (nueva estructura)
+      if (!agenda.plantillaBase) {
+        agenda.plantillaBase = {};
+      }
+
+      // Actualizar campos en plantillaBase
+      if (dias) {
+        // Si se envía array de strings simples (admin simplificado)
+        if (Array.isArray(dias) && typeof dias[0] === 'string') {
+          agenda.plantillaBase.dias = dias.map(d => normalizarDia(d));
+        }
+      }
+
+      if (horaInicio) agenda.plantillaBase.horaInicio = horaInicio;
+      if (horaFin) agenda.plantillaBase.horaFin = horaFin;
       if (bloque !== undefined) agenda.bloque = bloque;
       if (status !== undefined) agenda.status = status;
 
+      console.log('PlantillaBase actualizada:', JSON.stringify(agenda.plantillaBase, null, 2));
+      console.log('Bloque:', agenda.bloque);
+      console.log('Status:', agenda.status);
+
       await agenda.save();
+
+      console.log('✓ Agenda guardada correctamente');
+      console.log('==========================================\n');
 
       // Asegurar que el profesional tenga la referencia a la agenda
       await UsuariosUcad.findByIdAndUpdate(agenda.profesional, { agenda: agenda._id });
@@ -885,15 +922,19 @@ const agendaUcadController = {
         }
       }
 
-      // Crear la agenda con horariosDisponibles vacío (el profesional los llenará)
+      // Crear la agenda con plantillaBase (estructura nueva)
       const nuevaAgenda = new AgendaUCAD({
         profesional,
-        dias: diasNormalizados,
-        horaInicio,
-        horaFin,
         bloque,
         status: true,
-        horariosDisponibles: [], // vacío inicialmente
+        plantillaBase: {
+          dias: diasNormalizados,
+          horaInicio,
+          horaFin,
+          horariosDisponibles: [] // vacío inicialmente
+        },
+        horariosPorFecha: [], // Sistema principal (coordinador lo llenará)
+        excepciones: [],
         habilitadaPor: habilitadaPor || null,
         fechaHabilitacion: new Date()
       });
@@ -942,15 +983,21 @@ const agendaUcadController = {
         });
       }
 
-      // Normalizar días: asegurar que son strings sin tildes
-      const diasNormalizados = Array.isArray(agenda.dias)
-        ? agenda.dias.map(d => normalizarDia(typeof d === 'string' ? d : (d.dia || String(d))))
-        : [];
+      // Leer desde plantillaBase (nueva estructura) o campos legacy
+      const plantilla = agenda.plantillaBase || {};
+      const diasNormalizados = Array.isArray(plantilla.dias)
+        ? plantilla.dias.map(d => normalizarDia(d))
+        : (Array.isArray(agenda.dias)
+            ? agenda.dias.map(d => normalizarDia(typeof d === 'string' ? d : (d.dia || String(d))))
+            : []);
+
+      const horaInicio = plantilla.horaInicio || agenda.horaInicio || "09:00";
+      const horaFin = plantilla.horaFin || agenda.horaFin || "18:00";
 
       // Generar todos los slots posibles por día
       const slotsDisponibles = {};
       diasNormalizados.forEach(dia => {
-        slotsDisponibles[dia] = generarSlotsHorarios(agenda.horaInicio, agenda.horaFin, agenda.bloque);
+        slotsDisponibles[dia] = generarSlotsHorarios(horaInicio, horaFin, agenda.bloque);
       });
 
       // Organizar horarios ocupados desde la agenda (ya no buscamos citas internas)
@@ -970,11 +1017,11 @@ const agendaUcadController = {
           _id: agenda._id,
           profesional: agenda.profesional,
           dias: diasNormalizados,
-          horaInicio: agenda.horaInicio,
-          horaFin: agenda.horaFin,
+          horaInicio: horaInicio,
+          horaFin: horaFin,
           bloque: agenda.bloque,
           status: agenda.status,
-          horariosDisponibles: agenda.horariosDisponibles,
+          horariosDisponibles: plantilla.horariosDisponibles || agenda.horariosDisponibles || [],
           horariosOcupados: agenda.horariosOcupados,
           habilitadaPor: agenda.habilitadaPor,
           fechaHabilitacion: agenda.fechaHabilitacion

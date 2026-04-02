@@ -20,7 +20,9 @@ const agendaUCADSchema = new mongoose.Schema({
   // estructura: [{
   //   fecha: "2026-03-11", // fecha específica (formato ISO YYYY-MM-DD)
   //   horarios: ["09:00", "09:30", "10:00", "10:30", ...], // horarios disponibles
-  //   ocupados: [{ hora: "14:00", motivo: "Almuerzo" }], // horarios bloqueados
+  //   bloques: [{ inicio: "09:00", fin: "18:00" }], // bloques horarios configurados
+  //   ocupados: [{ hora: "14:00", motivo: "Almuerzo" }], // horarios bloqueados (DEPRECATED)
+  //   slotsBloqueados: ["13:00", "13:30"], // slots bloqueados manualmente
   //   notas: "Jornada especial" // opcional
   // }]
   // NOTA: Solo se guardan fechas con horarios configurados (no vacías)

@@ -878,19 +878,52 @@ const citasUcadController = {
         bloquesOcupados.add(horaCita);
       });
 
-      // Agregar horarios marcados como ocupados en horariosPorFecha
+      // Agregar horarios marcados como ocupados en horariosPorFecha (DEPRECATED)
       if (horarioFecha.ocupados && Array.isArray(horarioFecha.ocupados)) {
         horarioFecha.ocupados.forEach(hora => {
           bloquesOcupados.add(hora);
         });
       }
 
-      // Filtrar bloques disponibles (excluir ocupados y bloqueados)
-      const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.has(bloque));
+      // Agregar slots bloqueados manualmente
+      if (horarioFecha.slotsBloqueados && Array.isArray(horarioFecha.slotsBloqueados)) {
+        horarioFecha.slotsBloqueados.forEach(hora => {
+          bloquesOcupados.add(hora);
+        });
+      }
 
       // Obtener día de la semana en español
       const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
       const diaSemana = diasSemana[fechaDate.getDay()];
+
+      // Verificar si el día completo está bloqueado (excepciones)
+      const excepcion = (agenda.excepciones || []).find(e => {
+        const fechaExc = e.fecha.split('T')[0];
+        return fechaExc === fechaNormalizada;
+      });
+
+      if (excepcion && excepcion.tipo === 'bloqueo') {
+        // Día completo bloqueado, retornar vacío
+        return res.status(200).json({
+          profesional: {
+            id: profesional._id,
+            nombre: `${profesional.nombre} ${profesional.apellido}`,
+            especialidad: profesional.especialidad
+          },
+          fecha: fechaNormalizada,
+          diaSemana: diaSemana,
+          horariosDisponibles: [],
+          horariosOcupados: [],
+          totalDisponibles: 0,
+          totalOcupados: 0,
+          bloques: [],
+          diaBloqueado: true,
+          motivoBloqueo: excepcion.motivo
+        });
+      }
+
+      // Filtrar bloques disponibles (excluir ocupados y bloqueados)
+      const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.has(bloque));
 
       res.status(200).json({
         profesional: {
