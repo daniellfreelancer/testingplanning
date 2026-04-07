@@ -15,6 +15,13 @@ const { verificarToken, verificarRol } = require('../middleware/auth');
 router.get('/mis-profesionales', verificarToken, coordinadorController.obtenerMisProfesionales);
 
 /**
+ * @route   GET /api/coordinador/mis-especialidades
+ * @desc    Obtener especialidades asignadas al coordinador logueado
+ * @access  Coordinador
+ */
+router.get('/mis-especialidades', verificarToken, coordinadorController.obtenerMisEspecialidades);
+
+/**
  * @route   POST /api/coordinador/asignar-profesional
  * @desc    Coordinador se auto-asigna profesionales
  * @access  Coordinador

@@ -1262,6 +1262,420 @@ const citasUcadController = {
         error: error.message
       });
     }
+  },
+
+  /**
+   * Crear derivación por área (nuevo flujo)
+   * POST /crear-derivacion-area
+   * Body: { deportista, areaDerivacion, motivoDerivacion, derivadaPor, notas }
+   */
+  crearDerivacionPorArea: async (req, res) => {
+    try {
+      const { deportista, areaDerivacion, motivoDerivacion, derivadaPor, notas } = req.body;
+
+      // Validar campos requeridos
+      if (!deportista || !areaDerivacion || !derivadaPor) {
+        return res.status(400).json({
+          message: "Los campos deportista, areaDerivacion y derivadaPor son requeridos"
+        });
+      }
+
+      // Validar que el deportista existe
+      const deportistaExiste = await UsuariosUcad.findById(deportista);
+      if (!deportistaExiste) {
+        return res.status(404).json({ message: "Deportista no encontrado" });
+      }
+
+      // Validar que quien deriva existe
+      const profesionalDeriva = await UsuariosUcad.findById(derivadaPor);
+      if (!profesionalDeriva) {
+        return res.status(404).json({ message: "Profesional que deriva no encontrado" });
+      }
+
+      // Crear derivación sin profesional asignado aún (pendiente de validación)
+      const nuevaDerivacion = new CitasUcad({
+        deportista,
+        especialidad: areaDerivacion,
+        areaDerivacion,
+        tipoCita: 'derivacion',
+        estadoDerivacion: 'pendiente_validacion',
+        derivadaPor,
+        motivoDerivacion,
+        notas,
+        estado: 'pendiente',
+        // No tiene profesional, fecha ni hora hasta que el coordinador la asigne
+      });
+
+      await nuevaDerivacion.save();
+
+      await nuevaDerivacion.populate('deportista', 'nombre apellido email rut imgUrl');
+      await nuevaDerivacion.populate('derivadaPor', 'nombre apellido email especialidad');
+
+      res.status(201).json({
+        success: true,
+        message: "Derivación enviada al área correctamente. Pendiente de validación por coordinador.",
+        derivacion: nuevaDerivacion
+      });
+    } catch (error) {
+      console.error('Error al crear derivación por área:', error);
+      res.status(500).json({
+        message: "Error al crear derivación",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Listar derivaciones pendientes del área del coordinador
+   * GET /derivaciones-pendientes/:areaEspecialidad
+   */
+  obtenerDerivacionesPendientesArea: async (req, res) => {
+    try {
+      const { areaEspecialidad } = req.params;
+
+      const derivaciones = await CitasUcad.find({
+        tipoCita: 'derivacion',
+        areaDerivacion: areaEspecialidad,
+        estadoDerivacion: { $in: ['pendiente_validacion', 'validada'] }
+      })
+        .populate('deportista', 'nombre apellido email rut telefono imgUrl')
+        .populate('derivadaPor', 'nombre apellido email especialidad')
+        .populate('profesionalAsignado', 'nombre apellido email especialidad')
+        .populate('validadaPor', 'nombre apellido email')
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        success: true,
+        count: derivaciones.length,
+        derivaciones
+      });
+    } catch (error) {
+      console.error('Error al obtener derivaciones pendientes:', error);
+      res.status(500).json({
+        message: "Error al obtener derivaciones",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Validar derivación (coordinador acepta que corresponde)
+   * PUT /validar-derivacion/:id
+   * Body: { validadaPor }
+   */
+  validarDerivacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { validadaPor } = req.body;
+
+      if (!validadaPor) {
+        return res.status(400).json({ message: "El campo validadaPor es requerido" });
+      }
+
+      const derivacion = await CitasUcad.findById(id);
+      if (!derivacion) {
+        return res.status(404).json({ message: "Derivación no encontrada" });
+      }
+
+      if (derivacion.tipoCita !== 'derivacion') {
+        return res.status(400).json({ message: "Esta cita no es una derivación" });
+      }
+
+      if (derivacion.estadoDerivacion !== 'pendiente_validacion') {
+        return res.status(400).json({
+          message: `Esta derivación ya fue ${derivacion.estadoDerivacion}`
+        });
+      }
+
+      // Validar
+      derivacion.estadoDerivacion = 'validada';
+      derivacion.validadaPor = validadaPor;
+      derivacion.fechaValidacion = new Date();
+
+      await derivacion.save();
+
+      await derivacion.populate('deportista', 'nombre apellido email rut imgUrl');
+      await derivacion.populate('derivadaPor', 'nombre apellido email especialidad');
+      await derivacion.populate('validadaPor', 'nombre apellido email');
+
+      res.status(200).json({
+        success: true,
+        message: "Derivación validada correctamente",
+        derivacion
+      });
+    } catch (error) {
+      console.error('Error al validar derivación:', error);
+      res.status(500).json({
+        message: "Error al validar derivación",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Rechazar derivación (coordinador indica que no corresponde)
+   * PUT /rechazar-derivacion/:id
+   * Body: { validadaPor, motivoRechazo }
+   */
+  rechazarDerivacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { validadaPor, motivoRechazo } = req.body;
+
+      if (!validadaPor || !motivoRechazo) {
+        return res.status(400).json({
+          message: "Los campos validadaPor y motivoRechazo son requeridos"
+        });
+      }
+
+      const derivacion = await CitasUcad.findById(id);
+      if (!derivacion) {
+        return res.status(404).json({ message: "Derivación no encontrada" });
+      }
+
+      if (derivacion.tipoCita !== 'derivacion') {
+        return res.status(400).json({ message: "Esta cita no es una derivación" });
+      }
+
+      if (derivacion.estadoDerivacion === 'rechazada') {
+        return res.status(400).json({ message: "Esta derivación ya fue rechazada" });
+      }
+
+      if (derivacion.estadoDerivacion === 'asignada') {
+        return res.status(400).json({
+          message: "No se puede rechazar una derivación que ya fue asignada"
+        });
+      }
+
+      // Rechazar
+      derivacion.estadoDerivacion = 'rechazada';
+      derivacion.validadaPor = validadaPor;
+      derivacion.fechaValidacion = new Date();
+      derivacion.motivoRechazo = motivoRechazo;
+      derivacion.estado = 'cancelada';
+
+      await derivacion.save();
+
+      await derivacion.populate('deportista', 'nombre apellido email rut imgUrl');
+      await derivacion.populate('derivadaPor', 'nombre apellido email especialidad');
+      await derivacion.populate('validadaPor', 'nombre apellido email');
+
+      res.status(200).json({
+        success: true,
+        message: "Derivación rechazada",
+        derivacion
+      });
+    } catch (error) {
+      console.error('Error al rechazar derivación:', error);
+      res.status(500).json({
+        message: "Error al rechazar derivación",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Redirigir derivación a otra especialidad (coordinador)
+   * PUT /redirigir-derivacion/:id
+   * Body: { nuevaAreaDerivacion, motivoRedireccion, redirigidaPor }
+   */
+  redirigirDerivacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nuevaAreaDerivacion, motivoRedireccion, redirigidaPor } = req.body;
+
+      if (!nuevaAreaDerivacion || !motivoRedireccion || !redirigidaPor) {
+        return res.status(400).json({
+          message: "Los campos nuevaAreaDerivacion, motivoRedireccion y redirigidaPor son requeridos"
+        });
+      }
+
+      const derivacion = await CitasUcad.findById(id);
+      if (!derivacion) {
+        return res.status(404).json({ message: "Derivación no encontrada" });
+      }
+
+      if (derivacion.tipoCita !== 'derivacion') {
+        return res.status(400).json({ message: "Esta cita no es una derivación" });
+      }
+
+      if (derivacion.estadoDerivacion === 'asignada') {
+        return res.status(400).json({
+          message: "No se puede redirigir una derivación que ya fue asignada"
+        });
+      }
+
+      // Limitar número de redirecciones (máximo 2)
+      const numRedirecciones = (derivacion.notas?.match(/🔄 REDIRECCIÓN:/g) || []).length;
+      if (numRedirecciones >= 2) {
+        return res.status(400).json({
+          message: "Esta derivación ya fue redirigida 2 veces. Si no corresponde, debe rechazarla.",
+          maxRedirecciones: true
+        });
+      }
+
+      // Obtener información del coordinador que redirige
+      const coordinador = await UsuariosUcad.findById(redirigidaPor);
+      const nombreCoordinador = coordinador ? `${coordinador.nombre} ${coordinador.apellido}` : 'Coordinador';
+
+      // Construir historial completo de redirección
+      const historialRedireccion = `
+═══════════════════════════════════════════════════
+📋 DERIVACIÓN ORIGINAL:
+   • Derivada por: ${derivacion.derivadaPor?.nombre || 'N/A'} ${derivacion.derivadaPor?.apellido || ''}
+   • Especialidad original: ${derivacion.areaDerivacion}
+   • Motivo original: ${derivacion.motivoDerivacion}
+   ${derivacion.notas ? `• Notas previas: ${derivacion.notas}` : ''}
+
+🔄 REDIRECCIÓN:
+   • Redirigida por: ${nombreCoordinador}
+   • De: ${derivacion.areaDerivacion} → A: ${nuevaAreaDerivacion}
+   • Motivo de redirección: ${motivoRedireccion}
+   • Fecha de redirección: ${new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago' })}
+═══════════════════════════════════════════════════`;
+
+      // Redirigir a nueva área (preservando información original)
+      derivacion.areaDerivacion = nuevaAreaDerivacion;
+      derivacion.especialidad = nuevaAreaDerivacion;
+      derivacion.estadoDerivacion = 'pendiente_validacion'; // Vuelve a pendiente para nueva área
+      derivacion.notas = historialRedireccion; // Historial completo reemplaza notas anteriores
+      // NO sobrescribir motivoDerivacion - se mantiene el original
+
+      await derivacion.save();
+
+      await derivacion.populate('deportista', 'nombre apellido email rut imgUrl');
+      await derivacion.populate('derivadaPor', 'nombre apellido email especialidad');
+
+      res.status(200).json({
+        success: true,
+        message: `Derivación redirigida a ${nuevaAreaDerivacion}`,
+        derivacion
+      });
+    } catch (error) {
+      console.error('Error al redirigir derivación:', error);
+      res.status(500).json({
+        message: "Error al redirigir derivación",
+        error: error.message
+      });
+    }
+  },
+
+  /**
+   * Asignar profesional y horario a derivación validada
+   * PUT /asignar-derivacion/:id
+   * Body: { profesionalAsignado, fecha, duracion, validadaPor, notas, especialidadAsignada? }
+   */
+  asignarDerivacion: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { profesionalAsignado, fecha, duracion = 15, validadaPor, notas, especialidadAsignada } = req.body;
+
+      if (!profesionalAsignado || !fecha || !validadaPor) {
+        return res.status(400).json({
+          message: "Los campos profesionalAsignado, fecha y validadaPor son requeridos"
+        });
+      }
+
+      const derivacion = await CitasUcad.findById(id);
+      if (!derivacion) {
+        return res.status(404).json({ message: "Derivación no encontrada" });
+      }
+
+      if (derivacion.tipoCita !== 'derivacion') {
+        return res.status(400).json({ message: "Esta cita no es una derivación" });
+      }
+
+      if (derivacion.estadoDerivacion === 'rechazada') {
+        return res.status(400).json({
+          message: "No se puede asignar una derivación rechazada"
+        });
+      }
+
+      if (derivacion.estadoDerivacion === 'asignada') {
+        return res.status(400).json({ message: "Esta derivación ya fue asignada" });
+      }
+
+      // Validar que el profesional existe
+      const profesional = await UsuariosUcad.findById(profesionalAsignado);
+      if (!profesional || profesional.rol !== 'profesional') {
+        return res.status(404).json({ message: "Profesional no encontrado" });
+      }
+
+      // Si se proporciona especialidadAsignada, actualizar el área de la derivación
+      const especialidadFinal = especialidadAsignada || derivacion.areaDerivacion;
+
+      // Validar que el profesional tiene la especialidad correcta
+      if (profesional.especialidad !== especialidadFinal) {
+        return res.status(400).json({
+          message: `El profesional no tiene la especialidad ${especialidadFinal}`
+        });
+      }
+
+      // Actualizar el área si cambió
+      if (especialidadAsignada && especialidadAsignada !== derivacion.areaDerivacion) {
+        const notaCambioEsp = `\n[CAMBIO DE ESPECIALIDAD: de ${derivacion.areaDerivacion} a ${especialidadAsignada}]\nFecha: ${new Date().toLocaleString('es-CL')}`;
+        derivacion.areaDerivacion = especialidadAsignada;
+        derivacion.especialidad = especialidadAsignada;
+        derivacion.notas = (derivacion.notas || '') + notaCambioEsp;
+      }
+
+      // Validar conflicto de horarios
+      const fechaCita = new Date(fecha);
+      const citasConflicto = await CitasUcad.find({
+        profesional: profesionalAsignado,
+        fecha: fechaCita,
+        estado: { $in: ['pendiente', 'confirmada'] }
+      });
+
+      if (citasConflicto.length > 0) {
+        return res.status(409).json({
+          message: "El profesional ya tiene una cita en ese horario",
+          conflicto: true
+        });
+      }
+
+      // Asignar profesional y horario
+      derivacion.profesional = profesionalAsignado;
+      derivacion.profesionalAsignado = profesionalAsignado;
+      derivacion.fecha = fechaCita;
+      derivacion.duracion = duracion;
+      derivacion.estadoDerivacion = 'asignada';
+      derivacion.fechaAsignacion = new Date();
+      derivacion.estado = 'confirmada';
+
+      if (notas) {
+        derivacion.notas = derivacion.notas ? `${derivacion.notas}\n${notas}` : notas;
+      }
+
+      // Si aún no estaba validada, validarla automáticamente
+      if (derivacion.estadoDerivacion === 'pendiente_validacion') {
+        derivacion.validadaPor = validadaPor;
+        derivacion.fechaValidacion = new Date();
+      }
+
+      await derivacion.save();
+
+      await derivacion.populate('deportista', 'nombre apellido email rut imgUrl telefono');
+      await derivacion.populate('derivadaPor', 'nombre apellido email especialidad');
+      await derivacion.populate('profesional', 'nombre apellido email especialidad');
+      await derivacion.populate('profesionalAsignado', 'nombre apellido email especialidad');
+      await derivacion.populate('validadaPor', 'nombre apellido email');
+
+      // TODO: Aquí se deben enviar notificaciones al profesional y deportista
+      // await enviarNotificacionAsignacion(derivacion);
+
+      res.status(200).json({
+        success: true,
+        message: "Derivación asignada correctamente. Profesional y deportista notificados.",
+        derivacion
+      });
+    } catch (error) {
+      console.error('Error al asignar derivación:', error);
+      res.status(500).json({
+        message: "Error al asignar derivación",
+        error: error.message
+      });
+    }
   }
 };
 

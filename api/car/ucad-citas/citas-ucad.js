@@ -6,10 +6,10 @@ const citasUcadSchema = new mongoose.Schema({
     ref: 'usuariosUcad',
     required: false // no requerido para citas internas
   },
-  profesional: { 
-    type: mongoose.Types.ObjectId, 
+  profesional: {
+    type: mongoose.Types.ObjectId,
     ref: 'usuariosUcad',
-    required: true
+    required: false // Opcional: en derivaciones por área se asigna después
   },
   especialidad: { 
     type: String, 
@@ -33,9 +33,9 @@ const citasUcadSchema = new mongoose.Schema({
     enum: ['pendiente', 'confirmada', 'completada', 'cancelada','derivada'],
     default: 'pendiente'
   },
-  notas: { 
+  notas: {
     type: String,
-    maxlength: 500
+    maxlength: 2000 // Aumentado para permitir historial de redirecciones
   },
   motivoCancelacion: { 
     type: String,
@@ -46,11 +46,37 @@ const citasUcadSchema = new mongoose.Schema({
     enum: ['deportista', 'profesional', 'admin']
   },
   derivadaPor:{
-    type: mongoose.Types.ObjectId, 
+    type: mongoose.Types.ObjectId,
     ref: 'usuariosUcad',
   },
   motivoDerivacion:{
     type: String,
+  },
+  // Nuevo flujo de derivación por área
+  areaDerivacion: {
+    type: String, // Área/especialidad a la que se deriva
+  },
+  estadoDerivacion: {
+    type: String,
+    enum: ['pendiente_validacion', 'validada', 'rechazada', 'asignada'],
+  },
+  validadaPor: {
+    type: mongoose.Types.ObjectId,
+    ref: 'usuariosUcad', // Coordinador que validó
+  },
+  fechaValidacion: {
+    type: Date,
+  },
+  motivoRechazo: {
+    type: String,
+    maxlength: 500,
+  },
+  profesionalAsignado: {
+    type: mongoose.Types.ObjectId,
+    ref: 'usuariosUcad', // Profesional asignado por el coordinador
+  },
+  fechaAsignacion: {
+    type: Date,
   },
   inicioAtencion:{
     type: Date,

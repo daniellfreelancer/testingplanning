@@ -44,5 +44,25 @@ router.get("/derivaciones-recibidas/:profesionalId", citasUcadController.obtener
 // Asignar fecha/hora a una derivación pendiente
 router.put("/asignar-horario-derivacion/:citaId", citasUcadController.asignarHorarioDerivacion);
 
+// ===== NUEVO FLUJO: Derivaciones por área =====
+
+// Crear derivación por área (sin profesional específico)
+router.post("/crear-derivacion-area", citasUcadController.crearDerivacionPorArea);
+
+// Listar derivaciones pendientes del área (coordinador)
+router.get("/derivaciones-pendientes/:areaEspecialidad", citasUcadController.obtenerDerivacionesPendientesArea);
+
+// Validar derivación (coordinador acepta que corresponde)
+router.put("/validar-derivacion/:id", citasUcadController.validarDerivacion);
+
+// Rechazar derivación (coordinador indica que no corresponde)
+router.put("/rechazar-derivacion/:id", citasUcadController.rechazarDerivacion);
+
+// Redirigir derivación a otra especialidad (coordinador)
+router.put("/redirigir-derivacion/:id", citasUcadController.redirigirDerivacion);
+
+// Asignar profesional y horario a derivación (coordinador)
+router.put("/asignar-derivacion/:id", citasUcadController.asignarDerivacion);
+
 module.exports = router;
 

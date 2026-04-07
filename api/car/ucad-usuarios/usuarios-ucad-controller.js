@@ -425,6 +425,40 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         });
       }
 
+      // Detectar si cambió el email
+      let emailCambio = false;
+      let nuevaPassword = null;
+      const emailOriginal = usuario.email;
+      const emailNuevo = updateData.email ? String(updateData.email).trim().toLowerCase() : null;
+
+      if (emailNuevo && emailNuevo !== emailOriginal) {
+        console.log(`Email cambió de ${emailOriginal} a ${emailNuevo}`);
+        emailCambio = true;
+
+        // Verificar que el nuevo email no esté en uso por otro usuario
+        const emailExistente = await UsuariosUcad.findOne({
+          email: emailNuevo,
+          _id: { $ne: _id } // Excluir el usuario actual
+        });
+
+        if (emailExistente) {
+          return res.status(400).json({
+            message: "El nuevo correo ya está en uso por otro usuario"
+          });
+        }
+
+        // Generar nueva contraseña
+        nuevaPassword = generateRandomPassword(8);
+        const passwordHashed = bcryptjs.hashSync(nuevaPassword, 10);
+
+        // Agregar el nuevo password al array (mantener historial)
+        usuario.password.push(passwordHashed);
+        updateData.password = usuario.password;
+        updateData.email = emailNuevo;
+
+        console.log(`Nueva contraseña generada para ${emailNuevo}: ${nuevaPassword}`);
+      }
+
       // Si se envía un nuevo archivo, subirlo a S3
       if (req.file) {
         try {
@@ -440,12 +474,19 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         }
       }
 
-      // Si se actualiza el password, hashearlo
-      if (updateData.password) {
+      // Si se actualiza el password manualmente (sin cambio de email), hashearlo
+      if (updateData.password && !emailCambio) {
         const passwordHashed = bcryptjs.hashSync(updateData.password, 10);
         // Agregar el nuevo password al array (mantener historial)
         usuario.password.push(passwordHashed);
         updateData.password = usuario.password;
+      }
+
+      // Log de cambios de roles
+      if (updateData.esCoordinador !== undefined || updateData.esProfesional !== undefined) {
+        console.log(`Actualizando roles para ${usuario.nombre}:`);
+        console.log(`  - esCoordinador: ${usuario.esCoordinador} → ${updateData.esCoordinador}`);
+        console.log(`  - esProfesional: ${usuario.esProfesional} → ${updateData.esProfesional}`);
       }
 
       // Actualizar usuario
@@ -455,9 +496,33 @@ const usuariosUcadController = { // si entra como profecional o colaborador,
         { new: true, runValidators: true }
       );
 
+      // Si cambió el email, enviar correo con la nueva contraseña
+      if (emailCambio && nuevaPassword) {
+        try {
+          await bienvenidaProfesionalMail(
+            emailNuevo,
+            nuevaPassword,
+            usuarioActualizado.nombre,
+            usuarioActualizado.rol
+          );
+          console.log(`Correo de bienvenida enviado a ${emailNuevo}`);
+        } catch (emailError) {
+          console.error("Error al enviar correo:", emailError);
+          // No fallar la actualización si falla el envío de correo
+          return res.status(200).json({
+            message: "Usuario actualizado correctamente, pero hubo un error al enviar el correo",
+            usuario: usuarioActualizado,
+            warning: "No se pudo enviar el correo de bienvenida"
+          });
+        }
+      }
+
       res.status(200).json({
-        message: "Usuario actualizado correctamente",
-        usuario: usuarioActualizado
+        message: emailCambio
+          ? "Usuario actualizado y correo con nueva contraseña enviado"
+          : "Usuario actualizado correctamente",
+        usuario: usuarioActualizado,
+        ...(emailCambio && { nuevaPasswordGenerada: true })
       });
     } catch (error) {
       console.log(error);
