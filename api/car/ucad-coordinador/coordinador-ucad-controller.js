@@ -53,6 +53,54 @@ exports.obtenerMisProfesionales = async (req, res) => {
 };
 
 /**
+ * Obtener especialidades asignadas al coordinador
+ * GET /api/coordinador/mis-especialidades
+ */
+exports.obtenerMisEspecialidades = async (req, res) => {
+  try {
+    const coordinadorId = req.usuarioId;
+
+    // Buscar asignaciones activas del coordinador
+    const asignaciones = await CoordinadorAsignacion.find({
+      coordinador: coordinadorId,
+      activo: true
+    });
+
+    if (!asignaciones || asignaciones.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No tienes especialidades asignadas',
+        especialidades: []
+      });
+    }
+
+    // Extraer todas las especialidades únicas
+    const especialidadesSet = new Set();
+    asignaciones.forEach(asignacion => {
+      if (asignacion.especialidades && Array.isArray(asignacion.especialidades)) {
+        asignacion.especialidades.forEach(esp => {
+          especialidadesSet.add(esp);
+        });
+      }
+    });
+
+    const especialidades = Array.from(especialidadesSet);
+
+    res.status(200).json({
+      success: true,
+      especialidades
+    });
+  } catch (error) {
+    console.error('Error al obtener especialidades:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener especialidades asignadas',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Coordinador se asigna profesionales (auto-asignación)
  * POST /api/coordinador/asignar-profesional
  * Body: { profesionalIds: [Array de IDs], especialidades: [Array], criterio: 'manual' }
