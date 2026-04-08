@@ -700,6 +700,14 @@ const reservasPteAltoController = {
                 });
             }
 
+            // Verificar que el usuario su comuna sea igual a "Puente Alto"
+            if (usuarioEncontrado.comuna !== 'Puente Alto') {
+                return res.status(403).json({ 
+                    success: false,
+                    message: "Usuario no pertenece a la comuna de Puente Alto, no puede crear reservas." 
+                });
+            }
+
             // Validar que el usuario no tenga una reserva vigente
             const reservaVigente = await ReservasPteAlto.findOne({
                 usuario: usuarioEncontrado._id,
