@@ -73,7 +73,52 @@ const verificarRol = (...rolesPermitidos) => {
   };
 };
 
+/**
+ * Igual que verificarToken pero no responde 401 si falta el token o es inválido/expirado.
+ * Útil mientras el cliente no envía JWT o la seguridad aún no está activa.
+ */
+const verificarTokenOpcional = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.KEY_JWT);
+    req.usuarioId = decoded.id;
+    req.usuarioRole = decoded.role;
+    next();
+  } catch (error) {
+    console.warn('verificarTokenOpcional: token omitido o no válido, continuando sin usuario:', error.message);
+    next();
+  }
+};
+
+/**
+ * Igual que verificarRol pero solo aplica si ya hay req.usuarioRole (token válido previo).
+ */
+const verificarRolOpcional = (...rolesPermitidos) => {
+  return (req, res, next) => {
+    if (!req.usuarioRole) {
+      return next();
+    }
+
+    if (!rolesPermitidos.includes(req.usuarioRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para acceder a este recurso'
+      });
+    }
+
+    next();
+  };
+};
+
 module.exports = {
   verificarToken,
-  verificarRol
+  verificarRol,
+  verificarTokenOpcional,
+  verificarRolOpcional
 };
