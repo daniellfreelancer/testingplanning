@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const TalleresDeportivos = require('./talleresDeportivosPteAlto');
 const EspaciosDeportivos = require('../espacios-deportivos/espaciosDeportivosPteAlto');
 const ReservasPteAlto = require('../reservas-pte-alto/reservasPteAlto');
 const ComplejosDeportivos = require('../complejos-deportivos/complejosDeportivosPteAlto');
 const UsuariosPteAlto = require('../usuarios-pte-alto/usuariosPteAlto');
+const HistoricoPteAlto = require('../historico-pte-alto/historicoPteAlto');
 const sendEmailInscripcionTallerPteAlto = require('../email-pte-alto/mailInsripcionTallerPteAlto');
 const { uploadMulterFile } = require('../../../utils/s3Client'); // helper centralizado
 const bucketRegion = process.env.AWS_BUCKET_REGION;
@@ -14,6 +16,19 @@ const cloudfrontUrl = process.env.AWS_ACCESS_CLOUD_FRONT || process.env.CLOUDFRO
 if (!cloudfrontUrl || cloudfrontUrl.includes('undefined')) {
   console.warn('⚠️ ADVERTENCIA: AWS_ACCESS_CLOUD_FRONT no está configurado correctamente en .env');
   console.warn('⚠️ Las URLs de imágenes podrían no funcionar correctamente');
+}
+
+function getStaffIdFromRequest(req) {
+  if (req.usuarioId) return req.usuarioId;
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.KEY_JWT);
+    return decoded.id;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -102,7 +117,89 @@ const calcularEdad = (fechaNacimiento) => {
   const fechaNacimientoDate = new Date(fechaNacimiento);
   const edad = fechaActual.getFullYear() - fechaNacimientoDate.getFullYear();
   return edad;
+};
+
+/**
+ * Lógica compartida de inscripción al taller (email de inscripción incluido).
+ * @returns {Promise<{ ok: true, message: string, tallerNombre: string, usuarioLabel: string } | { ok: false, status: number, message: string }>}
+ */
+async function ejecutarInscripcionAlTaller(tallerId, usuarioId) {
+  const taller = await TalleresDeportivos.findById(tallerId);
+  if (!taller) {
+    return { ok: false, status: 404, message: 'Taller no encontrado' };
+  }
+
+  const usuario = await UsuariosPteAlto.findById(usuarioId);
+  if (!usuario) {
+    return { ok: false, status: 404, message: 'Usuario no encontrado' };
+  }
+
+  if (usuario.status !== true) {
+    return { ok: false, status: 400, message: 'su cuenta no esta activa, debe ser activa para inscribirse a este taller' };
+  }
+
+  if (usuario.comuna !== 'Puente Alto') {
+    return { ok: false, status: 400, message: 'El usuario no pertenece a la comuna de Puente Alto, no puede inscribirse a este taller' };
+  }
+
+  if (usuario.estadoValidacion !== 'validado') {
+    return { ok: false, status: 400, message: 'El usuario no esta validado, debe ser validado para inscribirse a este taller' };
+  }
+
+  if (taller.sexo !== 'ambos' && taller.sexo !== usuario.sexo) {
+    return { ok: false, status: 400, message: 'El taller solo acepta inscripciones para el sexo indicado, no puede inscribirse a este taller' };
+  }
+
+  const edadUsuario = calcularEdad(usuario.fechaNacimiento);
+  if (edadUsuario < taller.edadMin || edadUsuario > taller.edadMax) {
+    return { ok: false, status: 400, message: 'El usuario no cumple con la edad requerida para inscribirse a este taller' };
+  }
+
+  if (taller.capacidad <= taller.usuarios.length) {
+    return { ok: false, status: 400, message: 'El taller ha alcanzado su capacidad máxima, no hay cupos disponibles para inscribirse a este taller' };
+  }
+  if (taller.usuarios.some((id) => id.toString() === usuarioId.toString())) {
+    return { ok: false, status: 400, message: 'Ya estás inscrito a este taller o has dado de baja de este taller, comunica con el administrador para que te inscriba nuevamente' };
+  }
+
+  const usuariosBaja = taller.usuariosBaja || [];
+  if (usuariosBaja.some((id) => id.toString() === usuarioId.toString())) {
+    return { ok: false, status: 400, message: 'Ya has dado de baja de este taller, no puedes inscribirte nuevamente' };
+  }
+
+  taller.usuarios.push(usuarioId);
+  await taller.save();
+  usuario.talleresInscritos.push(tallerId);
+  await usuario.save();
+
+  try {
+    await taller.populate([
+      { path: 'complejo', select: 'nombre direccion' },
+      { path: 'sede', select: 'nombre direccion' },
+      { path: 'espacioDeportivo', select: 'nombre direccion' },
+    ]);
+    const nombreUsuario = [usuario.nombre, usuario.apellido].filter(Boolean).join(' ') || 'Usuario';
+    await sendEmailInscripcionTallerPteAlto(
+      usuario.email,
+      nombreUsuario,
+      taller,
+      usuarioId
+    );
+  } catch (emailError) {
+    console.error('Error al enviar email de confirmación de inscripción al taller (no crítico):', emailError);
+  }
+
+  const tallerNombre = taller.nombre || String(tallerId);
+  const usuarioLabel = [usuario.nombre, usuario.apellido].filter(Boolean).join(' ') || usuario.email || String(usuarioId);
+
+  return {
+    ok: true,
+    message: 'Te has inscrito correctamente a este taller, recibiras un email de confirmacion de inscripcion',
+    tallerNombre,
+    usuarioLabel,
+  };
 }
+
 /**
  * Genera sesiones individuales para el taller basado en días, horarios y rango de fechas
  * LEGACY - Para talleres sin variantes
@@ -560,11 +657,11 @@ const queryTalleresPopulate = [
   },
   {
     path:'usuarios',
-    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
+    select: 'nombre apellido email telefono rut tipoDocumento direccion fechaNacimiento sexo comuna',
   },
   {
     path:'usuariosBaja',
-    select: 'nombre apellido email telefono rut direccion fechaNacimiento sexo comuna',
+    select: 'nombre apellido email telefono rut tipoDocumento direccion fechaNacimiento sexo comuna',
   },
   {
     path:'creadoPor',
@@ -764,6 +861,79 @@ if (req.file) {
       });
     }
   },
+
+  obtenerTalleresDeportivosPteAltoPorCoordinador: async (req, res) => {
+    try {
+      const { coordinadorId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(coordinadorId)) {
+        return res.status(400).json({
+          message: 'ID de coordinador inválido',
+          success: false,
+        });
+      }
+      const coordinadorObjectId = new mongoose.Types.ObjectId(coordinadorId);
+      const talleresDeportivosPteAlto = await TalleresDeportivos.find({
+        coordinadores: coordinadorObjectId,
+      })
+        .sort({ nombre: 1 })
+        .populate('espacioDeportivo', 'nombre deporte')
+        .populate('complejo', 'nombre direccion')
+        .populate('sede', 'nombre direccion')
+        .populate('profesores', 'nombre apellido email')
+        .populate('coordinadores', 'nombre apellido email');
+
+      res.status(200).json({
+        message: 'Talleres deportivos PTE Alto obtenidos correctamente',
+        response: talleresDeportivosPteAlto,
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al obtener los talleres deportivos PTE Alto',
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
+  obtenerTalleresDeportivosPteAltoPorProfesor: async (req, res) => {
+    try {
+      const { profesorId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(profesorId)) {
+        return res.status(400).json({
+          message: 'ID de profesor inválido',
+          success: false,
+        });
+      }
+      const profesorObjectId = new mongoose.Types.ObjectId(profesorId);
+      const talleresDeportivosPteAlto = await TalleresDeportivos.find({
+        profesores: profesorObjectId,
+      })
+        .sort({ nombre: 1 })
+        .populate('espacioDeportivo', 'nombre deporte')
+        .populate('complejo', 'nombre direccion')
+        .populate('sede', 'nombre direccion')
+        .populate('profesores', 'nombre apellido email')
+        .populate('usuarios', 'nombre apellido email')
+        .populate('usuariosBaja', 'nombre apellido email')
+        .populate('coordinadores', 'nombre apellido email');
+
+      res.status(200).json({
+        message: 'Talleres deportivos PTE Alto obtenidos correctamente',
+        response: talleresDeportivosPteAlto,
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        message: 'Error al obtener los talleres deportivos PTE Alto',
+        error: error.message,
+        success: false,
+      });
+    }
+  },
+
   obtenerTalleresDeportivosPteAltoParaInscripciones : async (req, res) =>{
 
     try {
@@ -1034,130 +1204,23 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
       });
     }
   },
+  /**
+   * Inscripción pública / self-service (misma lógica que interna, sin registro en histórico de staff).
+   */
   inscribirseATaller: async (req, res) => {
-
-    /**
-     * El controlador debe recibir el id del taller y el id del usuario
-     * El controlador debe verificar que el taller existe, que el usuario este activo, validado y que su comuna sea Puente Alto
-     * El controlador debe verificar que el taller tenga fechaInicio y fechaFin
-     * El controlador debe verificar que el taller tenga capacidad
-     * El controlador debe verificar que el taller tenga cupos disponibles
-     * El controlador debe validar que el usuario tenga el sexo correcto para el taller
-     */
-
     try {
       const { tallerId, usuarioId } = req.params;
-
-      const taller = await TalleresDeportivos.findById(tallerId);
-      if (!taller) {
-        return res.status(404).json({
-          message: 'Taller no encontrado',
+      const result = await ejecutarInscripcionAlTaller(tallerId, usuarioId);
+      if (!result.ok) {
+        return res.status(result.status).json({
+          message: result.message,
           success: false,
         });
       }
-      
-      const usuario = await UsuariosPteAlto.findById(usuarioId);
-      if (!usuario) {
-        return res.status(404).json({
-          message: 'Usuario no encontrado',
-          success: false,
-        });
-      }
-      
-      /**
-       * Las validaciones deben ser independientes
-       */
-      
-      if (usuario.status !== true) {
-        return res.status(400).json({
-          message: 'su cuenta no esta activa, debe ser activa para inscribirse a este taller',
-          success: false,
-        });
-      }
-
-      if (usuario.comuna !== 'Puente Alto' ) {
-        return res.status(400).json({
-          message: 'El usuario no pertenece a la comuna de Puente Alto, no puede inscribirse a este taller',
-          success: false,
-        });
-      }
-
-      if (usuario.estadoValidacion !== 'validado' ) {
-        return res.status(400).json({
-          message: 'El usuario no esta validado, debe ser validado para inscribirse a este taller',
-          success: false,
-        });
-      }
-
-      if (taller.sexo !== 'ambos' && taller.sexo !== usuario.sexo) {
-        return res.status(400).json({
-          message: 'El taller solo acepta inscripciones para el sexo indicado, no puede inscribirse a este taller',
-          success: false,
-        });
-      }
-
-
-
-      //validacion de edad calcular la edad del usuario con la fecha de nacimiento completa tomando en cuenta el dia, mes y año
-      const edadUsuario = calcularEdad(usuario.fechaNacimiento);
-      if (edadUsuario < taller.edadMin || edadUsuario > taller.edadMax) {
-        return res.status(400).json({
-          message: 'El usuario no cumple con la edad requerida para inscribirse a este taller',
-          success: false,
-        });
-      }
-
-      
-      if (taller.capacidad <= taller.usuarios.length) {
-        return res.status(400).json({
-          message: 'El taller ha alcanzado su capacidad máxima, no hay cupos disponibles para inscribirse a este taller',
-          success: false,
-        });
-      }
-      if (taller.usuarios.some(id => id.toString() === usuarioId.toString())) {
-        return res.status(400).json({
-          message: 'Ya estás inscrito a este taller o has dado de baja de este taller, comunica con el administrador para que te inscriba nuevamente',
-          success: false,
-        });
-      }
-
-      if (taller.usuariosBaja.some(id => id.toString() === usuarioId.toString())) {
-        return res.status(400).json({
-          message: 'Ya has dado de baja de este taller, no puedes inscribirte nuevamente',
-          success: false,
-        });
-      }
-      
-      // Inscribir el usuario al taller
-      taller.usuarios.push(usuarioId);
-      await taller.save();
-      // agregar el taller al usuario
-      usuario.talleresInscritos.push(tallerId);
-      await usuario.save();
-
-      // Enviar email de confirmación de inscripción (resumen + link para darse de baja)
-      try {
-        await taller.populate([
-          { path: 'complejo', select: 'nombre direccion' },
-          { path: 'sede', select: 'nombre direccion' },
-          { path: 'espacioDeportivo', select: 'nombre direccion' },
-        ]);
-        const nombreUsuario = [usuario.nombre, usuario.apellido].filter(Boolean).join(' ') || 'Usuario';
-        await sendEmailInscripcionTallerPteAlto(
-          usuario.email,
-          nombreUsuario,
-          taller,
-          usuarioId
-        );
-      } catch (emailError) {
-        console.error('Error al enviar email de confirmación de inscripción al taller (no crítico):', emailError);
-      }
-
       return res.status(200).json({
-        message: 'Te has inscrito correctamente a este taller, recibiras un email de confirmacion de inscripcion',
+        message: result.message,
         success: true,
       });
-
     } catch (error) {
       console.log(error);
       return res.status(500).json({
@@ -1166,7 +1229,45 @@ actualizarTallerDeportivoPteAltoPorId: async (req, res) => {
         success: false,
       });
     }
+  },
 
+  /**
+   * Inscripción desde panel admin/coordinador/monitor: JWT + rol; registra histórico y envía email de inscripción (vía ejecutarInscripcionAlTaller).
+   */
+  inscribirseATallerInterno: async (req, res) => {
+    try {
+      const { tallerId, usuarioId } = req.params;
+      const staffId = getStaffIdFromRequest(req);
+      const result = await ejecutarInscripcionAlTaller(tallerId, usuarioId);
+      if (!result.ok) {
+        return res.status(result.status).json({
+          message: result.message,
+          success: false,
+        });
+      }
+      if (staffId) {
+        try {
+          await HistoricoPteAlto.create({
+            realizadoPor: staffId,
+            accion: 'INSCRIPCION_TALLER_INTERNA',
+            descripcion: `Inscripción al taller "${result.tallerNombre}" (${tallerId}) del participante ${result.usuarioLabel} (${usuarioId}). Email de confirmación de inscripción enviado al usuario.`,
+          });
+        } catch (histErr) {
+          console.error('Error al registrar histórico PTE Alto (inscripción interna):', histErr);
+        }
+      }
+      return res.status(200).json({
+        message: result.message,
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        message: 'Error al inscribirse al taller',
+        error: error.message,
+        success: false,
+      });
+    }
   },
   desinscribirseATaller: async (req, res) => {
     try {

@@ -109,6 +109,190 @@ const enviarEmailsCancelacionReserva = async (reserva) => {
 // ============================================
 
 /**
+ * Solapamiento estándar de intervalos [a,b) y [c,d): a < d && c < b
+ */
+const rangosSeSolapan = (aInicio, aFin, bInicio, bFin) =>
+    aInicio < bFin && bInicio < aFin;
+
+/**
+ * true si fechaInicio/fechaFin del taller representan un curso por temporadas (meses),
+ * no una reserva puntual en un solo día.
+ */
+const esRangoTemporadaCurso = (fechaInicio, fechaFin) => {
+    const a = new Date(fechaInicio);
+    const b = new Date(fechaFin);
+    if (!(b > a)) return false;
+    const diffMs = b - a;
+    if (diffMs > 25 * 60 * 60 * 1000) return true;
+    return (
+        a.getUTCFullYear() !== b.getUTCFullYear() ||
+        a.getUTCMonth() !== b.getUTCMonth() ||
+        a.getUTCDate() !== b.getUTCDate()
+    );
+};
+
+const parseHoraPartes = (horaStr) => {
+    if (horaStr == null || horaStr === '') return [0, 0];
+    const parts = String(horaStr).trim().split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    return [Number.isFinite(h) ? h : 0, Number.isFinite(m) ? m : 0];
+};
+
+const combinarFechaYHora = (baseDate, horaStr) => {
+    const d = new Date(baseDate);
+    const [h, m] = parseHoraPartes(horaStr);
+    d.setHours(h, m, 0, 0);
+    return d;
+};
+
+const normalizarNombreDia = (str) =>
+    String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+/** nombreDia (español) → 0–6 */
+const diaSemanaDesdeNombre = (nombre) => {
+    const n = normalizarNombreDia(nombre);
+    const map = {
+        domingo: 0,
+        lunes: 1,
+        martes: 2,
+        miercoles: 3,
+        jueves: 4,
+        viernes: 5,
+        sabado: 6
+    };
+    return map[n] !== undefined ? map[n] : null;
+};
+
+const diaEnRangoSolicitud = (diaCalendario, reqInicio, reqFin) => {
+    const dayStart = new Date(diaCalendario);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(diaCalendario);
+    dayEnd.setHours(23, 59, 59, 999);
+    return reqInicio < dayEnd && reqFin > dayStart;
+};
+
+/**
+ * Para un taller con rango de temporada largo: ¿hay solapamiento horario real
+ * (sesiones, informacionHorarios o dias+horas) con [inicioReq, finReq]?
+ */
+const tallerCursoSolapaRangoReal = (taller, inicioReq, finReq) => {
+    const reqStart = new Date(inicioReq);
+    const reqEnd = new Date(finReq);
+
+    if (taller.sesiones && taller.sesiones.length > 0) {
+        for (const sesion of taller.sesiones) {
+            if (sesion.estado === 'cancelada') continue;
+            const sStart = combinarFechaYHora(sesion.fecha, sesion.horaInicio);
+            const sEnd = combinarFechaYHora(sesion.fecha, sesion.horaFin);
+            if (sEnd > sStart && rangosSeSolapan(reqStart, reqEnd, sStart, sEnd)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    if (taller.informacionHorarios && taller.informacionHorarios.length > 0) {
+        const tIni = new Date(taller.fechaInicio);
+        const tFin = new Date(taller.fechaFin);
+        let cursor = new Date(tIni);
+        cursor.setHours(0, 0, 0, 0);
+        const limite = new Date(tFin);
+        limite.setHours(23, 59, 59, 999);
+
+        while (cursor <= limite) {
+            if (!diaEnRangoSolicitud(cursor, reqStart, reqEnd)) {
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
+            const dow = cursor.getDay();
+            for (const info of taller.informacionHorarios) {
+                const num = diaSemanaDesdeNombre(info.nombreDia || info.dia);
+                if (num !== dow) continue;
+                const sStart = combinarFechaYHora(cursor, info.horaInicio);
+                const sEnd = combinarFechaYHora(cursor, info.horaFin);
+                if (sEnd > sStart && rangosSeSolapan(reqStart, reqEnd, sStart, sEnd)) {
+                    return true;
+                }
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        return false;
+    }
+
+    const diasTaller = Array.isArray(taller.dias) ? taller.dias : [];
+    const diasMap = {
+        domingo: 0,
+        lunes: 1,
+        martes: 2,
+        miercoles: 3,
+        jueves: 4,
+        viernes: 5,
+        sabado: 6
+    };
+    const diasNumeros = diasTaller
+        .map((dia) => (typeof dia === 'number' ? dia : diasMap[normalizarNombreDia(dia)]))
+        .filter((num) => num !== undefined && num !== null);
+
+    const horariosInicio = Array.isArray(taller.horaInicio) ? taller.horaInicio : [];
+    const horariosFin = Array.isArray(taller.horaFin) ? taller.horaFin : [];
+
+    if (diasNumeros.length === 0 || horariosInicio.length === 0) {
+        return false;
+    }
+
+    const fechaFinal = new Date(taller.fechaFin);
+    let huboSolape = false;
+    let fechaActual = new Date(taller.fechaInicio);
+    while (fechaActual <= fechaFinal) {
+        if (diaEnRangoSolicitud(fechaActual, reqStart, reqEnd)) {
+            const diaSemana = fechaActual.getDay();
+            if (diasNumeros.includes(diaSemana)) {
+                for (let idx = 0; idx < horariosInicio.length; idx++) {
+                    const horaInicio = horariosInicio[idx];
+                    const horaFin = horariosFin[idx] || horariosFin[0];
+                    const sStart = combinarFechaYHora(fechaActual, horaInicio);
+                    const sEnd = combinarFechaYHora(fechaActual, horaFin);
+                    if (sEnd > sStart && rangosSeSolapan(reqStart, reqEnd, sStart, sEnd)) {
+                        huboSolape = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (huboSolape) break;
+        fechaActual.setDate(fechaActual.getDate() + 1);
+    }
+
+    return huboSolape;
+};
+
+/**
+ * ¿El taller bloquea el rango solicitado? Los cursos con fechaInicio/fechaFin de temporada
+ * solo cuentan si hay solape con sesiones/horarios reales, no con el rango de fechas del curso.
+ */
+const tallerBloqueaRango = (taller, inicioReq, finReq) => {
+    if (!taller.fechaInicio || !taller.fechaFin) {
+        return false;
+    }
+    const tIni = new Date(taller.fechaInicio);
+    const tFin = new Date(taller.fechaFin);
+    if (!(tIni < finReq && tFin > inicioReq)) {
+        return false;
+    }
+
+    if (!esRangoTemporadaCurso(taller.fechaInicio, taller.fechaFin)) {
+        return rangosSeSolapan(inicioReq, finReq, tIni, tFin);
+    }
+
+    return tallerCursoSolapaRangoReal(taller, inicioReq, finReq);
+};
+
+/**
  * Verifica la disponibilidad de un espacio en un rango de fechas
  * @param {String} espacioId - ID del espacio deportivo
  * @param {Date} fechaInicio - Fecha de inicio del rango
@@ -152,18 +336,17 @@ const verificarDisponibilidadEspacio = async (espacioId, fechaInicio, fechaFin) 
         });
     });
 
-    // Buscar talleres activos asignados al espacio que se solapen
-    const talleresConflictivos = await TalleresDeportivosPteAlto.find({
+    // Talleres cuyo período del curso intersecta el rango; el bloqueo real se decide en tallerBloqueaRango
+    // (no usar solo fechaInicio/fechaFin del taller: suelen ser la temporada, no el horario diario).
+    const talleresCandidatos = await TalleresDeportivosPteAlto.find({
         espacioDeportivo: espacioId,
         status: true,
-        $or: [
-            { fechaInicio: { $lt: fechaFin }, fechaFin: { $gt: fechaInicio } },
-            { fechaInicio: { $gte: fechaInicio }, fechaFin: { $lte: fechaFin } },
-            { fechaInicio: { $lte: fechaInicio }, fechaFin: { $gte: fechaFin } }
-        ]
+        fechaInicio: { $lt: fechaFin },
+        fechaFin: { $gt: fechaInicio }
     });
 
-    talleresConflictivos.forEach(taller => {
+    talleresCandidatos.forEach((taller) => {
+        if (!tallerBloqueaRango(taller, fechaInicio, fechaFin)) return;
         conflictos.push({
             tipo: 'taller',
             id: taller._id,
@@ -958,23 +1141,89 @@ const reservasPteAltoController = {
     listarTodasReservas: async (req, res) => {
         try {
             const {
-                espacioDeportivo,
+                espacioDeportivo: espacioDeportivoParam,
+                complejoDeportivo,
                 taller,
                 usuario,
                 estado,
                 tipoReserva,
                 fechaDesde,
-                fechaHasta
+                fechaHasta,
+                esReservaInterna,
+                tipoReservaInterna,
+                internoGenerico,
             } = req.query;
+
+            const TIPOS_RESERVA_INTERNA = ['tercero', 'convenio', 'cliente', 'arrendatario', 'mantenimiento', 'usuario'];
 
             // Construir query
             const query = {};
 
-            if (espacioDeportivo) query.espacioDeportivo = espacioDeportivo;
+            const espacioList = espacioDeportivoParam
+                ? (Array.isArray(espacioDeportivoParam) ? espacioDeportivoParam : [espacioDeportivoParam]).filter(Boolean)
+                : [];
+
+            const hasComplejoOEspacio = Boolean(complejoDeportivo) || espacioList.length > 0;
+
+            if (hasComplejoOEspacio) {
+                let espacioIds = espacioList;
+                if (espacioIds.length === 0 && complejoDeportivo) {
+                    espacioIds = await EspaciosDeportivosPteAlto.find({ complejoDeportivo }).distinct('_id');
+                }
+
+                // Si el cliente envía espacio(s) explícitos, no ampliar talleres a todo el complejo:
+                // solo talleres que usen alguno de esos espacios (array espacioDeportivo del taller).
+                const espaciosExplicitosEnQuery = espacioList.length > 0;
+
+                const tallerOr = [];
+                if (espaciosExplicitosEnQuery) {
+                    if (espacioIds.length > 0) {
+                        tallerOr.push({ espacioDeportivo: { $in: espacioIds } });
+                    }
+                } else {
+                    if (complejoDeportivo) {
+                        tallerOr.push({ complejo: complejoDeportivo });
+                    }
+                    if (espacioIds.length > 0) {
+                        tallerOr.push({ espacioDeportivo: { $in: espacioIds } });
+                    }
+                }
+
+                let tallerIds = [];
+                if (tallerOr.length > 0) {
+                    tallerIds = await TalleresDeportivosPteAlto.find({ $or: tallerOr }).distinct('_id');
+                }
+
+                const orParts = [];
+                if (espacioIds.length > 0) {
+                    orParts.push({ espacioDeportivo: { $in: espacioIds } });
+                }
+                if (tallerIds.length > 0) {
+                    orParts.push({ taller: { $in: tallerIds } });
+                }
+
+                if (orParts.length === 1) {
+                    Object.assign(query, orParts[0]);
+                } else if (orParts.length > 1) {
+                    query.$or = orParts;
+                } else {
+                    query._id = { $in: [] };
+                }
+            }
+
             if (taller) query.taller = taller;
             if (usuario) query.usuario = usuario;
             if (estado) query.estado = estado;
             if (tipoReserva) query.tipoReserva = tipoReserva;
+            if (esReservaInterna === 'true') query.esReservaInterna = true;
+
+            if (internoGenerico === 'true') {
+                query.esReservaInterna = true;
+                query.tipoReservaInterna = { $nin: ['convenio', 'mantenimiento'] };
+            } else if (tipoReservaInterna && TIPOS_RESERVA_INTERNA.includes(String(tipoReservaInterna))) {
+                query.tipoReservaInterna = tipoReservaInterna;
+                query.esReservaInterna = true;
+            }
 
             if (fechaDesde || fechaHasta) {
                 query.fechaInicio = {};
@@ -1236,6 +1485,7 @@ const reservasPteAltoController = {
 
             const reserva = await ReservasPteAlto.findById(id)
                 .populate('usuario', 'nombre apellido email rut telefono')
+                .populate('reservadoPor', 'nombre apellido email')
                 .populate('espacioDeportivo', 'nombre deporte direccion')
                 .populate('taller', 'nombre descripcion fechaInicio fechaFin capacidad');
 

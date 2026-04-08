@@ -31,4 +31,12 @@ router.get("/obtener-colaboradores-pte-alto", usuariosPteAltoController.obtenerC
 router.put("/cambiar-contrasena-usuario-pte-alto/:id", usuariosPteAltoController.cambiarContraseñaUsuarioPteAlto);
 router.put("/actualizar-colaborador-pte-alto/:idColaborador", usuariosPteAltoController.actualizarColaboradorPteAlto);
 router.put("/asignar-complejos-deportivos-pte-alto/:idUsuario", usuariosPteAltoController.adminsComplejosPteAlto);
+router.post(
+  "/reenviar-correo-bienvenida-colaborador/:id",
+  usuariosPteAltoController.reenviarCorreoBienvenidaColaboradorPteAlto
+);
+
+router.get("/admin/buscar-usuario-por-documento", usuariosPteAltoController.buscarUsuarioPorDocumento);
+router.post("/admin/crear-usuario-vecino-interno", usuariosPteAltoController.crearUsuarioVecinoInternoPteAlto);
+
 module.exports = router;
