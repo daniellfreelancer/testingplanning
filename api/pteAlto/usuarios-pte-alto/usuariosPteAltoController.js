@@ -12,6 +12,9 @@ const sendUsuarioHabilitadoPteAlto = require("../mail/usuarioHabilitadoPteAlto")
 const sendUsuarioRechazadoPteAlto = require("../mail/usuarioRechazadoPteAlto");
 const ReservasPteAlto = require("../reservas-pte-alto/reservasPteAlto");
 const ComplejosDeportivosPteAlto = require("../complejos-deportivos/complejosDeportivosPteAlto");
+const HistoricoPteAlto = require("../historico-pte-alto/historicoPteAlto");
+
+const INSTITUCION_PTE_ALTO_DEFAULT = process.env.PTE_ALTO_INSTITUCION_ID || "6925f10308c7b00a3c4498ca";
 
 // 👇 nuevo: usamos el helper centralizado de S3
 const { uploadMulterFile } = require("../../../utils/s3Client");
@@ -25,6 +28,20 @@ function generateRandomPassword(length = 8) {
     password += characters[randomIndex];
   }
   return password;
+}
+
+/** Opcional: si viene Authorization Bearer válido (p. ej. otro cliente), se usa para histórico. */
+function getStaffIdFromRequest(req) {
+  if (req.usuarioId) return req.usuarioId;
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  try {
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.KEY_JWT);
+    return decoded.id;
+  } catch {
+    return null;
+  }
 }
 
 const usuariosPteAltoController = {
@@ -926,6 +943,262 @@ const usuariosPteAltoController = {
       console.log(error);
       res.status(500).json({
         message: "Error al actualizar los complejos deportivos del usuario",
+        error: error.message,
+      });
+    }
+  },
+
+  /**
+   * GET admin: buscar un vecino (rol USER) por RUT o pasaporte (misma unicidad que crearUsuarioExternoPteAlto).
+   */
+  buscarUsuarioPorDocumento: async (req, res) => {
+    try {
+      const documento = (req.query.documento || "").trim();
+      const tipoDocumento = (req.query.tipoDocumento || "rut").trim();
+      if (!documento) {
+        return res.status(400).json({
+          success: false,
+          message: "Parámetro documento es requerido",
+        });
+      }
+
+      let usuarioPteAltoRut;
+      if (tipoDocumento === "rut") {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({
+          rut: documento,
+          rol: "USER",
+          $or: [{ tipoDocumento: "rut" }, { tipoDocumento: null }, { tipoDocumento: { $exists: false } }],
+        }).select(
+          "nombre apellido email rut tipoDocumento telefono direccion comuna ciudad region fechaNacimiento sexo estadoValidacion status institucion"
+        );
+      } else {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({
+          rut: documento,
+          tipoDocumento: "pasaporte",
+          rol: "USER",
+        }).select(
+          "nombre apellido email rut tipoDocumento telefono direccion comuna ciudad region fechaNacimiento sexo estadoValidacion status institucion"
+        );
+      }
+
+      if (!usuarioPteAltoRut) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontró un vecino con ese documento",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Usuario encontrado",
+        response: usuarioPteAltoRut,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al buscar usuario",
+        error: error.message,
+      });
+    }
+  },
+
+  /**
+   * POST admin: alta de vecino validado en vivo (sin documentos obligatorios). Envía email de bienvenida y registra histórico.
+   */
+  crearUsuarioVecinoInternoPteAlto: async (req, res) => {
+    try {
+      const staffId = getStaffIdFromRequest(req);
+      const {
+        nombre,
+        apellido,
+        email,
+        rut,
+        tipoDocumento,
+        telefono,
+        direccion,
+        comuna,
+        ciudad,
+        region,
+        fechaNacimiento,
+        sexo,
+        institucion,
+      } = req.body;
+
+      if (!nombre || !apellido || !email || !rut) {
+        return res.status(400).json({
+          success: false,
+          message: "nombre, apellido, email y rut (o documento) son requeridos",
+        });
+      }
+
+      const tipoDoc = tipoDocumento || "rut";
+      const usuarioPteAltoEmail = await UsuariosPteAlto.findOne({ email });
+      if (usuarioPteAltoEmail) {
+        return res.status(400).json({
+          success: false,
+          message: "El correo ya está registrado",
+          code: "email_duplicado",
+        });
+      }
+
+      let usuarioPteAltoRut;
+      if (tipoDoc === "rut") {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({
+          rut,
+          $or: [{ tipoDocumento: "rut" }, { tipoDocumento: null }, { tipoDocumento: { $exists: false } }],
+        });
+      } else {
+        usuarioPteAltoRut = await UsuariosPteAlto.findOne({ rut, tipoDocumento: "pasaporte" });
+      }
+      if (usuarioPteAltoRut) {
+        return res.status(400).json({
+          success: false,
+          message: "El documento ya está registrado",
+          code: "documento_duplicado",
+        });
+      }
+
+      const institucionId = institucion || INSTITUCION_PTE_ALTO_DEFAULT;
+      const password = generateRandomPassword(8);
+      const passwordHashed = bcryptjs.hashSync(password, 10);
+
+      const nuevoUsuarioPteAlto = new UsuariosPteAlto({
+        nombre,
+        apellido,
+        email,
+        rut,
+        rol: "USER",
+        tipoDocumento: tipoDoc,
+        telefono,
+        direccion,
+        comuna,
+        ciudad,
+        region,
+        fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : undefined,
+        sexo,
+        institucion: institucionId,
+        password: [passwordHashed],
+        status: true,
+        estadoValidacion: "validado",
+      });
+
+      const institucionDoc = await Institucion.findById(institucionId);
+      if (!institucionDoc) {
+        return res.status(404).json({ success: false, message: "Institución no encontrada" });
+      }
+
+      institucionDoc.usuariosPteAlto.push(nuevoUsuarioPteAlto._id);
+      await institucionDoc.save();
+
+      await nuevoUsuarioPteAlto.save();
+
+      try {
+        await sendWelcomeUsuarioExternoPteAlto(nuevoUsuarioPteAlto);
+      } catch (err) {
+        console.error("Error enviando email de bienvenida (usuario interno creado):", err);
+      }
+
+      if (staffId) {
+        try {
+          await HistoricoPteAlto.create({
+            realizadoPor: staffId,
+            accion: "CREACION_VECINO_INTERNO_VALIDADO",
+            descripcion: `Alta validada en vivo de vecino ${nombre} ${apellido} (${email}), documento ${rut}. estadoValidacion: validado. Email de bienvenida de registro enviado.`,
+          });
+        } catch (histErr) {
+          console.error("Error al registrar histórico PTE Alto (alta vecino interno):", histErr);
+        }
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Usuario creado correctamente",
+        response: { _id: nuevoUsuarioPteAlto._id },
+        password,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al crear usuario PTE Alto",
+        error: error.message,
+      });
+    }
+  },
+
+  /**
+   * Admin: reenvía el correo de bienvenida (misma plantilla que el alta) con una contraseña nueva
+   * y actualiza el hash en BD. El correo se envía antes de persistir para no invalidar la clave sin notificación.
+   */
+  reenviarCorreoBienvenidaColaboradorPteAlto: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const usuario = await UsuariosPteAlto.findById(id);
+      if (!usuario) {
+        return res.status(404).json({
+          success: false,
+          message: "Usuario PTE Alto no encontrado",
+        });
+      }
+
+      const rol = usuario.rol;
+      const rolRecibeBienvenidaColaborador =
+        rol === "ADMIN" ||
+        rol === "SUPERVISOR" ||
+        rol === "AGENDAMIENTO" ||
+        rol === "ADMIN_RECINTO" ||
+        rol === "COORDINADOR" ||
+        rol === "MONITOR" ||
+        rol === "COMUNICACIONES" ||
+        rol === "TERRITORIO_DEPORTIVO";
+
+      if (!rolRecibeBienvenidaColaborador) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Este rol no admite reenvío de correo de bienvenida de colaborador",
+        });
+      }
+
+      const plainPassword = generateRandomPassword(8);
+      await sendWelcomeColaboradorPuenteAlto(
+        usuario.email,
+        plainPassword,
+        usuario.nombre
+      );
+
+      usuario.password = [bcryptjs.hashSync(plainPassword, 10)];
+      await usuario.save();
+
+      const staffId = getStaffIdFromRequest(req);
+      if (staffId) {
+        try {
+          await HistoricoPteAlto.create({
+            realizadoPor: staffId,
+            accion: "COLABORADOR_REENVIAR_CORREO_BIENVENIDA",
+            descripcion: `Reenvío correo de bienvenida colaborador: ${usuario.nombre} ${usuario.apellido} (${usuario.email}), id ${id}.`,
+          });
+        } catch (histErr) {
+          console.error(
+            "Error al registrar histórico PTE Alto (reenviar correo colaborador):",
+            histErr
+          );
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Correo de bienvenida enviado correctamente",
+      });
+    } catch (error) {
+      console.error(
+        "Error reenviar correo bienvenida colaborador PTE Alto:",
+        error
+      );
+      return res.status(500).json({
+        success: false,
+        message: "Error al reenviar correo de bienvenida",
         error: error.message,
       });
     }

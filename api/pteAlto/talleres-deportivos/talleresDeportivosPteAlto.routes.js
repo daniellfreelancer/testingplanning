@@ -5,6 +5,14 @@ const upload = require('../../../libs/docsStorage');
 
 router.post('/crear-taller', upload.single('imgUrl'), talleresDeportivosPteAltoController.crearTallerDeportivoPteAlto);
 router.get('/obtener-todos-los-talleres', talleresDeportivosPteAltoController.obtenerTodosLosTalleresDeportivosPteAlto);
+router.get(
+  '/obtener-talleres-por-coordinador/:coordinadorId',
+  talleresDeportivosPteAltoController.obtenerTalleresDeportivosPteAltoPorCoordinador
+);
+router.get(
+  '/obtener-talleres-por-profesor/:profesorId',
+  talleresDeportivosPteAltoController.obtenerTalleresDeportivosPteAltoPorProfesor
+);
 router.get('/obtener-talleres-para-inscripciones', talleresDeportivosPteAltoController.obtenerTalleresDeportivosPteAltoParaInscripciones);
 router.get('/obtener-taller/:id', talleresDeportivosPteAltoController.obtenerTallerDeportivoPteAltoPorId);
 router.put('/actualizar-taller/:id', upload.single('imgUrl'), talleresDeportivosPteAltoController.actualizarTallerDeportivoPteAltoPorId);
@@ -17,6 +25,10 @@ router.delete('/desinscribir-sesion/:tallerId/:sesionId', talleresDeportivosPteA
 
 // Rutas para inscripcion y desinscripcion de talleres
 router.post('/inscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.inscribirseATaller);
+router.post(
+  '/inscribirse-taller-interno/:tallerId/:usuarioId',
+  talleresDeportivosPteAltoController.inscribirseATallerInterno
+);
 router.post('/desinscribirse-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.desinscribirseATaller);
 router.post('/reactivar-taller/:tallerId/:usuarioId', talleresDeportivosPteAltoController.reactivarEnTaller);
 module.exports = router;
