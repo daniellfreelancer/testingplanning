@@ -1491,11 +1491,20 @@ const reservasPteAltoController = {
         try {
             const { id } = req.params;
 
+            const queryPopulateEspacioYComplejo ={
+                path: 'espacioDeportivo',
+                select: 'nombre deporte direccion complejoDeportivo',
+                populate: {
+                    path: 'complejoDeportivo',
+                    select: 'nombre',
+                },
+            }
+
             const reserva = await ReservasPteAlto.findById(id)
                 .populate('usuario', 'nombre apellido email rut telefono')
                 .populate('reservadoPor', 'nombre apellido email')
-                .populate('espacioDeportivo', 'nombre deporte direccion')
-                .populate('taller', 'nombre descripcion fechaInicio fechaFin capacidad');
+                .populate(queryPopulateEspacioYComplejo)
+                .populate('taller', 'nombre descripcion fechaInicio fechaFin capacidad')
 
             if (!reserva) {
                 return res.status(404).json({
