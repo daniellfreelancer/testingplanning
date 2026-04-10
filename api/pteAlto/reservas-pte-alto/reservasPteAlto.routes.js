@@ -50,6 +50,9 @@ router.get('/obtener-reserva-por-id/:id', reservasPteAltoController.obtenerReser
 // Cancelar reserva (admin)
 router.put('/cancelar-reserva/:id', reservasPteAltoController.cancelarReservaAdmin);
 
+// Cancelación masiva (admin) — una notificación por email destinatario único
+router.put('/admin/cancelar-reservas-masivo', reservasPteAltoController.cancelacionesMasivasReservasAdmin);
+
 // Obtener complejo con espacios disponibles
 router.get('/admin/complejo/:complejoId/espacios-disponibles', reservasPteAltoController.obtenerComplejoConEspaciosDisponibles);
 
