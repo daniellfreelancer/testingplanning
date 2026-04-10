@@ -1,15 +1,6 @@
-const nodemailer = require("nodemailer");
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-const QRCode = require("qrcode");
-const {
-    GOOGLE_USER,
-    GOOGLE_ID,
-    GOOGLE_SECRET,
-    GOOGLE_REFRESH,
-    GOOGLE_URL,
-    GOOGLE_ACCESS,
-} = process.env;
+const { Resend } = require("resend");
+const { getReservaPublicDetailUrl } = require("./reservaPublicQrUrl");
+const { EMAIL_SERVICE_API_RESEND } = process.env;
 
 /**
  * Formatea una fecha UTC a hora Chile (America/Santiago) en 24h.
@@ -33,21 +24,12 @@ const formatearFecha = (fecha) => {
 };
 
 /**
- * Genera un código QR como buffer (para adjuntar en email)
+ * Construye la URL de imagen QR usando el servicio externo api.qrserver.com.
+ * Los clientes de correo cargan imágenes externas, a diferencia de base64 data URIs o CID.
  */
-const generarQRCode = async (texto) => {
-    try {
-        const qrBuffer = await QRCode.toBuffer(texto, {
-            errorCorrectionLevel: 'M',
-            type: 'image/png',
-            width: 300,
-            margin: 2
-        });
-        return qrBuffer;
-    } catch (error) {
-        console.error("Error al generar QR code:", error);
-        return null;
-    }
+const buildQRImageUrl = (data) => {
+    const encoded = encodeURIComponent(data);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=M&format=png&data=${encoded}`;
 };
 
 /**
@@ -81,47 +63,25 @@ const obtenerTipoReservaTexto = (reserva) => {
  */
 const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
     try {
-        // Validar que la reserva tenga usuario y sea tipo 'usuario'
+        if (!EMAIL_SERVICE_API_RESEND) {
+            throw new Error("EMAIL_SERVICE_API_RESEND no está configurada");
+        }
+
         if (!reserva.usuario || !reserva._id) {
             console.log("Reserva sin usuario o sin ID, no se envía email");
             return;
         }
 
-        // Validar que sea tipoReservaInterna 'usuario' si es reserva interna
         if (reserva.esReservaInterna && reserva.tipoReservaInterna !== 'usuario') {
             console.log("Reserva interna no es tipo 'usuario', no se envía email");
             return;
         }
 
-        const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_URL);
+        const resend = new Resend(EMAIL_SERVICE_API_RESEND);
 
-        oauth2Client.setCredentials({
-            refresh_token: GOOGLE_REFRESH,
-        });
-
-        const accessToken = await oauth2Client.getAccessToken();
-
-        const smtpTransport = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: GOOGLE_USER,
-                type: "OAuth2",
-                clientId: GOOGLE_ID,
-                clientSecret: GOOGLE_SECRET,
-                refreshToken: GOOGLE_REFRESH,
-                accessToken: GOOGLE_ACCESS,
-            },
-            tls: {
-                rejectUnauthorized: false,
-            },
-        });
-
-        // Generar URL para el QR code
         const reservaId = reserva._id.toString();
-        const qrUrl = `https://api.vitalmoveglobal.com/reservas-pte-alto/validar-reserva/${reservaId}`;
-        
-        // Generar QR code como buffer
-        const qrCodeBuffer = await generarQRCode(qrUrl);
+        const qrUrl = getReservaPublicDetailUrl(reservaId);
+        const qrImageUrl = buildQRImageUrl(qrUrl);
 
         // Preparar datos de la reserva
         const nombreRecurso = obtenerNombreRecurso(reserva);
@@ -260,19 +220,14 @@ const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
                       <!-- QR Code Section -->
                       <div class="qr-section">
                         <p class="qr-title">Código QR de Validación</p>
-                        ${qrCodeBuffer ? `
                         <div class="qr-code-wrapper">
-                          <img src="cid:qr-code" alt="Código QR de Reserva" class="qr-code-img" />
+                          <img src="${qrImageUrl}" alt="Código QR de Reserva" width="250" height="250" style="width:250px;height:250px;" />
                         </div>
                         <p class="qr-instructions">
                           Presenta este código QR al llegar al establecimiento para validar tu reserva.
                         </p>
-                        ` : `
-                        <p class="qr-instructions" style="color: #ff6b6b;">
-                          No se pudo generar el código QR. Por favor, contacta con soporte.
-                        </p>
-                        `}
                       </div>
+                      
                       
 
                     </td>
@@ -283,7 +238,7 @@ const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
                 <table class="footer" align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
                   <tr>
                     <td>
-                      <p style="margin: 0; padding: 10px 0;">Visítanos en <a href="https://www.deportespuentealto.cl" class="footer-link" target="_blank">www.vitalmoveglobal.com</a></p>
+                      <p style="margin: 0; padding: 10px 0;">Visítanos en <a href="https://www.deportespuentealto.cl" class="footer-link" target="_blank">Deportes Puente Alto</a></p>
                       <p style="margin: 0; padding: 10px 0;">Powered by <a href="https://www.vitalmoveglobal.com" class="footer-link" target="_blank">VitalMove</a></p>
                       <p style="margin: 15px 0 0 0; padding: 10px 0; font-size: 11px; color: #aaaaaa;">
                         Si tienes alguna pregunta sobre tu reserva, por favor contacta con nuestro equipo de soporte.
@@ -296,25 +251,19 @@ const sendEmailReservaPteAlto = async (email, nombreUsuario, reserva) => {
             </html>
         `;
 
-        // Preparar attachments para el QR code
-        const attachments = [];
-        if (qrCodeBuffer) {
-            attachments.push({
-                filename: 'qr-reserva.png',
-                content: qrCodeBuffer,
-                cid: 'qr-code' // Content-ID para referenciar en el HTML
-            });
-        }
-
-        const mailOptions = {
-            from: GOOGLE_USER,
+        const { error } = await resend.emails.send({
+            from: "Contacto <deportespuentealto@vitalmoveglobal.com>",
             to: email,
             subject: `Confirmación de Reserva - ${nombreRecurso}`,
             html: htmlContent,
-            attachments: attachments
-        };
+        });
 
-        await smtpTransport.sendMail(mailOptions);
+        if (error) {
+            throw new Error(
+                `Resend no pudo enviar el correo de reserva: ${error.message || "Error desconocido"}`
+            );
+        }
+
         console.log(`Email de confirmación de reserva enviado exitosamente a: ${email}`);
     } catch (error) {
         console.error("Error al enviar email de reserva:", error);

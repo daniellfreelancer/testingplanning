@@ -5,7 +5,7 @@
  */
 function getReservaPublicDetailUrl(reservaId) {
     const base = (
-        process.env.PTE_ALTO_FRONTEND_BASE_URL || "https://deportespte.vitalmoveglobal.com"
+        process.env.PTE_ALTO_FRONTEND_BASE_URL || "https://deportespuentealto.cl"
     ).replace(/\/$/, "");
     return `${base}/reserva/${String(reservaId)}`;
 }
