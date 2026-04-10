@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const ReservasPteAlto = require('./reservasPteAlto');
 const EspaciosDeportivosPteAlto = require('../espacios-deportivos/espaciosDeportivosPteAlto');
 const TalleresDeportivosPteAlto = require('../talleres-deportivos/talleresDeportivosPteAlto');
@@ -40,22 +41,17 @@ const resolverClubParaEmailCancelacion = async (reserva) => {
 };
 
 /**
- * Aviso por correo de cancelación a usuario y/o club (emails únicos). Fallos no críticos.
- * @param {Object} reserva - documento Mongoose (usuario/club pueden ir como ref u objeto)
+ * Acumula destinatarios (email + nombre) en un Map por clave de email en minúsculas.
+ * Misma lógica de resolución que el aviso unitario de cancelación.
+ * @param {Map<string, { email: string, nombre: string }>} destinatariosPorEmailKey
  */
-const enviarEmailsCancelacionReserva = async (reserva) => {
-    const enviados = new Set();
-    const enviar = async (email, nombre) => {
+const agregarDestinatariosCancelacionDesdeReserva = async (reserva, destinatariosPorEmailKey) => {
+    const add = (email, nombre) => {
         const e = email && String(email).trim();
         if (!e) return;
         const key = e.toLowerCase();
-        if (enviados.has(key)) return;
-        enviados.add(key);
-        try {
-            await sendEmailCancelacionPteAlto(e, nombre);
-        } catch (err) {
-            console.error('Error al enviar email de cancelación (no crítico):', err);
-        }
+        if (destinatariosPorEmailKey.has(key)) return;
+        destinatariosPorEmailKey.set(key, { email: e, nombre: nombre || 'Usuario' });
     };
 
     const usuario = reserva.usuario;
@@ -79,18 +75,34 @@ const enviarEmailsCancelacionReserva = async (reserva) => {
         }
     }
     if (mailUsuario) {
-        await enviar(mailUsuario, nombreUsuario);
+        add(mailUsuario, nombreUsuario);
     }
 
     if (reserva.esReservaInterna) {
         const clubInfo = await resolverClubParaEmailCancelacion(reserva);
         if (clubInfo && clubInfo.email) {
             const nombreOrg = clubInfo.nombre ? String(clubInfo.nombre).trim() : 'Organización';
-            await enviar(clubInfo.email, nombreOrg);
+            add(clubInfo.email, nombreOrg);
+        }
+    }
+};
+
+/**
+ * Aviso por correo de cancelación a usuario y/o club (emails únicos). Fallos no críticos.
+ * @param {Object} reserva - documento Mongoose (usuario/club pueden ir como ref u objeto)
+ */
+const enviarEmailsCancelacionReserva = async (reserva) => {
+    const destinatariosPorEmailKey = new Map();
+    await agregarDestinatariosCancelacionDesdeReserva(reserva, destinatariosPorEmailKey);
+    for (const [, { email, nombre }] of destinatariosPorEmailKey) {
+        try {
+            await sendEmailCancelacionPteAlto(email, nombre);
+        } catch (err) {
+            console.error('Error al enviar email de cancelación (no crítico):', err);
         }
     }
 
-    if (enviados.size === 0) {
+    if (destinatariosPorEmailKey.size === 0) {
         console.warn(
             '[cancelación email] No se envió ningún correo. reserva:',
             String(reserva._id),
@@ -1590,6 +1602,109 @@ const reservasPteAltoController = {
             res.status(500).json({
                 success: false,
                 message: "Error al cancelar la reserva",
+                error: error.message
+            });
+        }
+    },
+
+    /**
+     * Cancelación masiva (admin). Una notificación por dirección de correo única.
+     * PUT /reservas-pte-alto/admin/cancelar-reservas-masivo
+     * Body: { ids: string[], motivoCancelacion? }
+     */
+    cancelacionesMasivasReservasAdmin: async (req, res) => {
+        try {
+            const { motivoCancelacion, ids } = req.body;
+            if (!Array.isArray(ids) || ids.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Se requiere un array ids no vacío'
+                });
+            }
+
+            const destinatariosGlobales = new Map();
+            const idsCancelados = [];
+            const omitidasNoEncontrada = [];
+            const omitidasNoActiva = [];
+            const omitidasIdInvalido = [];
+            const yaProcesados = new Set();
+
+            for (const rawId of ids) {
+                const idStr = String(rawId);
+                if (!mongoose.Types.ObjectId.isValid(idStr)) {
+                    omitidasIdInvalido.push(rawId);
+                    continue;
+                }
+                if (yaProcesados.has(idStr)) continue;
+                yaProcesados.add(idStr);
+
+                const reserva = await ReservasPteAlto.findById(idStr);
+                if (!reserva) {
+                    omitidasNoEncontrada.push(idStr);
+                    continue;
+                }
+                if (reserva.estado !== 'activa') {
+                    omitidasNoActiva.push(idStr);
+                    continue;
+                }
+
+                reserva.estado = 'cancelada';
+                reserva.canceladoPor = 'ADMIN';
+                if (motivoCancelacion) {
+                    reserva.notas = motivoCancelacion;
+                }
+                await reserva.save();
+
+                if (reserva.tipoReserva === 'taller' && reserva.taller && reserva.usuario) {
+                    const taller = await TalleresDeportivosPteAlto.findById(reserva.taller);
+                    if (taller && taller.usuarios) {
+                        taller.usuarios = taller.usuarios.filter(
+                            userId => userId.toString() !== reserva.usuario.toString()
+                        );
+                        await taller.save();
+                    }
+                }
+
+                await reserva.populate('usuario', 'nombre apellido email');
+                await reserva.populate('club', 'nombre email');
+                await agregarDestinatariosCancelacionDesdeReserva(reserva, destinatariosGlobales);
+                idsCancelados.push(idStr);
+            }
+
+            for (const [, { email, nombre }] of destinatariosGlobales) {
+                try {
+                    await sendEmailCancelacionPteAlto(email, nombre);
+                } catch (err) {
+                    console.error('Error al enviar email de cancelación masiva (no crítico):', err);
+                }
+            }
+
+            if (destinatariosGlobales.size === 0 && idsCancelados.length > 0) {
+                console.warn(
+                    '[cancelación masiva email] No se envió ningún correo para',
+                    idsCancelados.length,
+                    'reserva(s)'
+                );
+            }
+
+            const n = idsCancelados.length;
+            return res.status(200).json({
+                success: true,
+                message:
+                    n === 0
+                        ? 'No se canceló ninguna reserva activa'
+                        : `${n} reserva(s) cancelada(s)`,
+                canceladas: n,
+                idsCancelados,
+                omitidasNoEncontrada,
+                omitidasNoActiva,
+                omitidasIdInvalido
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al cancelar reservas masivamente',
                 error: error.message
             });
         }
